@@ -20,7 +20,7 @@ Preliminary steps to perfornm before running this script
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically created
-nbiter=1
+nbiter=3
 
 ONSKY=1 #Set 0 for internal pup ; 1 for an on sky correction
 
@@ -48,11 +48,11 @@ size_probes=400
 
 #coronagraphic image
 DIT=16
-NDIT_image=2
+NDIT_image=1
 
 #Off-axis PSF
 DIT_PSF=16
-NDIT_PSF=2
+NDIT_PSF=1
 WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
 
 #Other images
@@ -66,7 +66,7 @@ Y0UP=1511 #X position of the upper PSF echo in python
 X1UP=478 #474 #Y position of the bottom PSF echo in python #485
 Y1UP=1511 #X position of the bottom PSF echo in python
 
-#Do you want to center you image at each iteration. Set 1 for yes, 0 for no.
+#Do you want to center your image at each iteration. Set 1 for yes, 0 for no.
 centeringateachiter=0
 
 #Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
@@ -76,7 +76,7 @@ create_PSF=0
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
 #WORK_PATH0=/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/
-WORK_PATH0=~/Downloads/TestsEFCSPHERE20200207/PackageEFCSPHERE/
+WORK_PATH0=C:/Users/apotier/Documents/Research/SPHERE/PackageEFCSPHERE/PackageEFCSPHERE/ #~/Documents/Research/SPHERE/PackageEFCSPHERE/PackageEFCSPHERE/
 
 
 ###################################################################
@@ -168,7 +168,7 @@ if [ "$create_PSF" -eq "1" ]; then
 
     # FOR OFF-AXIS PSF (!!!!!!!!!! ADD one ND !!!!!!)
     echo "Off-Axis PSF!"
-    echo "Add "WHICH_ND
+    echo "Add "$WHICH_ND
     #echo "Press enter to continue and introduce the ND and take the off axis PSF"
     #read -n1 -r key
     
@@ -243,7 +243,7 @@ export centeringateachiter
 
 #Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 echo "Launch python EFC code"
-python3 PythonSphereEFC_v2.py
+python PythonSphereEFC_v2.py #Should be python3 on SPHERE
 
 if (($nbiter == 2))
 then

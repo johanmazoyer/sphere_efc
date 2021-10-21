@@ -24,7 +24,7 @@ import scipy.ndimage as snd
 
 
 import sys
-print(sys.path)
+#print(sys.path)
 
 
 import os
@@ -54,12 +54,12 @@ def LoadImageFits(docs_dir):
     image=openfits[0].data
     return image
 
-def SaveFits(image,head,doc_dir2,name):
+def SaveFits(image,head,doc_dir2,name,replace=False):
     hdu=fits.PrimaryHDU(image)
     hdul = fits.HDUList([hdu])
     hdr=hdul[0].header
     hdr.set(head[0],head[1])
-    hdu.writeto(doc_dir2+name+'.fits')
+    hdu.writeto(doc_dir2+name+'.fits', overwrite=replace)
 
     
 def increasepixelinimage(image,pixafter,cut):
@@ -107,24 +107,32 @@ def pupiltodetector(input_wavefront,lyot_mask,occ_rad_ld):
     
     
     
-def invertDSCC(interact,coupe,goal='e',visu=False):
+def invertDSCC(interact, cut ,goal='e', regul="truncation", visu=False):
     U, s, V = np.linalg.svd(interact, full_matrices=False)
     S = np.diag(s)
     InvS=np.linalg.inv(S)
     if(visu==True):
         plt.plot(np.diag(InvS),'r.')
         plt.yscale('log')
-        plt.show()
+
         
-    if(goal=='e'):
-        InvS[np.where(InvS>coupe)]=0
-        pseudoinverse=np.dot(np.dot(np.transpose(V),InvS),np.transpose(U))
-        return [np.diag(InvS),pseudoinverse]
-      
-    if(goal=='c'):
-        InvS[coupe:]=0
-        pseudoinverse=np.dot(np.dot(np.transpose(V),InvS),np.transpose(U))
-        return [np.diag(InvS),pseudoinverse]
+    if goal == 'e':
+        InvS[np.where(InvS>cut)]=0
+    
+    
+    if goal == "c":
+        if regul == "truncation":
+            InvS[cut:] = 0
+        if regul == "tikhonov":
+            InvS = np.diag(s / (s**2 + s[cut]**2))
+            if visu == True:
+                plt.plot(np.diag(InvS), "b.")
+                plt.yscale("log")
+                # plt.show()
+
+    plt.show()                           
+    pseudoinverse=np.dot(np.dot(np.transpose(V),InvS),np.transpose(U))
+    return [np.diag(InvS),pseudoinverse]
 
 
 def createvectorprobes(posprobes,cutsvd):
@@ -184,14 +192,64 @@ def creatingWhichinPupil(cutinpupil):
     
     
     
-def creatingMaskDH(choosepixDH):
-    xx, yy = np.meshgrid(np.arange(dimimages)-(dimimages)/2, np.arange(dimimages)-(dimimages)/2)
-    rr     = np.hypot(yy, xx)
-    maskDH=np.ones((dimimages,dimimages))
-    maskDH[xx<choosepixDH[0]]=0
-    maskDH[xx>choosepixDH[1]]=0
-    maskDH[yy<choosepixDH[2]]=0
-    maskDH[yy>choosepixDH[3]]=0
+def creatingMaskDH(dimimages,
+                   shape,
+                   choosepixDH=[8, 35, -35, 35],
+                   circ_rad=[8, 10],
+                   circ_side="Full",
+                   circ_offset=8,
+                   circ_angle=0):
+    """ --------------------------------------------------
+    Create a binary mask.
+    
+    Parameters:
+    ----------
+    dimimages: int, size of the output squared mask
+    shape: string, can be 'square' or 'circle' , define the shape of the binary mask.
+    choosepixDH: 1D array, if shape is 'square', define the edges of the binary mask in pixels.
+    circ_rad: 1D array, if shape is 'circle', define the inner and outer edge of the binary mask
+    circ_side: string, if shape is 'circle', can define to keep only one side of the circle
+    circ_offset : float, remove pixels that are closer than circ_offset if circ_side is set
+    circ_angle : float, if circ_side is set, remove pixels within a cone of angle circ_angle
+
+    Return:
+    ------
+    maskDH: 2D array, binary mask
+    -------------------------------------------------- """
+    xx, yy = np.meshgrid(
+        np.arange(dimimages) - (dimimages) / 2,
+        np.arange(dimimages) - (dimimages) / 2)
+    rr = np.hypot(yy, xx)
+    if shape == "square":
+        maskDH = np.ones((dimimages, dimimages))
+        maskDH[xx < choosepixDH[0]] = 0
+        maskDH[xx > choosepixDH[1]] = 0
+        maskDH[yy < choosepixDH[2]] = 0
+        maskDH[yy > choosepixDH[3]] = 0
+    if shape == "circle":
+        maskDH = np.ones((dimimages, dimimages))
+        maskDH[rr >= circ_rad[1]] = 0
+        maskDH[rr < circ_rad[0]] = 0
+        if circ_side == "Right":
+            maskDH[xx < np.abs(circ_offset)] = 0
+            if circ_angle != 0:
+                maskDH[yy - xx / np.tan(circ_angle * np.pi / 180) > 0] = 0
+                maskDH[yy + xx / np.tan(circ_angle * np.pi / 180) < 0] = 0
+        if circ_side == "Left":
+            maskDH[xx > -np.abs(circ_offset)] = 0
+            if circ_angle != 0:
+                maskDH[yy - xx / np.tan(circ_angle * np.pi / 180) < 0] = 0
+                maskDH[yy + xx / np.tan(circ_angle * np.pi / 180) > 0] = 0
+        if circ_side == "Bottom":
+            maskDH[yy < np.abs(circ_offset)] = 0
+            if circ_angle != 0:
+                maskDH[yy - xx * np.tan(circ_angle * np.pi / 180) < 0] = 0
+                maskDH[yy + xx * np.tan(circ_angle * np.pi / 180) < 0] = 0
+        if circ_side == "Top":
+            maskDH[yy > -np.abs(circ_offset)] = 0
+            if circ_angle != 0:
+                maskDH[yy - xx * np.tan(circ_angle * np.pi / 180) > 0] = 0
+                maskDH[yy + xx * np.tan(circ_angle * np.pi / 180) > 0] = 0
     return maskDH
     
     
@@ -265,24 +323,24 @@ resolinpix_rad=1/resolinrad_pix     #pix/rad
 ld_rad=wave/pupsizeinmeter #lambda/D en radian
 
 ld_p=resolinpix_rad*ld_rad  #lambda/D en pixel
-print(ld_p)
+print('pixel per resolution element:', ld_p)
 #ld_p=3.5
 
 
 isz=int(pupsize*ld_p)#-1 # Nombre de pixels dans le plan pupille pour atteindre la résolution ld_p voulue
-print(isz)
+#print(isz)
 
 ld_mas=ld_rad*180/np.pi*60*60*1e3  #lambda/D en milliarcsec
 #radFPMinld=120/ld_mas  #Taille masque corono en lambda/D ALC3
 radFPMinld=92.5/ld_mas #Taille masque corono en lambda/D ALC2
-print(radFPMinld)
+print('Size Lyot mask in l/d:', radFPMinld)
 
 radFPMinpix=int(radFPMinld*ld_p)   #Taille masque corono en pixel
 
 # directory where are all the different matrices (CLMatrixOptimiser.HO_IM.fits , etc..)
-MatrixDirectory='C:/Users/apotier/Downloads/TestsEFCSPHERE20200207/PackageEFCSPHERE/MatricesAndModel/'
+MatrixDirectory=os.getcwd()+'/MatricesAndModel/'
 # directory where are all the different model planes (Apod, Lyot, etc..)
-ModelDirectory='C:/Users/apotier/Downloads/TestsEFCSPHERE20200207/PackageEFCSPHERE/Model/'
+ModelDirectory=os.getcwd()+'/Model/'
 
 mask384=LoadImageFits(ModelDirectory+'apod-4.0lovD_384-192.fits')
 Pup384=LoadImageFits(ModelDirectory+'generated_VLT_pup_384-192.fits')
@@ -296,11 +354,11 @@ dimimages=400
 
 
 onsky=1 #1 if on sky correction
-createPW=True
+createPW=False
 createmask=False
 createwhich=False
 createjacobian=False
-createEFCmatrix=False
+createEFCmatrix=True
 
 
 if onsky==0:
@@ -310,12 +368,10 @@ else:
     OffAxisPSF=pupiltodetector(maskoffaxis*mask384*Pup384,Lyot384,radFPMinld)
     lightsource='VLTPupil_'
 
-amplitude=400/37
-amplitude=8
-print(amplitude)
-
-pushact=amplitude*LoadImageFits(ModelDirectory+'PushActInPup384SecondWay.fits')
-
+#Amplitude in x nm/37 for the PW pokes such that pushact amplitude is equal to x nm
+amplitudePW=400/37
+#Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
+amplitudeEFCMatrix=8
 
 squaremaxPSF=np.amax(np.abs(OffAxisPSF))
 
@@ -327,24 +383,25 @@ squaremaxPSF=np.amax(np.abs(OffAxisPSF))
 
 if createPW==True:
     print('...Creating VectorProbes...')
+    pushact=amplitudePW*LoadImageFits(ModelDirectory+'PushActInPup384SecondWay.fits')
     # Choose probes positions
     posprobes = [678,679,680,681]#0.04cutestimation
     posprobes=[678,679,680] #0.1cutestimation
     posprobes=[678,679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
     #Choose the truncation above where the pixels won't be taken into account for estimation
-    cutestimation = 0.3*squaremaxPSF*8/amplitude
+    cutestimation = 0.3*squaremaxPSF*8/amplitudePW
 
     vectoressai,SVD = createvectorprobes(posprobes,cutestimation)
     ##
-    choosepix = [-55,55,-55,55]
-    maskDH = creatingMaskDH(choosepix)
+    choosepixvisu = [-55,55,-55,55]
+    maskDH = creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
 
     plt.imshow(SVD[1]*maskDH)
     plt.show()
     ##
-    SaveFits(SVD[1],['',0],MatrixDirectory,lightsource+'CorrectedZone')
+    SaveFits(SVD[1],['',0],MatrixDirectory,lightsource+'CorrectedZone',replace=True)
     ##
-    SaveFits(vectoressai,['',0],MatrixDirectory,lightsource+'VecteurEstimation_'+str(len(posprobes))+'probes'+str(int(amplitude*37))+'nm')
+    SaveFits(vectoressai,['',0],MatrixDirectory,lightsource+'VecteurEstimation_'+str(len(posprobes))+'probes'+str(int(amplitudePW*37))+'nm',replace=True)
 
 #### Pour correction 
 
@@ -352,33 +409,34 @@ if createwhich==True:
     print('...Creating DH and Gmatrix...')
     WhichInPupil = creatingWhichinPupil(0.5)
     print(len(WhichInPupil))
-    SaveFits(WhichInPupil,['',0],MatrixDirectory,'WhichInPupil0_5')
+    SaveFits(WhichInPupil,['',0],MatrixDirectory,'WhichInPupil0_5',replace=True)
 
 #Choose the four corners of your dark hole (in pixels)
 if createmask==True:
     choosepix = [-55,55,10,55] #DH3
     choosepix = [-55,55,-55,-10] #DH1
-    maskDH = creatingMaskDH(choosepix)
+    maskDH = creatingMaskDH(dimimages, 'square', choosepixDH = choosepix)
     namemask='1'
-    SaveFits(maskDH,['',0],MatrixDirectory,'mask_DH'+namemask)
+    SaveFits(maskDH,['',0],MatrixDirectory,'mask_DH'+namemask,replace=True)
     plt.imshow((maskDH)) #Afficher où le DH apparaît sur l'image au final
-    plt.show()
+    plt.pause(0.1)
 ##
 if createjacobian==True:
     namemask='1'
+    pushact=amplitudeEFCMatrix*LoadImageFits(ModelDirectory+'PushActInPup384SecondWay.fits')
     maskDH=LoadImageFits(MatrixDirectory+'mask_DH'+namemask+'.fits')
     WhichInPupil=LoadImageFits(MatrixDirectory+'WhichInPupil0_5.fits')
     #Creating Matrix
     Gmatrix = creatingCorrectionmatrix(maskDH,WhichInPupil)
     #Saving matrix
-    SaveFits(Gmatrix,['',0],ModelDirectory,lightsource+'Gmatrix_DH'+namemask)
+    SaveFits(Gmatrix,['',0],ModelDirectory,lightsource+'Gmatrix_DH'+namemask,replace=True)
 
 #### Uncomment below to create and save the interaction matrix
 if createEFCmatrix==True:
     namemask='1'
     Gmatrix = LoadImageFits(ModelDirectory+lightsource+'Gmatrix_DH'+namemask+'.fits')
     #Set how many modes you want to use to correct
-    nbmodes = 800
+    nbmodes = 600
     invertGDH = invertDSCC(Gmatrix,nbmodes,goal='c',visu=True)[1]
-    corr_mode='3'
-    SaveFits(invertGDH,['',0],MatrixDirectory,lightsource+'Interactionmatrix_DH'+namemask+'_SVD'+corr_mode)
+    corr_mode='1'
+    SaveFits(invertGDH,['',0],MatrixDirectory,lightsource+'Interactionmatrix_DH'+namemask+'_SVD'+corr_mode,replace=True)

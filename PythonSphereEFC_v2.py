@@ -1,9 +1,12 @@
 #Python EFC code
-#Version 2019/11/27
+#Version 2021/10/14
 
+import sys
+import os
+import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.colors as cols
+from matplotlib.colors import LogNorm
 
 import scipy
 import scipy.signal as scsi
@@ -22,15 +25,8 @@ from astropy.time import Time
 from astropy.modeling import models, fitting
 from astropy.io import fits
 
-import sys
-
-import os
 import cv2
-
 import glob
-
-import matplotlib.pyplot as plt
-import numpy as np
 from poppy import matrixDFT
 
 import warnings
@@ -56,7 +52,7 @@ onsky=int(os.environ['ONSKY'])#If 1: On sky measurements ; If 0: Calibration sou
 size_probes=int(os.environ['size_probes'])# Set the size of the probes for the estimation
 centeringateachiter=int(os.environ['centeringateachiter'])#If 1: Do the recentering at each iteration ; If 0: Do not do it
 
-print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name))
+print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name), flush=True)
 
 # plotting options
 matplotlib.rcParams['font.size'] = 17
@@ -115,11 +111,6 @@ def SHslopes2map(slopes,visu=True):
         fig.colorbar(im, cax=cbar_ax)
     return mapx,mapy
 
-
-def LoadImageFits(docs_dir):
-    openfits=fits.open(docs_dir)
-    image=openfits[0].data
-    return image
 
 def SaveFits(image,head,doc_dir2,name):
     hdu=fits.PrimaryHDU(image)
@@ -185,7 +176,7 @@ def fancy_xy_trans_slice(img_slice, xy_trans):
     return trans_slice
 
 def my_callback(params):
-    print("Trying parameters " + str(params))
+    print("Trying parameters " + str(params), flush=True)
 
 
 def correl_mismatch(slice0, slice1):
@@ -213,8 +204,6 @@ def reduceimageSPHERE(image,back,maxPSF,ctr_x,ctr_y,newsizeimg,expim,exppsf,ND):
     return image
 
 
-
-
 def createdifference(directory,filenameroot,posprobes,nbiter,centerx,centery):
     
     expim = expimIRD
@@ -227,30 +216,35 @@ def createdifference(directory,filenameroot,posprobes,nbiter,centerx,centery):
         ND=1.
         
     #Dark
-    backgroundcorono = LoadImageFits(sorted(glob.glob(directory+'SPHERE_BKGRD_EFC_CORO*.fits'))[-1])[0]
+    backgroundcorono = fits.getdata(sorted(glob.glob(directory+'SPHERE_BKGRD_EFC_CORO*.fits'))[-1])[0]
     if expim==exppsf:
         backgroundPSF = backgroundcorono
     else:
-        backgroundPSF = LoadImageFits(sorted(glob.glob(directory+'SPHERE_BKGRD_EFC_PSF*.fits'))[-1])[0]
+        backgroundPSF = fits.getdata(sorted(glob.glob(directory+'SPHERE_BKGRD_EFC_PSF*.fits'))[-1])[0]
     #PSF
-    PSFbrut = LoadImageFits(sorted(glob.glob(directory+'OffAxisPSF*.fits'))[-1])[0]
+    PSFbrut = fits.getdata(sorted(glob.glob(directory+'OffAxisPSF*.fits'))[-1])[0]
     PSF = reduceimageSPHERE(PSFbrut,backgroundPSF,1,int(centerx),int(centery),dimimages,1,1,1)
     smoothPSF=snd.median_filter(PSF,size=3)
     maxPSF=PSF[np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] ]
 
-    print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON FITS: ',maxPSF)
+    print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ',maxPSF, flush=True)
     
     #Correction
     
     #Traitement de l'image de référence (première image corono et recentrage subpixelique)
-    fileref = LoadImageFits(sorted(glob.glob(directory+filenameroot+'iter0_coro_image*.fits'))[-1])[0]
+    fileref = fits.getdata(sorted(glob.glob(directory+filenameroot+'iter0_coro_image*.fits'))[-1])[0]
     imageref = reduceimageSPHERE(fileref,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
     imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
     imageref=cropimage(imageref,int(dimimages/2),int(dimimages/2),int(dimimages/2))
 
-    filecorrection = LoadImageFits(sorted(glob.glob(directory+filenameroot+'iter'+str(nbiter-2)+'_coro_image*.fits'))[-1])[0]
+    filecorrection = fits.getdata(sorted(glob.glob(directory+filenameroot+'iter'+str(nbiter-2)+'_coro_image*.fits'))[-1])[0]
     imagecorrection=reduceimageSPHERE(filecorrection,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
     imagecorrection=cropimage(imagecorrection,int(dimimages/2),int(dimimages/2),int(dimimages/2))
+    Contrast=np.mean(imagecorrection[np.where(cropimage(maskDH,int(dimimages/2),int(dimimages/2),int(dimimages/2)))])
+    print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast)
+    
+    with open(directory + filenameroot + 'Contrast_vs_iter', 'a') as f:
+        f.write(str(Contrast) + '\n')
 
     def cost_function(xy_trans):
         # Function can use image slices defined in the global scope
@@ -265,10 +259,10 @@ def createdifference(directory,filenameroot,posprobes,nbiter,centerx,centery):
         #Calcul de la translation du centre par rapport à la réference: best param.
         #Les images probes sont ensuite translatées de best param
         best_params = fmin_powell(cost_function, [0, 0], disp=0, callback=None) #callback=my_callback
-        print('   Shifting recorded images by: ',best_params,' pixels' )
+        print('   Shifting recorded images by: ',best_params,' pixels' , flush=True)
         imagecorrection = fancy_xy_trans_slice(imagecorrection, best_params)
     else:
-        print('No recentering')
+        print('No recentering', flush=True)
         best_params = [centerx-int(centerx), centery-int(centery)]
         imagecorrection = fancy_xy_trans_slice(imagecorrection, best_params)
     
@@ -278,38 +272,56 @@ def createdifference(directory,filenameroot,posprobes,nbiter,centerx,centery):
     Difference=np.zeros((numprobes,dimimages,dimimages))    
     k=0
     j=1
+    
+    display(imagecorrection, ax1, '', vmin=1e-7, vmax=1e-3, norm=LogNorm())
+    ax1.text(1,10,'Contrast = '+str(Contrast),size=8)
+    PSF_to_display = cropimage(PSF,np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] , 70 )
+    ax1bis=fig1.add_axes([0.65, 0.70, 0.25, 0.25])
+    display(PSF_to_display, ax1bis, 'PSF' , vmin = np.amin(PSF_to_display), vmax = np.amax(PSF_to_display))#, norm = LogNorm())
+
+    
+
     for i in posprobes:
         image_name = sorted(glob.glob(directory+filenameroot+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits'))[-1]
-        #print('Loading the probe image {0:s}'.format(image_name))
-        image = LoadImageFits(image_name)[0]
+        #print('Loading the probe image {0:s}'.format(image_name), flush=True)
+        image = fits.getdata(image_name)[0]
         Ikplus = reduceimageSPHERE(image,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
+        display(cropimage(Ikplus,int(dimimages/2),int(dimimages/2),int(dimimages/2))-imagecorrection, ax2.flat[j-1] , title='+ '+str(i), vmin=-1e-4, vmax=1e-4)
         j=j+1
         image_name = sorted(glob.glob(directory+filenameroot+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits'))[-1]
-        #print('Loading the probe image {0:s}'.format(image_name))
-        image = LoadImageFits(image_name)[0]
+        #print('Loading the probe image {0:s}'.format(image_name), flush=True)
+        image = fits.getdata(image_name)[0]
         Ikmoins = reduceimageSPHERE(image,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
         Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
-        Difference[k] = (Ikplus-Ikmoins)
+        display(cropimage(Ikmoins,int(dimimages/2),int(dimimages/2),int(dimimages/2))-imagecorrection, ax2.flat[j-1] , title='- '+str(i), vmin=-1e-4, vmax=1e-4)
         j = j+1
+        Difference[k] = (Ikplus-Ikmoins)
         k = k+1
-        
+
     return Difference
 
 
+def display(image, axe, title, vmin, vmax , norm = None):
+    axe.imshow(image, vmin = vmin, vmax = vmax, norm = norm)
+    axe.set_xticks([])
+    axe.set_yticks([])
+    axe.set_title(title,size=7)
+    plt.pause(0.1)
+    return 0
 
 def resultEFC(directory,filenameroot,posprobes,nbiter,centerx,centery):
-    print('- Creating difference of images...')
+    print('- Creating difference of images...', flush=True)
     Difference=createdifference(directory,filenameroot,posprobes,nbiter,centerx,centery)
-    print('- Estimating the focal plane electric field...')
+    print('- Estimating the focal plane electric field...', flush=True)
     resultatestimation=estimateEab(Difference,vectoressai)
-    print('- Calculating slopes to generate the Dark Hole with EFC...')
+    print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
     gain=0.5
     solution1=solutiontocorrect(maskDH,resultatestimation,invertGDH)
-    solution1=solution1*amplitude/rad_632_to_nm_opt
+    solution1=solution1*amplitudeEFCMatrix/rad_632_to_nm_opt
     solution1=-gain*solution1
     slopes=VoltToSlope(solution1)
-    return resultatestimation,slopes
+    return resultatestimation, slopes
         
 
 
@@ -348,7 +360,7 @@ def FullIterEFC(dir,posprobes,nbiter,filenameroot,record=False):
         os.mkdir(dir)
 
     if nbiter==1:
-        print('Creating slopes for Cosinus, PSFOffAxis and new probes...')
+        print('Creating slopes for Cosinus, PSFOffAxis and new probes...', flush=True)
         #Reference slopes
         refslope='VisAcq.DET1.REFSLP'
         #Copy the reference slope with the right name for iteration 0 of ExperimentXXXX
@@ -367,13 +379,13 @@ def FullIterEFC(dir,posprobes,nbiter,filenameroot,record=False):
     else:
         #Calculate the center of the first coronagraphic image using the waffle
         if nbiter==2:
-            print('Calculating center of the first coronagraphic image:')
+            print('Calculating center of the first coronagraphic image:', flush=True)
             centerx,centery=findingcenterwithcosinus(dir+filenameroot)
             SaveFits([centerx,centery],['',0],dir+filenameroot,'centerxy')
         
-        centerx,centery=LoadImageFits(dir+filenameroot+'centerxy.fits')
+        centerx,centery=fits.getdata(dir+filenameroot+'centerxy.fits')
         #Estimation of the electric field using the pair-wise probing (return the electric field and the slopes)
-        print('Estimating the electric field using the pair-wise probing:')
+        print('Estimating the electric field using the pair-wise probing:', flush=True)
         estimation,pentespourcorrection=resultEFC(dir,filenameroot,posprobes,nbiter,centerx,centery)
         if record==True:
             #Record the slopes to apply for correction at the next iteration
@@ -384,12 +396,19 @@ def FullIterEFC(dir,posprobes,nbiter,filenameroot,record=False):
             recordnewprobes(size_probes,posprobes,dir+filenameroot,refslope,nbiter)
             
         #Propagate the estimation of electric field in the pupil plane and display the result using a nm scale
-        estimationpad=np.pad(real(estimation),int((isz-400)/2),'constant',constant_values=(0,0))+1j*np.pad(im(estimation),int((isz-400)/2),'constant',constant_values=(0,0))
-        estimationinpup=cropimage(im(shift(ifft(shift(estimationpad)))),int(isz/2),int(isz/2),384)
-        SaveFits(cropimage(im(shift(ifft(shift(estimationpad)))),int(isz/2),int(isz/2),384),['',0],dir,'iter1phase')
-        SaveFits(cropimage(real(shift(ifft(shift(estimationpad)))),int(isz/2),int(isz/2),384),['',0],dir,'iter1amp')
+        #estimationpad=np.pad(real(estimation),int((isz-400)/2),'constant',constant_values=(0,0))+1j*np.pad(im(estimation),int((isz-400)/2),'constant',constant_values=(0,0))
+        #estimationinpup=cropimage(im(shift(ifft(shift(estimationpad)))),int(isz/2),int(isz/2),384)
+        #SaveFits(cropimage(im(shift(ifft(shift(estimationpad)))),int(isz/2),int(isz/2),384),['',0],dir,'iter1phase')
+        #SaveFits(cropimage(real(shift(ifft(shift(estimationpad)))),int(isz/2),int(isz/2),384),['',0],dir,'iter1amp')
         #estimationinpup=estimationinpup*squaremaxPSF/2/np.pi*wave*1e9
-        print('Done with recording new slopes!')
+        estimation_to_display = cropimage(estimation*maskDH ,int(dimimages/2), int(dimimages/2), int(dimimages/2))
+        display(np.real(estimation_to_display), ax3.flat[0] , title='Real estim. iter' + str(nbiter-1), vmin=-1e-2, vmax=1e-2)
+        display(np.imag(estimation_to_display), ax3.flat[2] , title='Imag estim. iter' + str(nbiter-1), vmin=-1e-2, vmax=1e-2)
+        print('Done with recording new slopes!', flush=True)
+        
+        slopes_to_display = pentespourcorrection + fits.getdata(dir+filenameroot+refslope+'.fits')[0]
+        display(SHslopes2map(slopes_to_display, visu=False)[0], ax3.flat[1], title = 'Slopes SH in X to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
+        display(SHslopes2map(slopes_to_display, visu=False)[1], ax3.flat[3], title = 'Slopes SH in Y to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
         
         
         #f1 = plt.figure(1, figsize=(10,5))
@@ -398,7 +417,7 @@ def FullIterEFC(dir,posprobes,nbiter,filenameroot,record=False):
         #ax1.imshow(-estimationinpup, cmap="hot")
         #ax1.set_title('Im part of the PP Electric field')
         #refslope='iter'+str(nbiter-2)+'correction'
-        #before=LoadImageFits(dir+filenameroot+refslope+'.fits')[0]
+        #before=fits.getdata(dir+filenameroot+refslope+'.fits')[0]
         #ax3 = f1.add_subplot(122)
         #ax3.plot(before)
         #ax3.plot(pentespourcorrection+1.5)
@@ -424,9 +443,9 @@ def recordCoswithvolt(amptopushinnm,dir,refslope):
     xx, yy = np.meshgrid(np.arange(240)-(240)/2, np.arange(240)-(240)/2)
     cc= np.cos(2*np.pi*(xx*np.cos(0*np.pi/180.))*nbper/dim)
     coe=(cc.flatten())@IMF_inv
-    #print(np.amax(coe),np.amin(coe))
+    #print(np.amax(coe),np.amin(coe), flush=True)
     coe=coe*amptopushinnm/rad_632_to_nm_opt#/37/rad_632_to_nm_opt
-    #print(np.amax(coe),np.amin(coe))
+    #print(np.amax(coe),np.amin(coe), flush=True)
     slopetopush=V2S@coe
     recordslopes(slopetopush,dir,refslope,nam[0]+'_'+str(amptopushinnm)+'nm')
     return 0
@@ -452,9 +471,9 @@ def findingcenterwithcosinus(dir):
     cosinuspluscoro=sorted(glob.glob(dir+'CosinusForCentering*.fits'))[-1]
     coro=sorted(glob.glob(dir+'iter0_coro_image*.fits'))[-1]
     
-    #Fit par les gaussiennes
+    #Fit gaussian functions
     popt=np.zeros(8)
-    data=LoadImageFits(cosinuspluscoro)[0]-LoadImageFits(coro)[0]
+    data=fits.getdata(cosinuspluscoro)[0]-fits.getdata(coro)[0]
     data1=cropimage(data,x0_up,y0_up,30)
     data2=cropimage(data,x1_up,y1_up,30)
     data1[np.where(data1<0)]=0
@@ -470,7 +489,7 @@ def findingcenterwithcosinus(dir):
     try:
         popt1, pcov = opt.curve_fit(twoD_Gaussian, xy, (data1).flatten(), p0=initial_guess)
     except RuntimeError:
-        print("Error - curve_fit failed top PSF")
+        print("Error - curve_fit failed top PSF", flush=True)
 
     #Fit 2D Gaussian with fixed parameters for the bottom PSF
     initial_guess = (np.amax(data2), 1 , 1 , np.unravel_index(np.argmax(data2, axis=None), data2.shape)[0] , np.unravel_index(np.argmax(data2, axis=None), data2.shape)[1] ,np.mean(data2))
@@ -478,19 +497,21 @@ def findingcenterwithcosinus(dir):
     try:
         popt2, pcov = opt.curve_fit(twoD_Gaussian, xy, (data2).flatten(), p0=initial_guess)
     except RuntimeError:
-        print("Error - curve_fit failed bottom PSF")
+        print("Error - curve_fit failed bottom PSF", flush=True)
         
     centerx=((popt1[3]+x0_up-15)+(popt2[3]+x1_up-15))/2
     centery=((popt1[4]+y0_up-15)+(popt2[4]+y1_up-15))/2
     
-    print('- centerx = ',centery)
-    print('- centery = ',centerx)
-    print('!!!! ACTION: CHECK CENTERX AND CENTERY CORRESPOND TO THE CENTER OF THE CORO IMAGE')
-    print('If not, change the guess in the MainEFCBash.sh file')
+    print('- centerx = ',centery, flush=True)
+    print('- centery = ',centerx, flush=True)
+    print('!!!! ACTION: CHECK CENTERX AND CENTERY CORRESPOND TO THE CENTER OF THE CORO IMAGE AND CLOSE THE WINDOW', flush=True)
+    print('If false, change the guess in the MainEFCBash.sh file and run the iter again', flush=True)
 
     fig1,ax1=plt.subplots(1,1)
+    #I do not use crop of data here so the center index can be checked on the full image.
     ax1.imshow(data,vmin=-5e2,vmax=5e2)
-    plt.show()
+    plt.pause(0.01)
+    #plt.show()
 
     return centerx,centery
     
@@ -526,8 +547,8 @@ ld_p=resolinpix_rad*ld_rad  #lambda/D en pixel
 isz=int(pupsize*ld_p)#-1 # Nombre de pixels dans le plan pupille pour atteindre la résolution ld_p voulue
 
 
-
-amplitude=8
+#Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
+amplitudeEFCMatrix=8
 dimimages=400
 
 # Read SAXO calibrations
@@ -559,8 +580,8 @@ if nbprobe == '3':
 if nbprobe == '4':
     posprobes = [678,679,680,681]
 
-vectoressai=LoadImageFits(MatrixDirectory+lightsource+'VecteurEstimation_'+nbprobe+'probes'+str(size_probes)+'nm.fits')
-WhichInPupil=LoadImageFits(MatrixDirectory+'WhichInPupil0_5.fits')
+vectoressai=fits.getdata(MatrixDirectory+lightsource+'VecteurEstimation_'+nbprobe+'probes'+str(size_probes)+'nm.fits')
+WhichInPupil=fits.getdata(MatrixDirectory+'WhichInPupil0_5.fits')
 
 
 #Dark hole size
@@ -572,10 +593,34 @@ WhichInPupil=LoadImageFits(MatrixDirectory+'WhichInPupil0_5.fits')
 # corr_mode=0: stable correction but moderate contrast
 # corr_mode=1: less stable correction but better contrast
 # corr_mode=2: more aggressive correction (may be unstable)
+plt.close()
+#plt.ion()
 
-
-maskDH = LoadImageFits(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
-invertGDH=LoadImageFits(MatrixDirectory+lightsource+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
+fig = plt.figure(figsize=(12,7.5))
+(fig1,fig2),(fig3,fig4) = fig.subfigures(2, 2)
+fig1.suptitle('Coro image iter'+str(nbiter-2), size=10)
+fig2.suptitle('Probe images iter'+str(nbiter-1), size=10)
+#fig3.subtitle('Miscellaneous')
+ax1 = fig1.subplots(1,1,sharex=True,sharey=True)
+ax2 = fig2.subplots(2,2,sharex=True,sharey=True)
+ax3 = fig3.subplots(2,2)
+ax4 = fig4.subplots(1,1)
+maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
+invertGDH=fits.getdata(MatrixDirectory+lightsource+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
 
 FullIterEFC(ImageDirectory,posprobes,nbiter,exp_name,record=True)
+
+pastContrast = []
+with open(ImageDirectory + exp_name + 'Contrast_vs_iter') as f:
+    pastContrast = np.float64(f.readlines())
+ax4.plot(pastContrast, marker='o', markersize= 8, mfc='none')
+ax4.set_yscale('log')
+ax4.set_ylim(1e-7,1e-4)
+ax4.tick_params(axis='both', which='both', labelsize=8)
+ax4.set_title('Mean contrast in DH vs iteration',size=10)
+
+print('Close each image to proceed', flush=True)
+#plt.tight_layout()
+#plt.ioff()
+plt.show()
 
