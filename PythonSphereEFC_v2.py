@@ -1,34 +1,17 @@
 #Python EFC code
 #Version 2021/10/14
 
-import sys
 import os
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-
-import scipy
-import scipy.signal as scsi
 import scipy.optimize as opt
 import scipy.fftpack as fft
-from scipy.optimize import curve_fit
 from scipy.optimize import fmin_powell as fmin_powell
 import scipy.ndimage as snd
-
-import datetime
-
-from pathlib import Path,PurePath
-
 from astropy.io import fits
-from astropy.time import Time
-from astropy.modeling import models, fitting
-from astropy.io import fits
-
-import cv2
 import glob
-from poppy import matrixDFT
-
 import warnings
 warnings.filterwarnings("ignore")
 
