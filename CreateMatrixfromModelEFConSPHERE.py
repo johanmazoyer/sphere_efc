@@ -4,38 +4,13 @@
 #Version 6/12/2019
 ## Parameters and function
 
-import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib.colors as cols
-
-import scipy.signal as scsi
-
-import datetime
-import scipy.fftpack as fft
-
-from pathlib import Path,PurePath
-from astropy.io import fits
-from astropy.time import Time
-from scipy.optimize import curve_fit
-from astropy.modeling import models, fitting
-
-from scipy.optimize import fmin_powell as fmin_powell
-import scipy.ndimage as snd
-
-
-import sys
-#print(sys.path)
-
 
 import os
-import cv2
-
-
-
-import matplotlib.pyplot as plt
 import numpy as np
-from poppy import matrixDFT
+import matplotlib.pyplot as plt
+import scipy.fftpack as fft
 from astropy.io import fits
+from poppy import matrixDFT
 
 
 
