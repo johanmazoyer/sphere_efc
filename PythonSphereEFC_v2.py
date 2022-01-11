@@ -195,6 +195,9 @@ def correl_mismatch(slice0, slice1):
     return -correl
     
 
+def last(files):
+    extract = sorted(glob.glob(files))[-1]
+    return extract
 
 
 def cropimage(img, ctr_x, ctr_y, newsizeimg):
@@ -273,11 +276,11 @@ def createdifference(directory, filenameroot, posprobes, nbiter, centerx, center
         ND = 1.
         
     #Dark
-    backgroundcorono = fits.getdata(sorted(glob.glob(directory+'SPHERE_BKGRD_EFC_'+str(expim)+'s_*.fits'))[-1])[0]
-    backgroundPSF = fits.getdata(sorted(glob.glob(directory+'SPHERE_BKGRD_EFC_'+str(exppsf)+'s_*.fits'))[-1])[0]
+    backgroundcorono = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(expim)+'s_*.fits'))[0]
+    backgroundPSF = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(exppsf)+'s_*.fits'))[0]
     
     #PSF
-    PSFbrut = fits.getdata(sorted(glob.glob(directory+'OffAxisPSF*.fits'))[-1])[0]
+    PSFbrut = fits.getdata(last(directory+'OffAxisPSF*.fits'))[0]
     PSF = reduceimageSPHERE(PSFbrut,backgroundPSF,1,int(centerx),int(centery),dimimages,1,1,1)
     smoothPSF = snd.median_filter(PSF,size=3)
     maxPSF = PSF[np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] ]
@@ -287,12 +290,12 @@ def createdifference(directory, filenameroot, posprobes, nbiter, centerx, center
     #Correction
     
     #Traitement de l'image de référence (première image corono et recentrage subpixelique)
-    fileref = fits.getdata(sorted(glob.glob(directory+filenameroot+'iter0_coro_image*.fits'))[-1])[0]
+    fileref = fits.getdata(last(directory+filenameroot+'iter0_coro_image*.fits'))[0]
     imageref = reduceimageSPHERE(fileref,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
     imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
     imageref=cropimage(imageref,int(dimimages/2),int(dimimages/2),int(dimimages/2))
 
-    filecorrection = fits.getdata(sorted(glob.glob(directory+filenameroot+'iter'+str(nbiter-2)+'_coro_image*.fits'))[-1])[0]
+    filecorrection = fits.getdata(last(directory+filenameroot+'iter'+str(nbiter-2)+'_coro_image*.fits'))[0]
     imagecorrection = reduceimageSPHERE(filecorrection,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
     imagecorrection = cropimage(imagecorrection,int(dimimages/2),int(dimimages/2),int(dimimages/2))
     Contrast = np.mean(imagecorrection[np.where(cropimage(maskDH,int(dimimages/2),int(dimimages/2),int(dimimages/2)))])
@@ -337,14 +340,14 @@ def createdifference(directory, filenameroot, posprobes, nbiter, centerx, center
     
 
     for i in posprobes:
-        image_name = sorted(glob.glob(directory+filenameroot+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits'))[-1]
+        image_name = last(directory+filenameroot+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
         image = fits.getdata(image_name)[0]
         Ikplus = reduceimageSPHERE(image,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
         display(cropimage(Ikplus,int(dimimages/2),int(dimimages/2),int(dimimages/2))-imagecorrection, ax2.flat[j-1] , title='+ '+str(i), vmin=-1e-4, vmax=1e-4)
         j = j + 1
-        image_name = sorted(glob.glob(directory+filenameroot+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits'))[-1]
+        image_name = last(directory+filenameroot+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
         image = fits.getdata(image_name)[0]
         Ikmoins = reduceimageSPHERE(image,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
@@ -598,8 +601,8 @@ def findingcenterwithcosinus(dir):
         return (g).flatten()
     
     #LOOK THE FITS FILE AND CHANGE QUIKLY X0,Y0,X1,Y1
-    cosinuspluscoro = sorted(glob.glob(dir+'CosinusForCentering*.fits'))[-1]
-    coro = sorted(glob.glob(dir+'iter0_coro_image*.fits'))[-1]
+    cosinuspluscoro = last(dir+'CosinusForCentering*.fits')
+    coro = last(dir+'iter0_coro_image*.fits')
     
     #Fit gaussian functions
     data = fits.getdata(cosinuspluscoro)[0]-fits.getdata(coro)[0]
