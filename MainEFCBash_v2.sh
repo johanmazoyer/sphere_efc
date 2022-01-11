@@ -24,6 +24,8 @@ nbiter=3
 
 ONSKY=1 #Set 0 for internal pup ; 1 for an on sky correction
 
+Assuming_VLT_PUP_for_corr = 0 #Work only if ONSKY=0. Assume ONSKY=1 for EFC correction only
+
 #Dark hole size
 #DHsize = 0 for half dark hole 188mas to 625mas x -625mas to 625mas
 #DHsize = 1 for half dark hole 125mas to 625mas x -625mas to 625mas
@@ -115,7 +117,7 @@ if [ "$create_bkgrd" -eq "1" ]; then
 
     # acquire background
     echo "Acquire background"
-    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_bkgrd} OCS1.DET1.NDIT ${NDIT_bkgrd} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${NDIT_bkgrd}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_bkgrd} OCS1.DET1.NDIT ${NDIT_bkgrd} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${NDIT_bkgrd}s_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
     msgSend -n wsre sroControl START "-detId IRDIS"
     msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
@@ -209,6 +211,7 @@ if [ "$create_coro" -eq "1" ]; then
 	export DIT_PSF
 	export WHICH_ND
 	export ONSKY
+	export Assuming_VLT_PUP_for_corr
 	export size_probes
 	export centeringateachiter
 

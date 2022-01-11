@@ -31,6 +31,7 @@ expimIRD = float(os.environ['DIT'])#DIT for the coronagraphic images
 exppsfIRD = float(os.environ['DIT_PSF'])#DIT for the Off-axis PSF
 which_nd = os.environ['WHICH_ND']# which ND is used to record the Off-axis PSF
 onsky = int(os.environ['ONSKY'])#If 1: On sky measurements ; If 0: Calibration source measurements
+Assuming_VLT_PUP_for_corr = int(os.environ['Assuming_VLT_PUP_for_corr'])
 size_probes = int(os.environ['size_probes'])# Set the size of the probes for the estimation
 centeringateachiter = int(os.environ['centeringateachiter'])#If 1: Do the recentering at each iteration ; If 0: Do not do it
 
@@ -670,9 +671,15 @@ V2S = fits.getdata(MatrixDirectory+ 'CLMatrixOptimiser.HO_IM.fits')
 V2S = V2S / 0.4
 
 if onsky == 0:
-    lightsource = 'InternalPupil_'
+    lightsource_estim = 'InternalPupil_'
+    
+    if Assuming_VLT_PUP_for_corr == 0:
+        lightsource_corr = 'InternalPupil_'
+    else:
+        lightsource_corr = 'VLTPupil_'
 else:
-    lightsource = 'VLTPupil_'
+    lightsource_estim = 'VLTPupil_'
+    lightsource_corr = 'VLTPupil_'
 
 if nbprobe == '2':
     posprobes = [678, 679]
@@ -681,7 +688,7 @@ if nbprobe == '3':
 if nbprobe == '4':
     posprobes = [678,679,680,681]
 
-vectoressai = fits.getdata(MatrixDirectory+lightsource+'VecteurEstimation_'+nbprobe+'probes'+str(size_probes)+'nm.fits')
+vectoressai = fits.getdata(MatrixDirectory+lightsource_estim+'VecteurEstimation_'+nbprobe+'probes'+str(size_probes)+'nm.fits')
 WhichInPupil = fits.getdata(MatrixDirectory+'WhichInPupil0_5.fits')
 
 
@@ -707,7 +714,9 @@ ax2 = fig2.subplots(2,2,sharex=True,sharey=True)
 ax3 = fig3.subplots(2,2)
 ax4 = fig4.subplots(1,1)
 maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
-invertGDH = fits.getdata(MatrixDirectory+lightsource+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
+
+
+invertGDH = fits.getdata(MatrixDirectory+lightsource_corr+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
 
 FullIterEFC(ImageDirectory, posprobes, nbiter, exp_name, record=True)
 
