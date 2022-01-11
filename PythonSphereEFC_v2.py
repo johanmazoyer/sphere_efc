@@ -273,11 +273,9 @@ def createdifference(directory, filenameroot, posprobes, nbiter, centerx, center
         ND = 1.
         
     #Dark
-    backgroundcorono = fits.getdata(sorted(glob.glob(directory+'SPHERE_BKGRD_EFC_CORO*.fits'))[-1])[0]
-    if expim == exppsf:
-        backgroundPSF = backgroundcorono
-    else:
-        backgroundPSF = fits.getdata(sorted(glob.glob(directory+'SPHERE_BKGRD_EFC_PSF*.fits'))[-1])[0]
+    backgroundcorono = fits.getdata(sorted(glob.glob(directory+'SPHERE_BKGRD_EFC_'+str(expim)+'s_*.fits'))[-1])[0]
+    backgroundPSF = fits.getdata(sorted(glob.glob(directory+'SPHERE_BKGRD_EFC_'+str(exppsf)+'s_*.fits'))[-1])[0]
+    
     #PSF
     PSFbrut = fits.getdata(sorted(glob.glob(directory+'OffAxisPSF*.fits'))[-1])[0]
     PSF = reduceimageSPHERE(PSFbrut,backgroundPSF,1,int(centerx),int(centery),dimimages,1,1,1)
