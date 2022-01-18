@@ -20,18 +20,22 @@ Preliminary steps to perfornm before running this script
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically created
-nbiter=3
+nbiter=1
+# First try with nbiter= 1 to see if initialization runs
+# then nbiter=2 to see at least 1 full loop 
 
-ONSKY=1 #Set 0 for internal pup ; 1 for an on sky correction
 
-Assuming_VLT_PUP_for_corr = 0 #Work only if ONSKY=0. Assume ONSKY=1 for EFC correction only
+ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
 
-#Dark hole size
+Assuming_VLT_PUP_for_corr = 0 
+#Work only if ONSKY=0. If  Assuming_VLT_PUP_for_corr=1 assume ONSKY=1 for EFC correction only
+
+#Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
 #DHsize = 0 for half dark hole 188mas to 625mas x -625mas to 625mas
 #DHsize = 1 for half dark hole 125mas to 625mas x -625mas to 625mas
 #DHsize = 2 for full dark hole -625mas to 625mas x -625mas to 625mas
 #DHsize = 3 for half dark hole -625mas to 625mas x 125mas to 625mas
-DHsize=1
+DHsize=4
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
@@ -49,7 +53,7 @@ size_probes=400
 ## IRDIS parameters
 
 #coronagraphic image
-DIT=16
+DIT=1
 NDIT_image=1
 
 #Off-axis PSF
@@ -58,7 +62,7 @@ NDIT_PSF=1
 WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
 
 #Other images
-DIT_bkgrd=16
+DIT_bkgrd=1
 NDIT_bkgrd=2
 NDIT_cosinus=2
 
@@ -73,8 +77,8 @@ Y1UP=1511 #X position of the bottom PSF echo in python
 centeringateachiter=0
 
 #Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
-create_bkgrd=0
-create_PSF=0
+create_bkgrd=1
+create_PSF=1
 create_coro=1
 
 # Path common to wsre and wsrsgw
