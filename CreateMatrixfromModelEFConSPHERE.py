@@ -111,19 +111,19 @@ if createwhich==True:
     def_mat.SaveFits(WhichInPupil,['',0],MatrixDirectory,'WhichInPupil0_5',replace=True)
 
 #Choose the four corners of your dark hole (in pixels)
+namemask='4'
+
 if createmask==True:
     print('...Creating mask DH...')
     choosepix = [-55,55,10,55] #DH3
     choosepix = [-55,55,-55,-10] #DH1
     maskDH = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepix)
-    namemask='1'
     def_mat.SaveFits(maskDH,['',0],MatrixDirectory,'mask_DH'+namemask,replace=True)
     plt.imshow((maskDH)) #Afficher où le DH apparaît sur l'image au final
     plt.pause(0.1)
 ##
 if createjacobian==True:
     print('...Creating Jacobian...')
-    namemask='1'
     pushact=amplitudeEFCMatrix*fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
     maskDH=fits.getdata(MatrixDirectory+'mask_DH'+namemask+'.fits')
     WhichInPupil=fits.getdata(MatrixDirectory+'WhichInPupil0_5.fits')
@@ -142,7 +142,6 @@ if createjacobian==True:
 #### Uncomment below to create and save the interaction matrix
 if createEFCmatrix==True:
     print('...Creating EFC matrix...')
-    namemask='1'
     Gmatrix = fits.getdata(ModelDirectory+lightsource+'Gmatrix_DH'+namemask+'.fits')
     #Set how many modes you want to use to correct
     nbmodes = 600
