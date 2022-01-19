@@ -27,7 +27,7 @@ nbiter=1
 
 ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
 
-Assuming_VLT_PUP_for_corr = 0 
+Assuming_VLT_PUP_for_corr=0
 #Work only if ONSKY=0. If  Assuming_VLT_PUP_for_corr=1 assume ONSKY=1 for EFC correction only
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
@@ -35,7 +35,7 @@ Assuming_VLT_PUP_for_corr = 0
 #DHsize = 1 for half dark hole 125mas to 625mas x -625mas to 625mas
 #DHsize = 2 for full dark hole -625mas to 625mas x -625mas to 625mas
 #DHsize = 3 for half dark hole -625mas to 625mas x 125mas to 625mas
-DHsize=4
+DHsize=1
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
