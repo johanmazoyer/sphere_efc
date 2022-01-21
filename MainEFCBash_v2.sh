@@ -20,14 +20,14 @@ Preliminary steps to perfornm before running this script
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically created
-nbiter=1
+nbiter=6
 # First try with nbiter= 1 to see if initialization runs
 # then nbiter=2 to see at least 1 full loop 
 
 
 ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
 
-Assuming_VLT_PUP_for_corr=0
+Assuming_VLT_PUP_for_corr=0 
 #Work only if ONSKY=0. If  Assuming_VLT_PUP_for_corr=1 assume ONSKY=1 for EFC correction only
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
@@ -35,7 +35,7 @@ Assuming_VLT_PUP_for_corr=0
 #DHsize = 1 for half dark hole 125mas to 625mas x -625mas to 625mas
 #DHsize = 2 for full dark hole -625mas to 625mas x -625mas to 625mas
 #DHsize = 3 for half dark hole -625mas to 625mas x 125mas to 625mas
-DHsize=1
+DHsize=2
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
@@ -54,10 +54,10 @@ size_probes=400
 
 #coronagraphic image
 DIT=1
-NDIT_image=1
+NDIT_image=5
 
 #Off-axis PSF
-DIT_PSF=16
+DIT_PSF=1
 NDIT_PSF=1
 WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
 
@@ -77,14 +77,15 @@ Y1UP=1511 #X position of the bottom PSF echo in python
 centeringateachiter=0
 
 #Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
-create_bkgrd=1
-create_PSF=1
+create_bkgrd=0
+create_PSF=0
 create_coro=1
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
 #WORK_PATH0=/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/
-WORK_PATH0=C:/Users/apotier/Documents/Research/SPHERE/PackageEFCSPHERE/PackageEFCSPHERE/ #~/Documents/Research/SPHERE/PackageEFCSPHERE/PackageEFCSPHERE/
+WORK_PATH0=/vltuser/sphere/zwahhaj/efc/sphere_efc-main
+#C:/Users/apotier/Documents/Research/SPHERE/PackageEFCSPHERE/PackageEFCSPHERE/ #~/Documents/Research/SPHERE/PackageEFCSPHERE/PackageEFCSPHERE/
 
 
 ###################################################################
@@ -93,8 +94,8 @@ WORK_PATH0=C:/Users/apotier/Documents/Research/SPHERE/PackageEFCSPHERE/PackageEF
 ###################################################################
 ###################################################################
 
-MATRIX_PATH=$WORK_PATH0'MatricesAndModel/'
-WORK_PATH=$WORK_PATH0'SlopesAndImages/'
+MATRIX_PATH=$WORK_PATH0'/MatricesAndModel'
+WORK_PATH=$WORK_PATH0'/SlopesAndImages'
 
 
 if [ "$ONSKY" -eq "1" ]; then
@@ -121,7 +122,7 @@ if [ "$create_bkgrd" -eq "1" ]; then
 
     # acquire background
     echo "Acquire background"
-    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_bkgrd} OCS1.DET1.NDIT ${NDIT_bkgrd} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${NDIT_bkgrd}s_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_bkgrd} OCS1.DET1.NDIT ${NDIT_bkgrd} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
     msgSend -n wsre sroControl START "-detId IRDIS"
     msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
@@ -221,7 +222,7 @@ if [ "$create_coro" -eq "1" ]; then
 
 	#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 	echo "Launch python EFC code"
-	python PythonSphereEFC_v2.py #Should be python3 on SPHERE
+	python3 PythonSphereEFC_v2.py #Should be python3 on SPHERE
 
 	if (($nbiter == 2))
 	then
@@ -333,6 +334,7 @@ scp sphere@wsre:${DATA_PATH}/${EXP_NAME}iter[0-9]_Probe_000[0-9]_*.fits ${WORK_P
 scp sphere@wsre:${DATA_PATH}/${EXP_NAME}CosinusForCentering_*.fits ${WORK_PATH}/
 scp sphere@wsre:${DATA_PATH}/SPHERE_BKGRD_EFC_*.fits ${WORK_PATH}/
 scp sphere@wsre:${DATA_PATH}/OffAxisPSF_*.fits ${WORK_PATH}/
+#./send.sh
 
 # end
 echo "Done!"

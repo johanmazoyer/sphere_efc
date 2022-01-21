@@ -46,9 +46,9 @@ dimimages=400
 
 
 
-onsky=1 #1 if on sky correction
+onsky=0 #1 if on sky correction
 createPW=False
-createmask=False
+createmask=True
 createwhich=False
 createjacobian=True
 createEFCmatrix=True
@@ -111,13 +111,14 @@ if createwhich==True:
     def_mat.SaveFits(WhichInPupil,['',0],MatrixDirectory,'WhichInPupil0_5',replace=True)
 
 #Choose the four corners of your dark hole (in pixels)
-namemask='4'
+namemask='2'
 
 if createmask==True:
     print('...Creating mask DH...')
     choosepix = [-55,55,10,55] #DH3
     choosepix = [-55,55,-55,-10] #DH1
-    maskDH = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepix)
+    #maskDH = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepix)
+    maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,55], circ_side='Top', circ_offset=8)
     def_mat.SaveFits(maskDH,['',0],MatrixDirectory,'mask_DH'+namemask,replace=True)
     plt.imshow((maskDH)) #Afficher où le DH apparaît sur l'image au final
     plt.pause(0.1)
@@ -145,6 +146,30 @@ if createEFCmatrix==True:
     Gmatrix = fits.getdata(ModelDirectory+lightsource+'Gmatrix_DH'+namemask+'.fits')
     #Set how many modes you want to use to correct
     nbmodes = 600
-    invertGDH = def_mat.invertDSCC(Gmatrix,nbmodes,goal='c',visu=True)[1]
+    invertGDH = def_mat.invertDSCC(Gmatrix,nbmodes,goal='c',regul='tikhonov',visu=True)[1]
     corr_mode='1'
     def_mat.SaveFits(invertGDH,['',0],MatrixDirectory,lightsource+'Interactionmatrix_DH'+namemask+'_SVD'+corr_mode,replace=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

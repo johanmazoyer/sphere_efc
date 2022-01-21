@@ -15,9 +15,12 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # Retrieve the shell variables
-RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
-ImageDirectory = os.environ['WORK_PATH']#RootDirectory+'SlopesAndImages/'
-MatrixDirectory = os.environ['MATRIX_PATH']#RootDirectory+'MatricesAndModel/'
+#RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
+#ImageDirectory = os.environ['WORK_PATH']#RootDirectory+'SlopesAndImages/'
+#MatrixDirectory = os.environ['MATRIX_PATH']#RootDirectory+'MatricesAndModel/'
+RootDirectory = '/vltuser/sphere/zwahhaj/efc/sphere_efc-main/'
+ImageDirectory = RootDirectory+'SlopesAndImages/'
+MatrixDirectory = RootDirectory+'MatricesAndModel/'
 nbiter = int(os.environ['nbiter']) #nb of the iteration (first iteration is 1)
 exp_name = os.environ['EXP_NAME'] #Rootname of the Experiment
 dhsize = os.environ['DHsize']#Dark hole shape and size choice
@@ -277,8 +280,9 @@ def createdifference(directory, filenameroot, posprobes, nbiter, centerx, center
         ND = 1.
         
     #Dark
-    backgroundcorono = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(expim)+'s_*.fits'))[0]
-    backgroundPSF = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(exppsf)+'s_*.fits'))[0]
+    print(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits')
+    backgroundcorono = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0]
+    backgroundPSF = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(exppsf))+'s_*.fits'))[0]
     
     #PSF
     PSFbrut = fits.getdata(last(directory+'OffAxisPSF*.fits'))[0]
@@ -375,7 +379,8 @@ def display(image, axe, title, vmin, vmax , norm = None):
     norm: Can be LogNorm
 
     -------------------------------------------------- """
-    axe.imshow(image, vmin = vmin, vmax = vmax, norm = norm)
+    #axe.imshow(image, vmin = vmin, vmax = vmax, norm = LogNorm())
+    axe.imshow(image, norm = norm)
     axe.set_xticks([])
     axe.set_yticks([])
     axe.set_title(title,size=7)
@@ -720,14 +725,14 @@ invertGDH = fits.getdata(MatrixDirectory+lightsource_corr+'Interactionmatrix_DH'
 
 FullIterEFC(ImageDirectory, posprobes, nbiter, exp_name, record=True)
 
-pastContrast = []
-with open(ImageDirectory + exp_name + 'Contrast_vs_iter') as f:
-    pastContrast = np.float64(f.readlines())
-ax4.plot(pastContrast, marker='o', markersize= 8, mfc='none')
-ax4.set_yscale('log')
-ax4.set_ylim(1e-7,1e-4)
-ax4.tick_params(axis='both', which='both', labelsize=8)
-ax4.set_title('Mean contrast in DH vs iteration',size=10)
+#pastContrast = []
+#with open(ImageDirectory + exp_name + 'Contrast_vs_iter') as f:
+#    pastContrast = np.float64(f.readlines())
+#ax4.plot(pastContrast, marker='o', markersize= 8, mfc='none')
+#ax4.set_yscale('log')
+#ax4.set_ylim(1e-7,1e-4)
+#ax4.tick_params(axis='both', which='both', labelsize=8)
+#ax4.set_title('Mean contrast in DH vs iteration',size=10)
 
 print('Close each image to proceed', flush=True)
 #plt.tight_layout()
