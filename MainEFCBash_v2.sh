@@ -20,7 +20,7 @@ Preliminary steps to perfornm before running this script
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically created
-nbiter=6
+nbiter=2
 # First try with nbiter= 1 to see if initialization runs
 # then nbiter=2 to see at least 1 full loop 
 
@@ -35,7 +35,7 @@ Assuming_VLT_PUP_for_corr=0
 #DHsize = 1 for half dark hole 125mas to 625mas x -625mas to 625mas
 #DHsize = 2 for full dark hole -625mas to 625mas x -625mas to 625mas
 #DHsize = 3 for half dark hole -625mas to 625mas x 125mas to 625mas
-DHsize=2
+DHsize=1
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
@@ -85,7 +85,7 @@ create_coro=1
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
 #WORK_PATH0=/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/
 WORK_PATH0=/vltuser/sphere/zwahhaj/efc/sphere_efc-main
-#C:/Users/apotier/Documents/Research/SPHERE/PackageEFCSPHERE/PackageEFCSPHERE/ #~/Documents/Research/SPHERE/PackageEFCSPHERE/PackageEFCSPHERE/
+#WORK_PATH0=~/Documents/Research/SPHERE/Git_Software/sphere_efc
 
 
 ###################################################################

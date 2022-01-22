@@ -132,4 +132,5 @@ dmypy.json
 
 *.fits
 *.zip
+*Contrast_vs_iter
 

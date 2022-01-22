@@ -15,9 +15,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # Retrieve the shell variables
-#RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
-#ImageDirectory = os.environ['WORK_PATH']#RootDirectory+'SlopesAndImages/'
-#MatrixDirectory = os.environ['MATRIX_PATH']#RootDirectory+'MatricesAndModel/'
+# RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
+# ImageDirectory = os.environ['WORK_PATH']#RootDirectory+'SlopesAndImages/'
+# MatrixDirectory = os.environ['MATRIX_PATH']#RootDirectory+'MatricesAndModel/'
 RootDirectory = '/vltuser/sphere/zwahhaj/efc/sphere_efc-main/'
 ImageDirectory = RootDirectory+'SlopesAndImages/'
 MatrixDirectory = RootDirectory+'MatricesAndModel/'
@@ -30,8 +30,8 @@ x0_up = int(os.environ['X0UP'])#x position in python of the upper PSF echo
 y0_up = int(os.environ['Y0UP'])#y position in python of the upper PSF echo
 x1_up = int(os.environ['X1UP'])#x position in python of the bottom PSF echo
 y1_up = int(os.environ['Y1UP'])#y position in python of the bottom PSF echo
-expimIRD = float(os.environ['DIT'])#DIT for the coronagraphic images
-exppsfIRD = float(os.environ['DIT_PSF'])#DIT for the Off-axis PSF
+#expimIRD = float(os.environ['DIT'])#DIT for the coronagraphic images
+#exppsfIRD = float(os.environ['DIT_PSF'])#DIT for the Off-axis PSF
 which_nd = os.environ['WHICH_ND']# which ND is used to record the Off-axis PSF
 onsky = int(os.environ['ONSKY'])#If 1: On sky measurements ; If 0: Calibration source measurements
 Assuming_VLT_PUP_for_corr = int(os.environ['Assuming_VLT_PUP_for_corr'])
@@ -224,8 +224,12 @@ def cropimage(img, ctr_x, ctr_y, newsizeimg):
     return cropped
 
 
+def get_exptime(file):
+    exptime = int(round(fits.getval(file,'EXPTIME')))
+    return exptime
 
-def reduceimageSPHERE(image, back, maxPSF, ctr_x, ctr_y, newsizeimg, expim, exppsf, ND):
+
+def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND):
     """ --------------------------------------------------
     Processing of SPHERE images before being used and division by the maximum of the PSF
     
@@ -245,10 +249,13 @@ def reduceimageSPHERE(image, back, maxPSF, ctr_x, ctr_y, newsizeimg, expim, expp
     ------
     image: processed coronagraphic image, normalized by the max of the PSF
     -------------------------------------------------- """
-    image[:,:int(image.shape[1]/2)] = 0 #Annule la partie gauche de l'image
-    image = image - back #Soustrait le dark
-    image = (image/expim)/(maxPSF*ND/exppsf)  #Divise par le max de la PSF
-    image = cropimage(image,ctr_x,ctr_y,newsizeimg) #Récupère la partie voulue de l'image
+    expim = get_exptime(file) #Get image exposure time
+    back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] #Load dark that correspond to image exposure time
+    image = fits.getdata(file)[0] #Load image
+    image[:,:int(image.shape[1]/2)] = 0 #Cancel left part of image
+    image = image - back #Subtract dark
+    image = (image/expim)/(maxPSF*ND/exppsf)  #Divide by PSF max
+    image = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
     return image
 
 
@@ -270,23 +277,18 @@ def createdifference(directory, filenameroot, posprobes, nbiter, centerx, center
     Difference: 3D array, cube of images
     -------------------------------------------------- """
     
-    expim = expimIRD
-    exppsf = exppsfIRD
     if which_nd == 'ND_3.5':
         ND = ND35
     elif which_nd == 'ND_2.0':
         ND = ND2
     else:
         ND = 1.
-        
-    #Dark
-    print(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits')
-    backgroundcorono = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0]
-    backgroundPSF = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(exppsf))+'s_*.fits'))[0]
+
     
     #PSF
-    PSFbrut = fits.getdata(last(directory+'OffAxisPSF*.fits'))[0]
-    PSF = reduceimageSPHERE(PSFbrut,backgroundPSF,1,int(centerx),int(centery),dimimages,1,1,1)
+    file_PSF = last(directory+'OffAxisPSF*.fits')
+    exppsf = get_exptime(file_PSF)
+    PSF = reduceimageSPHERE(file_PSF, directory, 1,int(centerx),int(centery),dimimages,1,1)
     smoothPSF = snd.median_filter(PSF,size=3)
     maxPSF = PSF[np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] ]
 
@@ -295,16 +297,16 @@ def createdifference(directory, filenameroot, posprobes, nbiter, centerx, center
     #Correction
     
     #Traitement de l'image de référence (première image corono et recentrage subpixelique)
-    fileref = fits.getdata(last(directory+filenameroot+'iter0_coro_image*.fits'))[0]
-    imageref = reduceimageSPHERE(fileref,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
+    fileref = last(directory+filenameroot+'iter0_coro_image*.fits')
+    imageref = reduceimageSPHERE(fileref,directory,maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
     imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
     imageref=cropimage(imageref,int(dimimages/2),int(dimimages/2),int(dimimages/2))
 
-    filecorrection = fits.getdata(last(directory+filenameroot+'iter'+str(nbiter-2)+'_coro_image*.fits'))[0]
-    imagecorrection = reduceimageSPHERE(filecorrection,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
+    filecorrection = last(directory+filenameroot+'iter'+str(nbiter-2)+'_coro_image*.fits')
+    imagecorrection = reduceimageSPHERE(filecorrection, directory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
     imagecorrection = cropimage(imagecorrection,int(dimimages/2),int(dimimages/2),int(dimimages/2))
     Contrast = np.mean(imagecorrection[np.where(cropimage(maskDH,int(dimimages/2),int(dimimages/2),int(dimimages/2)))])
-    print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast)
+    print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast, flush=True)
     
     with open(directory + filenameroot + 'Contrast_vs_iter', 'a') as f:
         f.write(str(Contrast) + '\n')
@@ -347,15 +349,13 @@ def createdifference(directory, filenameroot, posprobes, nbiter, centerx, center
     for i in posprobes:
         image_name = last(directory+filenameroot+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-        image = fits.getdata(image_name)[0]
-        Ikplus = reduceimageSPHERE(image,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
+        Ikplus = reduceimageSPHERE(image_name, directory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
         display(cropimage(Ikplus,int(dimimages/2),int(dimimages/2),int(dimimages/2))-imagecorrection, ax2.flat[j-1] , title='+ '+str(i), vmin=-1e-4, vmax=1e-4)
         j = j + 1
         image_name = last(directory+filenameroot+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-        image = fits.getdata(image_name)[0]
-        Ikmoins = reduceimageSPHERE(image,backgroundcorono,maxPSF,int(centerx),int(centery),dimimages,expim,exppsf,ND)
+        Ikmoins = reduceimageSPHERE(image_name, directory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
         Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
         display(cropimage(Ikmoins,int(dimimages/2),int(dimimages/2),int(dimimages/2))-imagecorrection, ax2.flat[j-1] , title='- '+str(i), vmin=-1e-4, vmax=1e-4)
         j = j + 1
@@ -707,7 +707,7 @@ WhichInPupil = fits.getdata(MatrixDirectory+'WhichInPupil0_5.fits')
 # corr_mode=1: less stable correction but better contrast
 # corr_mode=2: more aggressive correction (may be unstable)
 plt.close()
-#plt.ion()
+plt.ion()
 
 fig = plt.figure(figsize=(12,7.5))
 ( fig1 , fig2 ) , ( fig3 , fig4 ) = fig.subfigures(2, 2)
@@ -725,17 +725,21 @@ invertGDH = fits.getdata(MatrixDirectory+lightsource_corr+'Interactionmatrix_DH'
 
 FullIterEFC(ImageDirectory, posprobes, nbiter, exp_name, record=True)
 
-#pastContrast = []
-#with open(ImageDirectory + exp_name + 'Contrast_vs_iter') as f:
-#    pastContrast = np.float64(f.readlines())
-#ax4.plot(pastContrast, marker='o', markersize= 8, mfc='none')
-#ax4.set_yscale('log')
-#ax4.set_ylim(1e-7,1e-4)
-#ax4.tick_params(axis='both', which='both', labelsize=8)
-#ax4.set_title('Mean contrast in DH vs iteration',size=10)
 
-print('Close each image to proceed', flush=True)
-#plt.tight_layout()
-#plt.ioff()
-plt.show()
+if nbiter>1:
+    pastContrast = []
+    with open(ImageDirectory + exp_name + 'Contrast_vs_iter') as f:
+        pastContrast = np.float64(f.readlines())
+    ax4.plot(pastContrast, marker='o', markersize= 8, mfc='none')
+    ax4.set_yscale('log')
+    ax4.set_ylim(1e-7,1e-4)
+    ax4.tick_params(axis='both', which='both', labelsize=8)
+    ax4.set_title('Mean contrast in DH vs iteration',size=10)
+    
+    print('Close each image to proceed', flush=True)
+    #plt.tight_layout()
+    plt.ioff()
+    plt.show()
+else:
+    plt.close()
 
