@@ -338,11 +338,11 @@ def createdifference(directory, filenameroot, posprobes, nbiter, centerx, center
     k = 0
     j = 1
     
-    display(imagecorrection, ax1, '', vmin=1e-7, vmax=1e-3, norm=LogNorm())
+    display(imagecorrection, ax1, '', vmin=1e-7, vmax=1e-3, norm='log')
     ax1.text(1, 10, 'Contrast = '+str(Contrast), size=8)
     PSF_to_display = cropimage(PSF,np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] , 70 )
     ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
-    display(PSF_to_display, ax1bis, 'PSF' , vmin = np.amin(PSF_to_display), vmax = np.amax(PSF_to_display))#, norm = LogNorm())
+    display(PSF_to_display, ax1bis, 'PSF' , vmin = np.amin(PSF_to_display), vmax = np.amax(PSF_to_display))
 
     
 
@@ -379,8 +379,11 @@ def display(image, axe, title, vmin, vmax , norm = None):
     norm: Can be LogNorm
 
     -------------------------------------------------- """
-    #axe.imshow(image, vmin = vmin, vmax = vmax, norm = LogNorm())
-    axe.imshow(image, norm = norm)
+    if norm == 'log':
+        axe.imshow(image, norm=LogNorm(vmin, vmax))
+    else:
+        axe.imshow(image, vmin = vmin, vmax = vmax)
+    #axe.imshow(image, norm = norm)
     axe.set_xticks([])
     axe.set_yticks([])
     axe.set_title(title,size=7)
