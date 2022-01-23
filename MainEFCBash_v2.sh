@@ -25,8 +25,37 @@ nbiter=2
 # then nbiter=2 to see at least 1 full loop 
 
 
-ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
+#Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
+create_bkgrd=0
+create_PSF=0
+create_coro=1
 
+
+## IRDIS parameters
+
+#coronagraphic image
+DIT_image=1
+NDIT_image=1
+
+#Image diversity
+DIT_probe=1
+NDIT_probe=1
+
+#Off-axis PSF
+DIT_PSF=1
+NDIT_PSF=1
+WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
+
+#Background
+DIT_bkgrd=1
+NDIT_bkgrd=2
+
+#Other images
+DIT_cosinus=1
+NDIT_cosinus=2
+
+
+ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
 Assuming_VLT_PUP_for_corr=0 
 #Work only if ONSKY=0. If  Assuming_VLT_PUP_for_corr=1 assume ONSKY=1 for EFC correction only
 
@@ -49,23 +78,6 @@ nbprobe=2
 #SizeProbes : can be 296, 400 or 500 (in nm)
 size_probes=400
 
-
-## IRDIS parameters
-
-#coronagraphic image
-DIT=1
-NDIT_image=5
-
-#Off-axis PSF
-DIT_PSF=1
-NDIT_PSF=1
-WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
-
-#Other images
-DIT_bkgrd=1
-NDIT_bkgrd=2
-NDIT_cosinus=2
-
 # First guess for the PSF echo position used for image centering (WARNING X and Y are inverted here)
 # (adding a cosine to DM phase)
 X0UP=548 #544 #Y position of the upper PSF echo in python #553
@@ -76,16 +88,13 @@ Y1UP=1511 #X position of the bottom PSF echo in python
 #Do you want to center your image at each iteration. Set 1 for yes, 0 for no.
 centeringateachiter=0
 
-#Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
-create_bkgrd=0
-create_PSF=0
-create_coro=1
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
 #WORK_PATH0=/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/
 WORK_PATH0=/vltuser/sphere/zwahhaj/efc/sphere_efc-main
 #WORK_PATH0=~/Documents/Research/SPHERE/Git_Software/sphere_efc
+#WORK_PATH0=~/Documents/Recherche/DonneesTHD/EFConSPHERE/sphere_efc
 
 
 ###################################################################
@@ -212,8 +221,6 @@ if [ "$create_coro" -eq "1" ]; then
 	export Y0UP
 	export X1UP
 	export Y1UP
-	export DIT
-	export DIT_PSF
 	export WHICH_ND
 	export ONSKY
 	export Assuming_VLT_PUP_for_corr
@@ -262,7 +269,7 @@ if [ "$create_coro" -eq "1" ]; then
 
 			echo "Acquire Cosinus"
 			echo ' * acquiring image'
-			msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT} OCS1.DET1.NDIT ${NDIT_cosinus} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosinusForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+			msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_cosinus} OCS1.DET1.NDIT ${NDIT_cosinus} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosinusForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
 			msgSend -n wsre sroControl START "-detId IRDIS"
 			msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
@@ -292,7 +299,7 @@ if [ "$create_coro" -eq "1" ]; then
 	echo ' * acquiring image'
 	let imgnb=$nbiter-1
 	#echo ${imgnb}
-	msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${imgnb}_coro_image_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+	msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${imgnb}_coro_image_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
 	msgSend -n wsre sroControl START "-detId IRDIS"
 	msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
@@ -316,7 +323,7 @@ if [ "$create_coro" -eq "1" ]; then
 
 		echo "Acquire Probe"
 		echo ' * acquiring image'
-		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${k}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${k}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
 		msgSend -n wsre sroControl START "-detId IRDIS"
 		msgSend -n wsre sroControl WAIT "-detId IRDIS"
 		let k=$k+1
