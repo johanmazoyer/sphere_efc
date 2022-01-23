@@ -339,7 +339,7 @@ def createdifference(directory, filenameroot, posprobes, nbiter, centerx, center
     j = 1
     
     display(imagecorrection, ax1, '', vmin=1e-7, vmax=1e-3, norm='log')
-    ax1.text(1, 10, 'Contrast = '+str(Contrast), size=8)
+    ax1.text(1, 12, 'Contrast = '+str(format(Contrast,'.2e')), size=15,color ='red', weight='bold')
     PSF_to_display = cropimage(PSF,np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] , 70 )
     ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
     display(PSF_to_display, ax1bis, 'PSF' , vmin = np.amin(PSF_to_display), vmax = np.amax(PSF_to_display))
@@ -387,6 +387,7 @@ def display(image, axe, title, vmin, vmax , norm = None):
     axe.set_xticks([])
     axe.set_yticks([])
     axe.set_title(title,size=7)
+    plt.draw()
     plt.pause(0.1)
     return 0
 
@@ -648,11 +649,8 @@ def findingcenterwithcosinus(dir):
     print('!!!! ACTION: CHECK CENTERX AND CENTERY CORRESPOND TO THE CENTER OF THE CORO IMAGE AND CLOSE THE WINDOW', flush=True)
     print('If false, change the guess in the MainEFCBash.sh file and run the iter again', flush=True)
 
-    fig1, ax1 = plt.subplots(1,1)
     #I do not use crop of data here so the center index can be checked on the full image.
-    ax1.imshow(data, vmin=-5e2, vmax=5e2)
-    plt.pause(0.01)
-    #plt.show()
+    display(data, ax4, 'Cosine for centering', vmin=-5e2, vmax=5e2)
 
     return centerx, centery
 
@@ -710,7 +708,6 @@ WhichInPupil = fits.getdata(MatrixDirectory+'WhichInPupil0_5.fits')
 # corr_mode=1: less stable correction but better contrast
 # corr_mode=2: more aggressive correction (may be unstable)
 plt.close()
-plt.ion()
 
 fig = plt.figure(figsize=(12,7.5))
 ( fig1 , fig2 ) , ( fig3 , fig4 ) = fig.subfigures(2, 2)
@@ -730,18 +727,18 @@ FullIterEFC(ImageDirectory, posprobes, nbiter, exp_name, record=True)
 
 
 if nbiter>1:
-    pastContrast = []
-    with open(ImageDirectory + exp_name + 'Contrast_vs_iter') as f:
-        pastContrast = np.float64(f.readlines())
-    ax4.plot(pastContrast, marker='o', markersize= 8, mfc='none')
-    ax4.set_yscale('log')
-    ax4.set_ylim(1e-7,1e-4)
-    ax4.tick_params(axis='both', which='both', labelsize=8)
-    ax4.set_title('Mean contrast in DH vs iteration',size=10)
+    if nbiter>2:
+        pastContrast = []
+        with open(ImageDirectory + exp_name + 'Contrast_vs_iter') as f:
+            pastContrast = np.float64(f.readlines())
+        ax4.plot(pastContrast, marker='o', markersize= 8, mfc='none')
+        ax4.set_yscale('log')
+        ax4.set_ylim(1e-7,1e-4)
+        ax4.tick_params(axis='both', which='both', labelsize=8)
+        ax4.set_title('Mean contrast in DH vs iteration',size=10)
     
     print('Close each image to proceed', flush=True)
-    #plt.tight_layout()
-    plt.ioff()
+    plt.draw()
     plt.show()
 else:
     plt.close()
