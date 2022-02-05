@@ -109,8 +109,10 @@ WORK_PATH=$WORK_PATH0'/SlopesAndImages'
 
 if [ "$ONSKY" -eq "1" ]; then
 	echo "The NCPA compensation is done from on-sky measurements"
+	lightsource_estim = 'VLTPupil_'
 else
 	echo "The NCPA compensation is done from the calibration source measurements"
+	lightsource_estim = 'InternalPupil_'
 fi
 
 
@@ -170,7 +172,7 @@ if [ "$create_PSF" -eq "1" ]; then
 
     echo "Acquire OFF-Axis PSF"
     echo ' * acquiring image'
-    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_PSF} OCS1.DET1.NDIT ${NDIT_PSF} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME OffAxisPSF_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_PSF} OCS1.DET1.NDIT ${NDIT_PSF} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${lightsource_estim}OffAxisPSF_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
     msgSend -n wsre sroControl START "-detId IRDIS"
     msgSend -n wsre sroControl WAIT "-detId IRDIS"
 

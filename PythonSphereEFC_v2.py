@@ -284,7 +284,7 @@ def createdifference(directory, filenameroot, posprobes, nbiter, centerx, center
 
     
     #PSF
-    file_PSF = last(directory+'OffAxisPSF*.fits')
+    file_PSF = last(directory+lightsource_estim+'OffAxisPSF*.fits')
     exppsf = get_exptime(file_PSF)
     PSF = reduceimageSPHERE(file_PSF, directory, 1,int(centerx),int(centery),dimimages,1,1)
     smoothPSF = snd.median_filter(PSF,size=3)
