@@ -73,7 +73,8 @@ DHsize=1
 corr_mode=1
 
 #Number of probing actuator
-nbprobe=2
+#nbprobe=2
+zone_to_correct='horizontal'#vertical
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
 size_probes=400
@@ -218,7 +219,7 @@ if [ "$create_coro" -eq "1" ]; then
 	export EXP_NAME
 	export DHsize
 	export corr_mode
-	export nbprobe
+	export zone_to_correct
 	export X0UP
 	export Y0UP
 	export X1UP

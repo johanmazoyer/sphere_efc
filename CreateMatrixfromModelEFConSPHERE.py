@@ -47,11 +47,11 @@ dimimages=400
 
 
 onsky=0 #1 if on sky correction
-createPW=False
-createmask=True
+createPW=True
+createmask=False
 createwhich=False
-createjacobian=True
-createEFCmatrix=True
+createjacobian=False
+createEFCmatrix=False
 
 
 if onsky==0:
@@ -72,14 +72,15 @@ amplitudeEFCMatrix=8
 
 
 #### Pour estimation
-
+zone_to_correct = 'horizontal' #vertical
 if createPW==True:
     print('...Creating VectorProbes...')
     pushact=amplitudePW*raw_pushact
     # Choose probes positions
-    posprobes = [678,679,680,681]#0.04cutestimation
-    posprobes=[678,679,680] #0.1cutestimation
-    posprobes=[678,679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
+    if zone_to_correct == 'vertical':
+        posprobes=[678,679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
+    elif zone_to_correct == 'horizontal':
+        posprobes=[893,934]
     #Choose the truncation above where the pixels won't be taken into account for estimation
     cutestimation = 0#0.3*squaremaxPSF*8/amplitudePW
 
@@ -98,9 +99,9 @@ if createPW==True:
     plt.imshow(SVD[1]*maskDH)
     plt.show()
     ##
-    def_mat.SaveFits(SVD[1],['',0],MatrixDirectory,lightsource+'CorrectedZone',replace=True)
+    def_mat.SaveFits(SVD[1],['',0],MatrixDirectory,lightsource+zone_to_correct+'CorrectedZone',replace=True)
     ##
-    def_mat.SaveFits(vectoressai,['',0],MatrixDirectory,lightsource+'VecteurEstimation_'+str(len(posprobes))+'probes'+str(int(amplitudePW*37))+'nm',replace=True)
+    def_mat.SaveFits(vectoressai,['',0],MatrixDirectory,lightsource+'VecteurEstimation_'+zone_to_correct+str(int(amplitudePW*37))+'nm',replace=True)
 
 #### Pour correction 
 

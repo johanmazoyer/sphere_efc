@@ -25,7 +25,7 @@ nbiter = int(os.environ['nbiter']) #nb of the iteration (first iteration is 1)
 exp_name = os.environ['EXP_NAME'] #Rootname of the Experiment
 dhsize = os.environ['DHsize']#Dark hole shape and size choice
 corr_mode = os.environ['corr_mode']#Correction mode (more or less agressive)
-nbprobe = os.environ['nbprobe']#number of probing actuators
+zone_to_correct = os.environ['zone_to_correct']
 x0_up = int(os.environ['X0UP'])#x position in python of the upper PSF echo
 y0_up = int(os.environ['Y0UP'])#y position in python of the upper PSF echo
 x1_up = int(os.environ['X1UP'])#x position in python of the bottom PSF echo
@@ -685,14 +685,12 @@ else:
     lightsource_estim = 'VLTPupil_'
     lightsource_corr = 'VLTPupil_'
 
-if nbprobe == '2':
-    posprobes = [678, 679]
-if nbprobe == '3':
-    posprobes = [678,679,680]
-if nbprobe == '4':
-    posprobes = [678,679,680,681]
+if zone_to_correct == 'vertical':
+    posprobes=[678,679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
+elif zone_to_correct == 'horizontal':
+    posprobes=[893,934]
 
-vectoressai = fits.getdata(MatrixDirectory+lightsource_estim+'VecteurEstimation_'+nbprobe+'probes'+str(size_probes)+'nm.fits')
+vectoressai = fits.getdata(MatrixDirectory+lightsource_estim+'VecteurEstimation_'+zone_to_correct+str(size_probes)+'nm.fits')
 WhichInPupil = fits.getdata(MatrixDirectory+'WhichInPupil0_5.fits')
 
 
