@@ -7,12 +7,12 @@ import SPHERE_EFC_Func as func
 warnings.filterwarnings("ignore")
 
 # Retrieve the shell variables
-RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
-ImageDirectory = os.environ['WORK_PATH']#RootDirectory+'SlopesAndImages/'
-MatrixDirectory = os.environ['MATRIX_PATH']#RootDirectory+'MatricesAndModel/'
-# RootDirectory = '/vltuser/sphere/zwahhaj/efc/sphere_efc-main/'
-# ImageDirectory = RootDirectory+'SlopesAndImages/'
-# MatrixDirectory = RootDirectory+'MatricesAndModel/'
+# RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
+# ImageDirectory = os.environ['WORK_PATH']#RootDirectory+'SlopesAndImages/'
+# MatrixDirectory = os.environ['MATRIX_PATH']#RootDirectory+'MatricesAndModel/'
+RootDirectory = '/vltuser/sphere/zwahhaj/efc/sphere_efc-main/'
+ImageDirectory = RootDirectory+'SlopesAndImages/'
+MatrixDirectory = RootDirectory+'MatricesAndModel/'
 nbiter = int(os.environ['nbiter']) #nb of the iteration (first iteration is 1)
 exp_name = os.environ['EXP_NAME'] #Rootname of the Experiment
 dhsize = os.environ['DHsize']#Dark hole shape and size choice
