@@ -326,7 +326,7 @@ if [ "$create_coro" -eq "1" ]; then
 
 		echo "Acquire Probe"
 		echo ' * acquiring image'
-		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${k}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_probe} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${k}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
 		msgSend -n wsre sroControl START "-detId IRDIS"
 		msgSend -n wsre sroControl WAIT "-detId IRDIS"
 		let k=$k+1
@@ -343,7 +343,7 @@ scp sphere@wsre:${DATA_PATH}/${EXP_NAME}iter[0-9]_coro_image_*.fits ${WORK_PATH}
 scp sphere@wsre:${DATA_PATH}/${EXP_NAME}iter[0-9]_Probe_000[0-9]_*.fits ${WORK_PATH}/
 scp sphere@wsre:${DATA_PATH}/${EXP_NAME}CosinusForCentering_*.fits ${WORK_PATH}/
 scp sphere@wsre:${DATA_PATH}/SPHERE_BKGRD_EFC_*.fits ${WORK_PATH}/
-scp sphere@wsre:${DATA_PATH}/OffAxisPSF_*.fits ${WORK_PATH}/
+scp sphere@wsre:${DATA_PATH}/${lightsource_estim}OffAxisPSF_*.fits ${WORK_PATH}/
 #./send.sh
 
 # end
