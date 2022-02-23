@@ -564,6 +564,8 @@ def FullIterEFC(param):
         #estimation_to_display = cropimage(estimation*maskDH, int(dimimages/2), int(dimimages/2), int(dimimages/2))
         display(coherent_signal, ax3.flat[0] , title='Coherent iter' + str(nbiter-2), vmin = 1e-7, vmax=1e-3, norm='log' )
         display(incoherent_signal, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = 1e-7, vmax= 1e-3, norm='log')
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits',coherent_signal)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits',incoherent_signal)
         print('Done with recording new slopes!', flush=True)
         
         slopes_to_display = pentespourcorrection + fits.getdata(dir2+refslope+'.fits')[0]
