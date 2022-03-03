@@ -43,8 +43,8 @@ createjacobian=True
 createEFCmatrix=True
 
 #RGa
-#coro = 'APLC'
-coro = 'FQPM'
+coro = 'APLC'
+#coro = 'FQPM'
 
 if coro == 'APLC':
     mask384=fits.getdata(ModelDirectory+'apod-4.0lovD_384-192.fits')
