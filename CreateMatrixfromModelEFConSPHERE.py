@@ -35,6 +35,7 @@ ModelDirectory=os.getcwd()+'/Model/'
 dimimages=400
 
 wave=1.667e-6
+
 onsky=1 #1 if on sky correction
 createPW=True
 createmask=True
@@ -67,7 +68,6 @@ elif coro == 'FQPM':
         mask384=def_mat.pupiltodetector(mask384,wave,Lyot384,'',dimimages,coro,PSFcentering,pupparf=True)
     
 raw_pushact = fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
-
 
 if onsky==0:
     input_wavefront = mask384
