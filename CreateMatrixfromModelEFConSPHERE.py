@@ -46,12 +46,12 @@ dimimages=400
 
 
 
-onsky=0 #1 if on sky correction
+onsky=1 #1 if on sky correction
 createPW=True
-createmask=False
-createwhich=False
-createjacobian=False
-createEFCmatrix=False
+createmask=True
+createwhich=True
+createjacobian=True
+createEFCmatrix=True
 
 
 if onsky==0:
