@@ -32,19 +32,9 @@ MatrixDirectory=os.getcwd()+'/MatricesAndModel/'
 # directory where are all the different model planes (Apod, Lyot, etc..)
 ModelDirectory=os.getcwd()+'/Model/'
 
-
-wave=1.667e-6
-mask384=fits.getdata(ModelDirectory+'apod-4.0lovD_384-192.fits')
-Pup384=fits.getdata(ModelDirectory+'generated_VLT_pup_384-192.fits')
-ALC='ALC2'
-Lyot384=fits.getdata(ModelDirectory+'sphere_stop_ST_ALC2.fits')
-raw_pushact = fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
-
-
-#maskoffaxis=def_mat.translationFFT(30,30)
 dimimages=400
 
-
+wave=1.667e-6
 
 onsky=1 #1 if on sky correction
 createPW=True
@@ -53,6 +43,31 @@ createwhich=True
 createjacobian=True
 createEFCmatrix=True
 
+coro = 'APLC'
+#coro = 'FQPM'
+
+if coro == 'APLC':
+    mask384=fits.getdata(ModelDirectory+'apod-4.0lovD_384-192.fits')
+    Pup384=fits.getdata(ModelDirectory+'generated_VLT_pup_384-192.fits')
+    ALC='ALC2'
+    Lyot384=fits.getdata(ModelDirectory+'sphere_stop_ST_ALC2.fits')
+    PSFcentering=1
+elif coro == 'FQPM':
+    mask384=fits.getdata(ModelDirectory+'apod-4.0lovD_384-192.fits')
+    pupsizetmp=mask384.shape[0]
+    isz = int(int(def_mat.definition_isz(pupsizetmp,wave)[0]/2)*2)
+    mask384=def_mat.zeropad(def_mat.roundpupil(pupsizetmp,pupsizetmp/2),isz)
+    Pup384=def_mat.zeropad(def_mat.roundpupil(pupsizetmp,pupsizetmp/2),isz)
+    ALC=''
+    Lyot384=def_mat.zeropad(def_mat.roundpupil(pupsizetmp,pupsizetmp/2),isz)
+#    maskoffaxis=translationFFTFQPM(30,30)
+    PSFcentering = def_mat.translationFFT(isz,.5,.5)
+
+#Perfect pupil for FQPM (remove numeric noise)
+    if onsky == 0:
+        mask384=def_mat.pupiltodetector(mask384,wave,Lyot384,'',dimimages,coro,PSFcentering,pupparf=True)
+    
+raw_pushact = fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
 
 if onsky==0:
     input_wavefront = mask384
@@ -60,6 +75,8 @@ if onsky==0:
 else:
     input_wavefront = mask384*Pup384
     lightsource='VLTPupil_'
+
+lightsource = lightsource+coro+'_'
 
 #OffAxisPSF=def_mat.pupiltodetector(maskoffaxis*mask384*Pup384, wave,Lyot384,ALC,dimimages)
 
@@ -91,7 +108,9 @@ if createPW==True:
                                                  dimimages ,
                                                  pushact ,
                                                  posprobes ,
-                                                 cutestimation )
+                                                 cutestimation,
+                                                 coro,
+                                                 PSFcentering)
     ##
     choosepixvisu = [-55,55,-55,55]
     maskDH = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
@@ -107,9 +126,14 @@ if createPW==True:
 
 if createwhich==True:
     print('...Creating DH and Gmatrix...')
-    WhichInPupil = def_mat.creatingWhichinPupil(Lyot384, raw_pushact, 0.5)
+    if coro == 'APLC':
+        Lyottmp= Lyot384
+    elif coro == 'FQPM':
+        print(raw_pushact.shape,Lyot384.shape)
+        Lyottmp = Lyot384[int(Lyot384.shape[0]/2-raw_pushact.shape[1]/2):int(Lyot384.shape[0]/2+raw_pushact.shape[1]/2),int(Lyot384.shape[1]/2-raw_pushact.shape[2]/2):int(Lyot384.shape[1]/2+raw_pushact.shape[2]/2)]
+    WhichInPupil = def_mat.creatingWhichinPupil(Lyottmp, raw_pushact, 0.5)
     print(len(WhichInPupil))
-    def_mat.SaveFits(WhichInPupil,['',0],MatrixDirectory,'WhichInPupil0_5',replace=True)
+    def_mat.SaveFits(WhichInPupil,['',0],MatrixDirectory,lightsource+'WhichInPupil0_5',replace=True)
 
 #Choose the four corners of your dark hole (in pixels)
 namemask='2'
@@ -120,15 +144,15 @@ if createmask==True:
     choosepix = [-55,55,-55,-10] #DH1
     #maskDH = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepix)
     maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,55], circ_side='Top', circ_offset=8)
-    def_mat.SaveFits(maskDH,['',0],MatrixDirectory,'mask_DH'+namemask,replace=True)
+    def_mat.SaveFits(maskDH,['',0],MatrixDirectory,lightsource+'mask_DH'+namemask,replace=True)
     plt.imshow((maskDH)) #Afficher où le DH apparaît sur l'image au final
     plt.pause(0.1)
 ##
 if createjacobian==True:
     print('...Creating Jacobian...')
     pushact=amplitudeEFCMatrix*fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
-    maskDH=fits.getdata(MatrixDirectory+'mask_DH'+namemask+'.fits')
-    WhichInPupil=fits.getdata(MatrixDirectory+'WhichInPupil0_5.fits')
+    maskDH=fits.getdata(MatrixDirectory+lightsource+'mask_DH'+namemask+'.fits')
+    WhichInPupil=fits.getdata(MatrixDirectory+lightsource+'WhichInPupil0_5.fits')
     #Creating Matrix
     Gmatrix = def_mat.creatingCorrectionmatrix(input_wavefront,
                                                  wave,
@@ -137,7 +161,10 @@ if createjacobian==True:
                                                  dimimages ,
                                                  pushact ,
                                                  maskDH,
-                                                 WhichInPupil)
+                                                 WhichInPupil,
+                                                 coro,
+                                                 PSFcentering)
+
     #Saving matrix
     def_mat.SaveFits(Gmatrix,['',0],ModelDirectory,lightsource+'Gmatrix_DH'+namemask,replace=True)
 
