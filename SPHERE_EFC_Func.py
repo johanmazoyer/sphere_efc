@@ -405,8 +405,8 @@ def resultEFC(param):
     gain = param['gain'] 
     
     vectoressai = fits.getdata(MatrixDirectory+lightsource_estim+'VecteurEstimation_'+zone_to_correct+str(size_probes)+'nm.fits')
-    WhichInPupil = fits.getdata(MatrixDirectory+'WhichInPupil0_5.fits')
-    maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
+    WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
+    maskDH = fits.getdata(MatrixDirectory+lightsource_estim+'mask_DH'+str(dhsize)+'.fits')
     invertGDH = fits.getdata(MatrixDirectory+lightsource_corr+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
 
     print('- Creating difference of images...', flush=True)
@@ -493,6 +493,7 @@ def FullIterEFC(param):
     filenameroot = param["exp_name"]
     size_probes = param["size_probes"]
     dimimages = param["dimimages"]
+    lightsource_estim = param["lightsource_estim"]
     #Check if the directory dir exists
     if os.path.isdir(dir) is False:
         #Create the directory
@@ -500,7 +501,7 @@ def FullIterEFC(param):
     dir2 = dir + filenameroot
         
     dhsize = param["dhsize"]
-    maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
+    maskDH = fits.getdata(MatrixDirectory+lightsource_estim+'mask_DH'+str(dhsize)+'.fits')
 
     if nbiter == 1:
         print('Creating slopes for Cosinus, PSFOffAxis and new probes...', flush=True)

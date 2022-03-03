@@ -27,6 +27,7 @@ onsky = int(os.environ['ONSKY'])#If 1: On sky measurements ; If 0: Calibration s
 Assuming_VLT_PUP_for_corr = int(os.environ['Assuming_VLT_PUP_for_corr'])
 size_probes = int(os.environ['size_probes'])# Set the size of the probes for the estimation
 centeringateachiter = int(os.environ['centeringateachiter'])#If 1: Do the recentering at each iteration ; If 0: Do not do it
+coro = os.environ('coro')
 
 print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name), flush=True)
 
@@ -51,8 +52,8 @@ param = {
   "centeringateachiter": centeringateachiter,
   "amplitudeEFCMatrix": 8, #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
   "dimimages": 400,
-  "gain": 0.5
-  
+  "gain": 0.5,
+  "coro": coro
 }
 
 # plotting options
@@ -70,7 +71,10 @@ if onsky == 0:
 else:
     lightsource_estim = 'VLTPupil_'
     lightsource_corr = 'VLTPupil_'
-    
+
+lightsource_estim = lightsource_estim + coro
+lightsource_corr = lightsource_corr + coro
+
 param['lightsource_estim'] = lightsource_estim
 param['lightsource_corr'] = lightsource_corr
 

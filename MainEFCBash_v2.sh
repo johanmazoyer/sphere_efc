@@ -17,6 +17,10 @@ Preliminary steps to perfornm before running this script
 3/ Adjust the user parameters below to nbiter=1 at start (then increment), adjust (maybe) the path.
 '
 
+#Coronagraph that is used
+coro = 'APLC'
+#coro = 'FQPM'
+
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically created
@@ -116,7 +120,7 @@ else
 	lightsource_estim = 'InternalPupil_'
 fi
 
-
+lightsource_estim = lightsource_estim + coro+'_'
 
 if [ "$create_bkgrd" -eq "1" ]; then
 #FOR BACKGROUND
@@ -229,6 +233,7 @@ if [ "$create_coro" -eq "1" ]; then
 	export Assuming_VLT_PUP_for_corr
 	export size_probes
 	export centeringateachiter
+	export coro
 
 	#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 	echo "Launch python EFC code"

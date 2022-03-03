@@ -42,7 +42,6 @@ createwhich=True
 createjacobian=True
 createEFCmatrix=True
 
-#RGa
 coro = 'APLC'
 #coro = 'FQPM'
 
@@ -77,7 +76,6 @@ else:
     input_wavefront = mask384*Pup384
     lightsource='VLTPupil_'
 
-#RGa
 lightsource = lightsource+coro+'_'
 
 #OffAxisPSF=def_mat.pupiltodetector(maskoffaxis*mask384*Pup384, wave,Lyot384,ALC,dimimages)
