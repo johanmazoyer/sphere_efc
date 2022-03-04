@@ -53,13 +53,19 @@ if coro == 'APLC':
     Lyot384=fits.getdata(ModelDirectory+'sphere_stop_ST_ALC2.fits')
     PSFcentering=1
 elif coro == 'FQPM':
+    #used to define the sampling of the focal images
     mask384=fits.getdata(ModelDirectory+'apod-4.0lovD_384-192.fits')
     pupsizetmp=mask384.shape[0]
     isz = int(int(def_mat.definition_isz(pupsizetmp,wave)[0]/2)*2)
+    # Round pupil
     mask384=def_mat.zeropad(def_mat.roundpupil(pupsizetmp,pupsizetmp/2),isz)
-    Pup384=def_mat.zeropad(def_mat.roundpupil(pupsizetmp,pupsizetmp/2),isz)
+    # VLT pupil
+    Pup384=fits.getdata(ModelDirectory+'generated_VLT_pup_384-192.fits')
+    Pup384=def_mat.zeropad(Pup384,isz)
     ALC=''
-    Lyot384=def_mat.zeropad(def_mat.roundpupil(pupsizetmp,pupsizetmp/2),isz)
+    # Lyot stop (NEED TO BE UPDATED WITH THE FQPM LYOT FUNCTION)
+    Lyot384=fits.getdata(ModelDirectory+'sphere_stop_ST_ALC2.fits')
+    Lyot384=def_mat.zeropad(Lyot384,isz)
 #    maskoffaxis=translationFFTFQPM(30,30)
     PSFcentering = def_mat.translationFFT(isz,.5,.5)
 
