@@ -17,10 +17,6 @@ Preliminary steps to perfornm before running this script
 3/ Adjust the user parameters below to nbiter=1 at start (then increment), adjust (maybe) the path.
 '
 
-#Coronagraph that is used
-coro = 'APLC'
-#coro = 'FQPM'
-
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically created
@@ -63,6 +59,11 @@ ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
 Assuming_VLT_PUP_for_corr=0 
 #Work only if ONSKY=0. If  Assuming_VLT_PUP_for_corr=1 assume ONSKY=1 for EFC correction only
 
+
+#Coronagraph that is used
+coro='APLC'
+#coro='FQPM'
+
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
 #DHsize = 0 for half dark hole 188mas to 625mas x -625mas to 625mas
 #DHsize = 1 for half dark hole 125mas to 625mas x -625mas to 625mas
@@ -75,10 +76,11 @@ DHsize=1
 # corr_mode=1: less stable correction but better contrast
 # corr_mode=2: more aggressive correction (may be unstable)
 corr_mode=1
+gain=0.5
 
 #Number of probing actuator
 #nbprobe=2
-zone_to_correct='horizontal'#vertical
+zone_to_correct='horizontal' #vertical
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
 size_probes=400
@@ -234,6 +236,7 @@ if [ "$create_coro" -eq "1" ]; then
 	export size_probes
 	export centeringateachiter
 	export coro
+	export gain
 
 	#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 	echo "Launch python EFC code"
