@@ -36,42 +36,23 @@ dimimages=400
 
 wave=1.667e-6
 
-onsky=1 #1 if on sky correction
+onsky=0 #1 if on sky correction
 createPW=True
-createmask=True
-createwhich=True
-createjacobian=True
-createEFCmatrix=True
+createmask=False
+createwhich=False
+createjacobian=False
+createEFCmatrix=False
 
-coro = 'APLC'
-#coro = 'FQPM'
+#coro = 'APLC'
+coro = 'FQPM'
 
-if coro == 'APLC':
-    mask384=fits.getdata(ModelDirectory+'apod-4.0lovD_384-192.fits')
-    Pup384=fits.getdata(ModelDirectory+'generated_VLT_pup_384-192.fits')
-    ALC='ALC2'
-    Lyot384=fits.getdata(ModelDirectory+'sphere_stop_ST_ALC2.fits')
-    PSFcentering=1
-elif coro == 'FQPM':
-    #used to define the sampling of the focal images
-    mask384=fits.getdata(ModelDirectory+'apod-4.0lovD_384-192.fits')
-    pupsizetmp=mask384.shape[0]
-    isz = int(int(def_mat.definition_isz(pupsizetmp,wave)[0]/2)*2)
-    # Round pupil
-    mask384=def_mat.zeropad(def_mat.roundpupil(pupsizetmp,pupsizetmp/2),isz)
-    # VLT pupil
-    Pup384=fits.getdata(ModelDirectory+'generated_VLT_pup_384-192.fits')
-    Pup384=def_mat.zeropad(Pup384,isz)
-    ALC=''
-    # Lyot stop (NEED TO BE UPDATED WITH THE FQPM LYOT FUNCTION)
-    Lyot384=fits.getdata(ModelDirectory+'sphere_stop_ST_ALC2.fits')
-    Lyot384=def_mat.zeropad(Lyot384,isz)
-#    maskoffaxis=translationFFTFQPM(30,30)
-    PSFcentering = def_mat.translationFFT(isz,.5,.5)
+
+mask384, Pup384, ALC, Lyot384 = def_mat.Upload_CoroConfig(ModelDirectory, coro, wave)
 
 #Perfect pupil for FQPM (remove numeric noise)
+if coro == 'FQPM':
     if onsky == 0:
-        mask384=def_mat.pupiltodetector(mask384,wave,Lyot384,'',dimimages,coro,PSFcentering,pupparf=True)
+        mask384=def_mat.pupiltodetector(mask384,wave,Lyot384,'',dimimages,coro,pupparf=True)
     
 raw_pushact = fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
 
@@ -115,8 +96,7 @@ if createPW==True:
                                                  pushact ,
                                                  posprobes ,
                                                  cutestimation,
-                                                 coro,
-                                                 PSFcentering)
+                                                 coro)
     ##
     choosepixvisu = [-55,55,-55,55]
     maskDH = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
@@ -168,8 +148,7 @@ if createjacobian==True:
                                                  pushact ,
                                                  maskDH,
                                                  WhichInPupil,
-                                                 coro,
-                                                 PSFcentering)
+                                                 coro)
 
     #Saving matrix
     def_mat.SaveFits(Gmatrix,['',0],ModelDirectory,lightsource+'Gmatrix_DH'+namemask,replace=True)

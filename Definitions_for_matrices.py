@@ -16,34 +16,53 @@ shift = np.fft.fftshift
 ishift=np.fft.ifftshift
 
 
+def Upload_CoroConfig(ModelDirectory, coro, wavelength):
+    if coro == 'APLC':
+        mask384 = fits.getdata(ModelDirectory+'apod-4.0lovD_384-192.fits')
+        Pup384 = fits.getdata(ModelDirectory+'generated_VLT_pup_384-192.fits')
+        ALC = 'ALC2'
+        Lyot384 = fits.getdata(ModelDirectory+'sphere_stop_ST_ALC2.fits')
+        #PSFcentering = 1
+        
+    elif coro == 'FQPM':
+        #used to define the sampling of the focal images
+        mask384 = roundpupil(384,int(384/2))#fits.getdata(ModelDirectory+'apod-4.0lovD_384-192.fits')
+        #pupsizetmp = mask384.shape[0]
+        #isz = int(int(definition_isz(pupsizetmp,wavelength)[0]/2)*2)
+        # Round pupil
+        #mask384 = zeropad(roundpupil(pupsizetmp,pupsizetmp/2),isz)
+        # VLT pupil
+        Pup384 = fits.getdata(ModelDirectory+'generated_VLT_pup_384-192.fits')
+        #Pup384 = zeropad(Pup384,isz)
+        ALC=''
+        # Lyot stop (NEED TO BE UPDATED WITH THE FQPM LYOT FUNCTION)
+        Lyot384 = fits.getdata(ModelDirectory+'sphere_stop_ST_ALC2.fits')
+        #Lyot384 = zeropad(Lyot384,isz)
+    #    maskoffaxis=translationFFTFQPM(30,30)
+        #PSFcentering = translationFFT(isz,.5,.5)
+    return mask384, Pup384, ALC, Lyot384#, PSFcentering
+
+
 def roundpupil(nbpix,prad1):
     xx, yy = np.meshgrid(np.arange(nbpix)-(nbpix)/2, np.arange(nbpix)-(nbpix)/2)
     rr     = np.hypot(yy, xx)
-    pupilnormal=np.zeros((nbpix,nbpix))
-    pupilnormal[rr<=prad1]=1.
+    pupilnormal = np.zeros((nbpix,nbpix))
+    pupilnormal[rr<=prad1] = 1.
     return pupilnormal
 
 
 def SaveFits(image,head,doc_dir2,name,replace=False):
-    hdu=fits.PrimaryHDU(image)
+    hdu = fits.PrimaryHDU(image)
     hdul = fits.HDUList([hdu])
-    hdr=hdul[0].header
+    hdr = hdul[0].header
     hdr.set(head[0],head[1])
     hdu.writeto(doc_dir2+name+'.fits', overwrite=replace)
 
-    
-def increasepixelinimage(image,pixafter,cut):
-    pixbefore=len(image)
-    fftimagerescale=np.zeros((pixafter,pixafter),dtype=complex)
-    fftimage=shift(fft(shift(image)))
-    fftimagerescale[int(pixafter/2-pixbefore/2):int(pixafter/2+pixbefore/2),int(pixafter/2-pixbefore/2):int(pixafter/2+pixbefore/2)]=fftimage
-    imagerescale=abs(shift(ifft(shift(fftimagerescale))))*(pixafter/pixbefore)**2
-    imagerescale[np.where(imagerescale<cut)]=0
-    return imagerescale
+
 
 #RGa
 def definition_isz(pupsizetmp,wave):
-    pupsizeinmeter=8 #Pupsizeinmeter
+    pupsizeinmeter = 8 #Pupsizeinmeter
 
     #Raccourcis conversions angles
     d2rad    = np.pi / 180.0 # degree to radian conversion factor
@@ -61,17 +80,17 @@ def definition_isz(pupsizetmp,wave):
     #print('pixel per resolution element:', ld_p)
     #ld_p=3.5
     isz=int(pupsizetmp*ld_p)#-1 # Nombre de pixels dans le plan pupille pour atteindre la résolution ld_p voulue
+    #isz = int(int(isz/2)*2)
     return [isz,ld_mas]
 
-def pupiltodetector(input_wavefront , wave, lyot_mask , Name_ALC , isz_foc,coro,PSFcentering,pupparf=False):
+def pupiltodetector(input_wavefront, wave, lyot_mask, Name_ALC, isz_foc, coro, pupparf=False):
     
     pup_shape = input_wavefront.shape
     pupsize = pup_shape[0] #Size of pupil in pixel (384)
+    # Nombre de pixels dans le plan pupille pour atteindre la résolution ld_p voulue
+    [isz_pup,ld_mas] = definition_isz(pupsize, wave)
 
     if coro == 'APLC':
-    
-# Nombre de pixels dans le plan pupille pour atteindre la résolution ld_p voulue
-        [isz_pup,ld_mas] = definition_isz(pupsize,wave)
 
         if Name_ALC == 'ALC2':
             radFPMinld=92.5/ld_mas #Taille masque corono en lambda/D ALC2
@@ -80,7 +99,7 @@ def pupiltodetector(input_wavefront , wave, lyot_mask , Name_ALC , isz_foc,coro,
         else:
            raise ValueError("ALC name unsupported")
 
-    #print('Size Lyot mask in l/d:', radFPMinld)
+        #print('Size Lyot mask in l/d:', radFPMinld)
 
 
         mft_sampling = 100 #[pixels/(l/D)] sampling factor of the computed focal plane field with the MFT
@@ -93,42 +112,48 @@ def pupiltodetector(input_wavefront , wave, lyot_mask , Name_ALC , isz_foc,coro,
     
     
         occulter_area = roundpupil(npix, occ_rad_pix)
-        lyot_plane_rejected = matrixDFT.matrix_dft(focal_plane*occulter_area,occulter_fov, pup_shape, inverse=True,centering='FFTSTYLE')
+        lyot_plane_rejected = matrixDFT.matrix_dft(focal_plane*occulter_area, occulter_fov, pup_shape, inverse=True, centering='FFTSTYLE')
         focal_plane = focal_plane*(1.-.8*occulter_area)
     
         before_lyot_stop = (input_wavefront - lyot_plane_rejected)
         after_lyot_stop = before_lyot_stop * lyot_mask
-    
-    
-        after_lyot_stop2 = np.zeros((isz_pup,isz_pup),dtype=complex)
-        after_lyot_stop2[int(isz_pup/2-pupsize/2):int(isz_pup/2+pupsize/2),int(isz_pup/2-pupsize/2):int(isz_pup/2+pupsize/2)]=after_lyot_stop
+        after_lyot_stop2 = zeropad(after_lyot_stop, isz_pup)  
         
-        detector_img = shift(fft(shift(after_lyot_stop2)))[int(isz_pup/2-isz_foc/2):int(isz_pup/2+isz_foc/2),int(isz_pup/2-isz_foc/2):int(isz_pup/2+isz_foc/2)]
+        
     elif coro == 'FQPM':
-        fqpm_mask=np.ones((pupsize,pupsize))
-        fqpm_mask[0:int(pupsize/2),0:int(pupsize/2)]=-1
-        fqpm_mask[int(pupsize/2):pupsize,int(pupsize/2):pupsize]=-1
-#        import os
-#        MatrixDirectory=os.getcwd()+'/MatricesAndModel/'
-#        SaveFits(fqpm_mask,['',0],MatrixDirectory,'fqpm',replace=True)
-#        SaveFits(np.abs(input_wavefront),['',0],MatrixDirectory,'input_wavefront',replace=True)
-#        SaveFits(np.abs(lyot_mask),['',0],MatrixDirectory,'lyot',replace=True)
-        before_lyot_stop = shift(ifft(fft(shift(input_wavefront*PSFcentering))*fqpm_mask))
-#        SaveFits(np.abs(before_lyot_stop),['',0],MatrixDirectory,'before_lyot',replace=True)
-
+        input_wavefront = zeropad(input_wavefront, isz_pup)
+        lyot_mask = zeropad(lyot_mask, isz_pup)
+        PSFcentering = translationFFT(isz_pup,.5,.5)
+        fqpm_mask = create_fqpm(isz_pup)
+        
+        before_lyot_stop = goto_pupil(goto_focal(input_wavefront*PSFcentering)*fqpm_mask)
+     
         if pupparf == True:
-            return shift(ifft(fft(shift(before_lyot_stop*(1-lyot_mask)))*fqpm_mask))*np.conjugate(PSFcentering)
+            pupperf = (shift(ifft(fft(shift(before_lyot_stop*(1-lyot_mask)))*fqpm_mask))*np.conjugate(PSFcentering))#[int(isz_pup/2-pupsize/2):int(isz_pup/2+pupsize/2),int(isz_pup/2-pupsize/2):int(isz_pup/2+pupsize/2)]
+            return cropimage(pupperf, isz_pup/2, isz_pup/2, pupsize)
  
-        after_lyot_stop=before_lyot_stop*lyot_mask
-#        SaveFits(np.abs(after_lyot_stop),['',0],MatrixDirectory,'afterlyot',replace=True)
+        after_lyot_stop2 = before_lyot_stop * lyot_mask * np.conjugate(PSFcentering)
  
-        detector_img=shift(fft(shift(after_lyot_stop*np.conjugate(PSFcentering))))[int(pupsize/2-isz_foc/2):int(pupsize/2+isz_foc/2),int(pupsize/2-isz_foc/2):int(pupsize/2+isz_foc/2)]
- #       SaveFits(np.abs(detector_img)**2,['',0],MatrixDirectory,'im',replace=True)
+        
     else:
         print('coro should be APLC or FQPM')
 
-
+    detector_img = goto_focal(after_lyot_stop2)#[int(isz_pup/2-isz_foc/2):int(isz_pup/2+isz_foc/2),int(isz_pup/2-isz_foc/2):int(isz_pup/2+isz_foc/2)]
+    detector_img = cropimage(detector_img, isz_pup/2, isz_pup/2, isz_foc)
+    
     return detector_img
+    
+def goto_focal(pupil_plane):
+    pupil_plane = shift(pupil_plane)
+    focal_plane = fft(pupil_plane)
+    focal_plane = shift(focal_plane)
+    return focal_plane
+
+def goto_pupil(focal_plane):
+    focal_plane = ishift(focal_plane)
+    pupil_plane = ifft(focal_plane)
+    pupil_plane = ishift(pupil_plane)
+    return pupil_plane
     
     
     
@@ -160,7 +185,7 @@ def invertDSCC(interact, cut ,goal='e', regul="truncation", visu=False):
     return [np.diag(InvS),pseudoinverse]
 
 
-def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, posprobes , cutsvd, coro, PSFcentering):
+def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, posprobes , cutsvd, coro):
     pup_shape = input_wavefront.shape
     pupsize = pup_shape[0] #Size of pupil in pixel (384)
     numprobe = len(posprobes)
@@ -171,23 +196,20 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
     SVD = np.zeros((2,isz_foc,isz_foc))
     
     maskoffaxis = translationFFT(pupsize,30,30)
-    OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc,coro,PSFcentering)
+    OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc,coro)
     squaremaxPSF = np.amax(np.abs(OffAxisPSF))
 
     cutsvd = 0.3*squaremaxPSF*8/(400/37)
     
-    pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc,coro,PSFcentering)
+    pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc,coro)
 
     k=0
     for i in posprobes:
         print(i)
-        if coro == 'APLC':
-            probephase[k] = pushact[i]
-        elif coro == 'FQPM':
-            probephase[k] = zeropad(pushact[i],pupsize)
+        probephase[k] = pushact[i]
         probephase[k] = 2*np.pi*(probephase[k])*1e-9/wave
         input_wavefront_k = input_wavefront*(1+1j*probephase[k]) #entrance pupil plane field (can be real, or complex with amplitude and phase)
-        deltapsikbis = pupiltodetector(input_wavefront_k, wave,lyot_mask,Name_ALC,isz_foc,coro,PSFcentering)
+        deltapsikbis = pupiltodetector(input_wavefront_k, wave,lyot_mask,Name_ALC,isz_foc,coro)
         deltapsik[k] = (deltapsikbis-pupilnoabb)/squaremaxPSF
         k=k+1
 
@@ -282,29 +304,26 @@ def creatingMaskDH(dimimages,
     
     
     
-def creatingCorrectionmatrix(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, mask, Whichact,coro,PSFcentering):
+def creatingCorrectionmatrix(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, mask, Whichact, coro):
     pup_shape = input_wavefront.shape
     pupsize = pup_shape[0] #Size of pupil in pixel (384)
     maskoffaxis = translationFFT(pupsize,30,30)
-    OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc,coro,PSFcentering)
+    OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, coro)
     squaremaxPSF = np.amax(np.abs(OffAxisPSF))
     
-    pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc,coro,PSFcentering)
+    pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc, coro)
     
     Gmatrixbis=np.zeros((2*int(np.sum(mask)),len(Whichact)))
 
     k=0
     for i in Whichact:
         print(i)
-        if coro == 'APLC':
-            Psivector = pushact[i]
-        elif coro == 'FQPM':
-            Psivector = zeropad(pushact[i],pupsize)
+        Psivector = pushact[i]
         Psivector=2*np.pi*(Psivector)*1e-9/wave
         input_wavefront_k=input_wavefront*(1+1j*Psivector) #entrance pupil plane field (can be real, or complex with amplitude and phase)
         
         
-        Gvectorbisbis=(pupiltodetector(input_wavefront_k , wave , lyot_mask , Name_ALC , isz_foc,coro,PSFcentering)- pupilnoabb)/squaremaxPSF
+        Gvectorbisbis=(pupiltodetector(input_wavefront_k , wave , lyot_mask , Name_ALC , isz_foc, coro)- pupilnoabb)/squaremaxPSF
     
         
         Gmatrixbis[0:int(np.sum(mask)),k]=(np.real(Gvectorbisbis)[np.where(mask==1)]).flatten()
@@ -314,19 +333,63 @@ def creatingCorrectionmatrix(input_wavefront, wave, lyot_mask , Name_ALC , isz_f
 
 
 
-def translationFFT(pupsize,a,b):
-    maskx=np.zeros((pupsize,pupsize))
-    masky=np.zeros((pupsize,pupsize))
-    for i in np.arange(pupsize):
-        for j in np.arange(pupsize):
-            maskx[i,j]=j*np.pi*2*a/pupsize-a*np.pi
-            masky[i,j]=i*np.pi*2*b/pupsize-b*np.pi
-    masktot=np.exp(-1j*maskx)*np.exp(-1j*masky)
-    return masktot
+def translationFFT(dim_im,a,b):
+    """ --------------------------------------------------
+    Create a phase ramp of size (dim_im,dim_im) that can be used as follow
+    to shift one image by (a,b) pixels : shift_im = real(fft(ifft(im)*exp(i phase ramp)))
+    
+    Parameters
+    ----------
+    dim_im : int
+        Size of the phase ramp (in pixels)
+    a : float
+        Shift desired in the x direction (in pixels)
+    b : float
+        Shift desired in the y direction (in pixels)
+    
+    Returns
+    ------
+    masktot : 2D array
+        Phase ramp
+    -------------------------------------------------- """
+    # Verify this function works
+    maska = np.linspace(-np.pi * a, np.pi * a, dim_im)
+    maskb = np.linspace(-np.pi * b, np.pi * b, dim_im)
+    xx, yy = np.meshgrid(maska, maskb)
+    return np.exp(-1j * xx) * np.exp(-1j * yy)
 
 
 def zeropad(tab,dim):
-    newtab=np.zeros((dim,dim),dtype=tab.dtype)
-    newtab[int(dim/2-tab.shape[0]/2):int(dim/2+tab.shape[0]/2),int(dim/2-tab.shape[1]/2):int(dim/2+tab.shape[1]/2)]=tab
+    newtab = np.zeros((dim,dim),dtype=complex)
+    left = int(dim/2-tab.shape[0]/2)
+    right = int(dim/2+tab.shape[0]/2)
+    bottom = int(dim/2-tab.shape[1]/2)
+    top = int(dim/2+tab.shape[1]/2)
+    newtab[left:right,bottom:top] = tab
     return newtab
+
+def cropimage(img, ctr_x, ctr_y, newsizeimg):
+    """ --------------------------------------------------
+    Crop an image
+    
+    Parameters:
+    ----------
+    img: 2D array, image to crop
+    ctr_x: int, center of the cropped image in the x direction
+    ctr_y: int, center of the cropped image in the y direction
+    newsizeimg: int, size of the new image in x and y direction (same dimentsion for both)
+
+    Return:
+    ------
+    cropped: 2D array, cropped image
+    -------------------------------------------------- """
+    newimgs2 = newsizeimg / 2
+    cropped = img[int(ctr_x-newimgs2):int(ctr_x+newimgs2),int(ctr_y-newimgs2):int(ctr_y+newimgs2)]
+    return cropped
+
+def create_fqpm(isz_pup):        
+    fqpm_mask = np.ones((isz_pup,isz_pup))
+    fqpm_mask[0:int(isz_pup/2),0:int(isz_pup/2)] = -1
+    fqpm_mask[int(isz_pup/2):isz_pup,int(isz_pup/2):isz_pup] = -1
+    return fqpm_mask
     
