@@ -52,8 +52,7 @@ param = {
   "centeringateachiter": centeringateachiter,
   "amplitudeEFCMatrix": 8, #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
   "dimimages": 400,
-  "gain": 0.5,
-  "coro": coro
+  "gain": 0.5
 }
 
 # plotting options
@@ -72,8 +71,8 @@ else:
     lightsource_estim = 'VLTPupil_'
     lightsource_corr = 'VLTPupil_'
 
-lightsource_estim = lightsource_estim + coro
-lightsource_corr = lightsource_corr + coro
+lightsource_estim = lightsource_estim + coro + '_'
+lightsource_corr = lightsource_corr + coro + '_'
 
 param['lightsource_estim'] = lightsource_estim
 param['lightsource_corr'] = lightsource_corr
