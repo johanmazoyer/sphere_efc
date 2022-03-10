@@ -11,6 +11,7 @@ from astropy.io import fits
 import scipy.ndimage as snd
 from scipy.optimize import fmin_powell as fmin_powell
 import scipy.optimize as opt
+from scipy import ndimage
 import glob
 import os
 
@@ -270,6 +271,9 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     hotpixmap[hotpixwh] = 1
     image = image_crop - back_crop #Subtract dark
     image = mean_window_8pix(image,hotpixmap)
+    
+    lowpass = ndimage.gaussian_filter(image, 2)
+    image = image - lowpass
 
     image = (image/expim)/(maxPSF*ND/exppsf)  #Divide by PSF max
     # image = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
