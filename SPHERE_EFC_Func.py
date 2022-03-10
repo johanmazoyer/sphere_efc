@@ -201,12 +201,14 @@ def get_exptime(file):
 
 def mean_window_8pix(array, hotpix):
     """ --------------------------------------------------
-    the hot pixels are 
+    the hot pixels are averaged to it's eigh neighbor. I do a slightly complicated stuff
+    when I nan pad the array in case the hot pix is on the edge of the array. 
+    That can probably be simplified if you don't care about the pixels on the edge
     
     Parameters:
     ----------
-    array: 2D array, raw image
-    hotpix: 2D array, hot pixels
+    array: 2D array, raw image 
+    hotpix: 2D array, hot pixels both array must have same size
 
     Return:
     ------
@@ -260,7 +262,7 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     # first solution :gaussin filter with a very small kernel.
     # image = snd.gaussian_filter(image,2)
 
-    # second solution. We average all pixel by it's neighbor
+    # second solution. We replace hot pixels by the average of their neighbors
     hotpixmap = back_crop*0 
     hotpixwh = np.where(back_crop > 5*np.nanmedian(back_crop))
     hotpixmap[hotpixwh] = 1
