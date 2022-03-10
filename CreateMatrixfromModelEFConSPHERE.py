@@ -32,19 +32,28 @@ MatrixDirectory=os.getcwd()+'/MatricesAndModel/'
 # directory where are all the different model planes (Apod, Lyot, etc..)
 ModelDirectory=os.getcwd()+'/Model/'
 
-dimimages=400
-
-wave=1.667e-6
-
-onsky=0 #1 if on sky correction
-createPW=True
-createmask=False
-createwhich=False
-createjacobian=False
-createEFCmatrix=False
-
 #coro = 'APLC'
 coro = 'FQPM'
+dimimages=200
+wave=1.667e-6
+onsky=0 #1 if on sky correction
+
+zone_to_correct = 'horizontal' #vertical
+createPW=False
+
+createwhich=False
+createjacobian=False
+
+#name of the mask that can be saved with createmask and then used in createEFCmatrix
+namemask='2'
+maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,55], circ_side='Top', circ_offset=8)
+createmask=False
+
+nbmodes = 600
+corr_mode='1'
+createEFCmatrix=True
+
+
 
 
 mask384, Pup384, ALC, Lyot384 = def_mat.Upload_CoroConfig(ModelDirectory, coro, wave)
@@ -76,7 +85,7 @@ amplitudeEFCMatrix=8
 
 
 #### Pour estimation
-zone_to_correct = 'horizontal' #vertical
+
 if createPW==True:
     print('...Creating VectorProbes...')
     pushact=amplitudePW*raw_pushact
@@ -99,9 +108,9 @@ if createPW==True:
                                                  coro)
     ##
     choosepixvisu = [-55,55,-55,55]
-    maskDH = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
+    maskvisu = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
 
-    plt.imshow(SVD[1]*maskDH)
+    plt.imshow(SVD[1]*maskvisu)
     plt.show()
     ##
     def_mat.SaveFits(SVD[1],['',0],MatrixDirectory,lightsource+zone_to_correct+'CorrectedZone',replace=True)
@@ -112,32 +121,15 @@ if createPW==True:
 
 if createwhich==True:
     print('...Creating DH and Gmatrix...')
-    if coro == 'APLC':
-        Lyottmp= Lyot384
-    elif coro == 'FQPM':
-        print(raw_pushact.shape,Lyot384.shape)
-        Lyottmp = Lyot384[int(Lyot384.shape[0]/2-raw_pushact.shape[1]/2):int(Lyot384.shape[0]/2+raw_pushact.shape[1]/2),int(Lyot384.shape[1]/2-raw_pushact.shape[2]/2):int(Lyot384.shape[1]/2+raw_pushact.shape[2]/2)]
-    WhichInPupil = def_mat.creatingWhichinPupil(Lyottmp, raw_pushact, 0.5)
-    print(len(WhichInPupil))
+    WhichInPupil = def_mat.creatingWhichinPupil(Lyot384, raw_pushact, 0.5)
+    print('Number of actuators in visible through the Lyot: ',len(WhichInPupil))
     def_mat.SaveFits(WhichInPupil,['',0],MatrixDirectory,lightsource+'WhichInPupil0_5',replace=True)
 
-#Choose the four corners of your dark hole (in pixels)
-namemask='2'
 
-if createmask==True:
-    print('...Creating mask DH...')
-    choosepix = [-55,55,10,55] #DH3
-    choosepix = [-55,55,-55,-10] #DH1
-    #maskDH = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepix)
-    maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,55], circ_side='Top', circ_offset=8)
-    def_mat.SaveFits(maskDH,['',0],MatrixDirectory,lightsource+'mask_DH'+namemask,replace=True)
-    plt.imshow((maskDH)) #Afficher où le DH apparaît sur l'image au final
-    plt.pause(0.1)
 ##
 if createjacobian==True:
     print('...Creating Jacobian...')
     pushact=amplitudeEFCMatrix*fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
-    maskDH=fits.getdata(MatrixDirectory+lightsource+'mask_DH'+namemask+'.fits')
     WhichInPupil=fits.getdata(MatrixDirectory+lightsource+'WhichInPupil0_5.fits')
     #Creating Matrix
     Gmatrix = def_mat.creatingCorrectionmatrix(input_wavefront,
@@ -146,21 +138,32 @@ if createjacobian==True:
                                                  ALC ,
                                                  dimimages ,
                                                  pushact ,
-                                                 maskDH,
                                                  WhichInPupil,
                                                  coro)
 
     #Saving matrix
-    def_mat.SaveFits(Gmatrix,['',0],ModelDirectory,lightsource+'Gmatrix_DH'+namemask,replace=True)
+    def_mat.SaveFits(Gmatrix,['',0],ModelDirectory,lightsource+'Jacobian',replace=True)
+
+
+#Choose the four corners of your dark hole (in pixels)
+if createmask==True:
+    print('...Creating mask DH...')
+    #choosepix = [-55,55,10,55] #DH3
+    #choosepix = [-55,55,-55,-10] #DH1
+    #maskDH = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepix)
+    def_mat.SaveFits(maskDH,['',0],MatrixDirectory,'mask_DH'+namemask,replace=True)
+    plt.imshow((maskDH)) #Afficher où le DH apparaît sur l'image au final
+    plt.pause(0.1)
+
 
 #### Uncomment below to create and save the interaction matrix
 if createEFCmatrix==True:
     print('...Creating EFC matrix...')
-    Gmatrix = fits.getdata(ModelDirectory+lightsource+'Gmatrix_DH'+namemask+'.fits')
+    maskDH=fits.getdata(MatrixDirectory+'mask_DH'+namemask+'.fits')
+    Gmatrix = fits.getdata(ModelDirectory+lightsource+'Jacobian.fits')
+    masked_Gmatrix = def_mat.get_masked_jacobian(Gmatrix, maskDH)
     #Set how many modes you want to use to correct
-    nbmodes = 600
-    invertGDH = def_mat.invertDSCC(Gmatrix,nbmodes,goal='c',regul='tikhonov',visu=True)[1]
-    corr_mode='1'
+    invertGDH = def_mat.invertDSCC(masked_Gmatrix,nbmodes,goal='c',regul='tikhonov',visu=True)[1]
     def_mat.SaveFits(invertGDH,['',0],MatrixDirectory,lightsource+'Interactionmatrix_DH'+namemask+'_SVD'+corr_mode,replace=True)
 
 

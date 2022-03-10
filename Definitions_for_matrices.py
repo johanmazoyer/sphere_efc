@@ -195,7 +195,9 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
     Vecteurenvoi = np.zeros((isz_foc**2,2,numprobe))
     SVD = np.zeros((2,isz_foc,isz_foc))
     
-    maskoffaxis = translationFFT(pupsize,30,30)
+    
+    [isz_pup,ld_mas] = definition_isz(pupsize, wave)
+    maskoffaxis = cropimage(translationFFT(isz_pup,30,30), int(isz_pup/2), int(isz_pup)/2, pupsize)
     OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc,coro)
     squaremaxPSF = np.amax(np.abs(OffAxisPSF))
 
@@ -304,33 +306,43 @@ def creatingMaskDH(dimimages,
     
     
     
-def creatingCorrectionmatrix(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, mask, Whichact, coro):
+def creatingCorrectionmatrix(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, Whichact, coro):
     pup_shape = input_wavefront.shape
     pupsize = pup_shape[0] #Size of pupil in pixel (384)
-    maskoffaxis = translationFFT(pupsize,30,30)
+    [isz_pup,ld_mas] = definition_isz(pupsize, wave)
+    maskoffaxis = cropimage(translationFFT(isz_pup,30,30), int(isz_pup/2), int(isz_pup)/2, pupsize)
     OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, coro)
     squaremaxPSF = np.amax(np.abs(OffAxisPSF))
     
     pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc, coro)
     
-    Gmatrixbis=np.zeros((2*int(np.sum(mask)),len(Whichact)))
+    Gmatrixbis=np.zeros((2,int(isz_foc*isz_foc),len(Whichact)))
 
     k=0
     for i in Whichact:
         print(i)
         Psivector = pushact[i]
-        Psivector=2*np.pi*(Psivector)*1e-9/wave
-        input_wavefront_k=input_wavefront*(1+1j*Psivector) #entrance pupil plane field (can be real, or complex with amplitude and phase)
-        
-        
-        Gvectorbisbis=(pupiltodetector(input_wavefront_k , wave , lyot_mask , Name_ALC , isz_foc, coro)- pupilnoabb)/squaremaxPSF
+        Psivector = 2*np.pi*(Psivector)*1e-9/wave
+        input_wavefront_k = input_wavefront*(1+1j*Psivector) #entrance pupil plane field (can be real, or complex with amplitude and phase)
     
-        
-        Gmatrixbis[0:int(np.sum(mask)),k]=(np.real(Gvectorbisbis)[np.where(mask==1)]).flatten()
-        Gmatrixbis[int(np.sum(mask)):,k]=(np.imag(Gvectorbisbis)[np.where(mask==1)]).flatten()
+        Gvectorbisbis = (pupiltodetector(input_wavefront_k , wave , lyot_mask , Name_ALC , isz_foc, coro)- pupilnoabb)/squaremaxPSF
+    
+        Gmatrixbis[0,:,k] = np.real(Gvectorbisbis).flatten()
+        Gmatrixbis[1,:,k] = np.imag(Gvectorbisbis).flatten()
         k=k+1
     return Gmatrixbis
 
+
+def get_masked_jacobian(complex_jacobian, mask):
+    mask_flattened = mask.flatten()
+    masked_jacobian = np.zeros((2*int(np.sum(mask)),complex_jacobian.shape[2]))
+    
+    masked_jacobian[0:int(np.sum(mask))] = complex_jacobian[0,np.where(mask_flattened)]
+    masked_jacobian[int(np.sum(mask)):] = complex_jacobian[1,np.where(mask_flattened)]
+    
+    return masked_jacobian
+        
+    
 
 
 def translationFFT(dim_im,a,b):

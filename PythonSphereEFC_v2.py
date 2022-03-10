@@ -52,7 +52,7 @@ param = {
   "size_probes": size_probes,
   "centeringateachiter": centeringateachiter,
   "amplitudeEFCMatrix": 8, #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
-  "dimimages": 400,
+  "dimimages": 200,
   "gain": gain
 }
 
