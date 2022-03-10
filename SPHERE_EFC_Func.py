@@ -222,6 +222,8 @@ def mean_window_8pix(array, hotpix):
     hotpix_expand[1:-1,1:-1] = hotpix
 
     wh_dead = np.where(hotpix_expand ==1)
+    # we first nan the hot pix in case there is several close to each others
+    array_expand[wh_dead] = np.nan
 
     for numdead in range(len(wh_dead[0])):
             i = wh_dead[0][numdead]
@@ -259,15 +261,12 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     image_crop = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
     back_crop = cropimage(back,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of dark
     
-    # first solution :gaussin filter with a very small kernel.
-    # image = snd.gaussian_filter(image,2)
-
-    # second solution. We replace hot pixels by the average of their neighbors
+    #  We replace hot pixels by the average of their neighbors
     hotpixmap = back_crop*0 
-    hotpixwh = np.where(back_crop > 5*np.nanmedian(back_crop))
+    hotpixwh = np.where(back_crop > 20*np.nanmedian(back_crop))
     hotpixmap[hotpixwh] = 1
     image = image_crop - back_crop #Subtract dark
-    image = mean_window_8pix[image,hotpixmap]
+    image = mean_window_8pix(image,hotpixmap)
 
     image = (image/expim)/(maxPSF*ND/exppsf)  #Divide by PSF max
     # image = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
