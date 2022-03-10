@@ -198,6 +198,36 @@ def get_exptime(file):
     return exptime
 
 
+
+def mean_window_8pix(array, hotpix):
+    """ --------------------------------------------------
+    the hot pixels are 
+    
+    Parameters:
+    ----------
+    array: 2D array, raw image
+    hotpix: 2D array, hot pixels
+
+    Return:
+    ------
+    image: processed coronagraphic image, where hot pixels have been removed
+    -------------------------------------------------- """
+    array_expand = np.zeros((np.shape(array)[0] + 2, np.shape(array)[1] + 2) )
+    array_expand[:] = np.nan
+    array_expand[1:-1,1:-1] = array
+
+    hotpix_expand = np.zeros((np.shape(array)[0] + 2, np.shape(array)[1] + 2))
+    hotpix_expand[1:-1,1:-1] = hotpix
+
+    wh_dead = np.where(hotpix_expand ==1)
+
+    for numdead in range(len(wh_dead[0])):
+            i = wh_dead[0][numdead]
+            j = wh_dead[1][numdead]
+            array_expand[i,j] = np.nanmean([array_expand[i-1,j] , array_expand[i+1,j] , array_expand[i,j-1] , array_expand[i,j+1] , array_expand[i-1,j-1] , array_expand[i+1,j+1] , array_expand[i-1,j+1] , array_expand[i+1,j-1]]) 
+
+    return array_expand[1:-1,1:-1]
+
 def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND):
     """ --------------------------------------------------
     Processing of SPHERE images before being used and division by the maximum of the PSF
@@ -222,9 +252,23 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] #Load dark that correspond to image exposure time
     image = fits.getdata(file)[0] #Load image
     image[:,:int(image.shape[1]/2)] = 0 #Cancel left part of image
-    image = image - back #Subtract dark
+    
+    
+    image_crop = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
+    back_crop = cropimage(back,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of dark
+    
+    # first solution :gaussin filter with a very small kernel.
+    # image = snd.gaussian_filter(image,2)
+
+    # second solution. We average all pixel by it's neighbor
+    hotpixmap = back_crop*0 
+    hotpixwh = np.where(back_crop > 5*np.nanmedian(back_crop))
+    hotpixmap[hotpixwh] = 1
+    image = image_crop - back_crop #Subtract dark
+    image = mean_window_8pix[image,hotpixmap]
+
     image = (image/expim)/(maxPSF*ND/exppsf)  #Divide by PSF max
-    image = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
+    # image = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
     return image
 
 
