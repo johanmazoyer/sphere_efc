@@ -230,6 +230,9 @@ def mean_window_8pix(array, hotpix):
             j = wh_dead[1][numdead]
             array_expand[i,j] = np.nanmean([array_expand[i-1,j] , array_expand[i+1,j] , array_expand[i,j-1] , array_expand[i,j+1] , array_expand[i-1,j-1] , array_expand[i+1,j+1] , array_expand[i-1,j+1] , array_expand[i+1,j-1]]) 
 
+    # finally we remove the nans that can happens if you have very large zones of hot pixs
+    array_expand[np.isnan(array_expand)] = 0
+    
     return array_expand[1:-1,1:-1]
 
 def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND):
