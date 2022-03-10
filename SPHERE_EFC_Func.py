@@ -282,17 +282,18 @@ def createdifference(param):
     fileref = last(directory+'iter0_coro_image*.fits')
     imageref = reduceimageSPHERE(fileref,ImageDirectory,maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
     imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
-    imageref=cropimage(imageref,int(dimimages/2),int(dimimages/2),int(dimimages/2))
+    #imageref=cropimage(imageref,int(dimimages/2),int(dimimages/2),int(dimimages/2))
 
     filecorrection = last(directory+'iter'+str(nbiter-2)+'_coro_image*.fits')
     imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
-    imagecorrection2 = cropimage(imagecorrection,int(dimimages/2),int(dimimages/2),int(dimimages/2))
+    #imagecorrection2 = cropimage(imagecorrection,int(dimimages/2),int(dimimages/2),int(dimimages/2))
 
     def cost_function(xy_trans):
         # Function can use image slices defined in the global scope
         # Calculate X_t - image translated by x_trans
-        unshifted = fancy_xy_trans_slice(imagecorrection2, xy_trans)
-        mask = roundpupil(int(dimimages/2),67)
+        unshifted = fancy_xy_trans_slice(imagecorrection, xy_trans)
+        #mask = roundpupil(int(dimimages/2),67)
+        mask = roundpupil(dimimages,67)
         #Return mismatch measure for the translated image X_t
         return correl_mismatch(imageref[np.where(mask==0)], unshifted[np.where(mask==0)])
         
@@ -319,13 +320,13 @@ def createdifference(param):
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
         Ikplus = reduceimageSPHERE(image_name, ImageDirectory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
-        Images_to_display.append(cropimage(Ikplus-imagecorrection,int(dimimages/2),int(dimimages/2),int(dimimages/2)))
+        Images_to_display.append(Ikplus-imagecorrection)
         j = j + 1
         image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
         Ikmoins = reduceimageSPHERE(image_name, ImageDirectory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
         Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
-        Images_to_display.append(cropimage(Ikmoins-imagecorrection,int(dimimages/2),int(dimimages/2),int(dimimages/2)))
+        Images_to_display.append(Ikmoins-imagecorrection)
         j = j + 1
         Difference[k] = (Ikplus-Ikmoins)
         k = k + 1
@@ -536,9 +537,9 @@ def FullIterEFC(param):
         Contrast_cor = str(format(extract_contrast_global([coherent_signal],maskDH)[0,0],'.2e'))
         Contrast_inc = str(format(extract_contrast_global([incoherent_signal],maskDH)[0,0],'.2e'))
         
-        imagecorrection = cropimage(imagecorrection, int(dimimages/2), int(dimimages/2), int(dimimages/2))
-        coherent_signal = cropimage(coherent_signal, int(dimimages/2), int(dimimages/2), int(dimimages/2))
-        incoherent_signal = cropimage(incoherent_signal, int(dimimages/2), int(dimimages/2), int(dimimages/2))
+        #imagecorrection = cropimage(imagecorrection, int(dimimages/2), int(dimimages/2), int(dimimages/2))
+        #coherent_signal = cropimage(coherent_signal, int(dimimages/2), int(dimimages/2), int(dimimages/2))
+        #incoherent_signal = cropimage(incoherent_signal, int(dimimages/2), int(dimimages/2), int(dimimages/2))
         
         plt.close()
         fig = plt.figure(constrained_layout=True,figsize=(12,7.5))
