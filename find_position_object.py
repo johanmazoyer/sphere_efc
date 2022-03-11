@@ -21,10 +21,35 @@ from astroplan import Observer, FixedTarget
 
 # from astropy.coordinates import EarthLocation
 # print(EarthLocation.get_site_names())
-sphere_plate_scale = 12.25 #mas.pix−1
+
 
 def PA_on_detector(target_name, time_now, estimated_onsky_PA_of_the_planet, verbose = False):
     
+    """ --------------------------------------------------
+    Measure the planet position in SPHERE detector at the given time
+
+    Author: J Mazoyer
+    
+    Parameters:
+    ----------
+    target_name: string
+        name of the object
+
+    time_now: Time object (astropy)
+        Time of observation
+
+    estimated_onsky_PA_of_the_planet: float degrees
+        Estimated position angle of the planet in degrees
+        
+    verbose : bool
+        if True print values and intermediate
+
+    Return:
+    
+    Position angle of the planet
+
+    -------------------------------------------------- """
+
     vlt = Observer.at_site('Paranal Observatory', timezone="UTC")
     PUPOFFSET = 135.87 # ±0.03 deg 
     True_North = -1.75 #+/-0.08 deg (https://arxiv.org/pdf/1609.06681.pdf)
@@ -57,8 +82,32 @@ def PA_on_detector(target_name, time_now, estimated_onsky_PA_of_the_planet, verb
 
 
 
-def plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,estimated_radius_of_the_planet, time_in_hour = 1):
+def plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,estimated_sep_of_the_planet, time_in_hour = 1):
+    """ --------------------------------------------------
+    Plot the planet position in SPHERE detector in the next hour of the given time
+
+    Author: J Mazoyer
     
+    Parameters:
+    ----------
+    target_name: string
+        name of the object
+
+    time_now: Time object (astropy)
+        Time at the begining of observation
+
+    estimated_onsky_PA_of_the_planet: float degrees
+        Estimated position angle of the planet in degrees
+        
+    estimated_sep_of_the_planet: float mas
+        Estimated separation of the planet in mas
+
+    Return:
+
+    NA
+    -------------------------------------------------- """
+    
+    sphere_plate_scale = 12.25 #mas.pix−1
 
     t1 = Time('2010-01-01 00:00:00')
     t2 = Time('2010-01-01 00:10:00')
@@ -71,7 +120,7 @@ def plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,esti
     time_plots = time_now + dt10minutes * np.arange(0,total_timein10min + 1)
 
 
-    radiuses_plot = np.zeros(len(time_plots)) + estimated_radius_of_the_planet/sphere_plate_scale
+    radiuses_plot = np.zeros(len(time_plots)) + estimated_sep_of_the_planet/sphere_plate_scale
     positions_angles_plot = np.zeros(len(time_plots)) 
 
     for i, timehere in enumerate(time_plots):
@@ -89,22 +138,25 @@ def plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,esti
 
     colors = positions_angles_plot
 
-    r = np.arange(0, 20, 0.01)
-    theta = (2 * np.pi+ np.pi/2 ) * r 
 
     fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
     ax.set_theta_zero_location("N")
     ax.plot(positions_angles_plot, radiuses_plot)
-    c = ax.scatter(positions_angles_plot[0], radiuses_plot[0], c=1.9, cmap='hsv', alpha=0.75)
+    c = ax.scatter(positions_angles_plot[0], radiuses_plot[0], c='red', alpha=0.75)
 
     ax.set_rmax(60)
     ax.set_rticks([10, 20, 30, 40, 50, 60])  # Less radial ticks
     # ax.set_rlabel_position(-22.5)  # Move radial labels away from plotted line
     ax.grid(True)
 
+    plt.text(np.radians(225), 90, target_name, fontsize = 12,ha ='center')
+    plt.text(np.radians(135), 90,  time_plots[0], fontsize = 12,ha ='center',c='red')
+
 
     ax.set_title("Position planet in next {0} hour(s) (radius in pixel, dot is now)".format(time_in_hour), va='bottom')
     plt.show()
+
+
 
 
 
@@ -116,13 +168,13 @@ timestring = '2015-02-05T00:24:51.25' # start time in cube
 # timestring = '2015-02-05T03:55:24.57' # end time in cube
 
 estimated_onsky_PA_of_the_planet = 212.58 # degree https://doi.org/10.1051/0004-6361/201834302
-estimated_radius_of_the_planet = 332.42 # mas https://doi.org/10.1051/0004-6361/201834302
+estimated_sep_of_the_planet = 332.42 # mas https://doi.org/10.1051/0004-6361/201834302
 
 
 
 time_now = Time(timestring, format='isot', scale='utc')
 PA_on_detector(target_name, time_now, estimated_onsky_PA_of_the_planet, verbose = True)
-plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,estimated_radius_of_the_planet, time_in_hour = 3)
+plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,estimated_sep_of_the_planet, time_in_hour = 3)
 
 
 # just to check in betapic cube
