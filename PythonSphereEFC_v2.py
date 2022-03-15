@@ -27,7 +27,7 @@ onsky = int(os.environ['ONSKY'])#If 1: On sky measurements ; If 0: Calibration s
 Assuming_VLT_PUP_for_corr = int(os.environ['Assuming_VLT_PUP_for_corr'])
 size_probes = int(os.environ['size_probes'])# Set the size of the probes for the estimation
 centeringateachiter = int(os.environ['centeringateachiter'])#If 1: Do the recentering at each iteration ; If 0: Do not do it
-coro = os.environ(['coro'])
+coro = os.environ['coro']
 gain = float(os.environ['gain'])
 
 print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name), flush=True)

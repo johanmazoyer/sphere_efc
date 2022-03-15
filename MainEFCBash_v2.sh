@@ -116,13 +116,13 @@ WORK_PATH=$WORK_PATH0'/SlopesAndImages'
 
 if [ "$ONSKY" -eq "1" ]; then
 	echo "The NCPA compensation is done from on-sky measurements"
-	lightsource_estim = 'VLTPupil_'
+	lightsource_estim='VLTPupil_'
 else
 	echo "The NCPA compensation is done from the calibration source measurements"
 	lightsource_estim = 'InternalPupil_'
 fi
 
-lightsource_estim = lightsource_estim + coro+'_'
+lightsource_estim=${lightsource_estim}${coro}_
 
 if [ "$create_bkgrd" -eq "1" ]; then
 #FOR BACKGROUND
