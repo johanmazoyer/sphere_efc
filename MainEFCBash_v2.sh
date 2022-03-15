@@ -24,7 +24,7 @@ coro = 'APLC'
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically created
-nbiter=2
+nbiter=1
 # First try with nbiter= 1 to see if initialization runs
 # then nbiter=2 to see at least 1 full loop 
 
@@ -38,28 +38,28 @@ create_coro=1
 ## IRDIS parameters
 
 #coronagraphic image
-DIT_image=1
-NDIT_image=1
+DIT_image=32
+NDIT_image=2
 
 #Image diversity
-DIT_probe=1
-NDIT_probe=1
+DIT_probe=32
+NDIT_probe=2
 
 #Off-axis PSF
 DIT_PSF=1
 NDIT_PSF=1
-WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
+WHICH_ND='ND_2.0' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
 
 #Background
 DIT_bkgrd=1
 NDIT_bkgrd=2
 
 #Other images
-DIT_cosinus=1
+DIT_cosinus=32
 NDIT_cosinus=2
 
 
-ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
+ONSKY=1 #Set 0 for internal pup ; 1 for an on sky correction
 Assuming_VLT_PUP_for_corr=0 
 #Work only if ONSKY=0. If  Assuming_VLT_PUP_for_corr=1 assume ONSKY=1 for EFC correction only
 
@@ -68,7 +68,7 @@ Assuming_VLT_PUP_for_corr=0
 #DHsize = 1 for half dark hole 125mas to 625mas x -625mas to 625mas
 #DHsize = 2 for full dark hole -625mas to 625mas x -625mas to 625mas
 #DHsize = 3 for half dark hole -625mas to 625mas x 125mas to 625mas
-DHsize=1
+DHsize=13
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
@@ -78,7 +78,7 @@ corr_mode=1
 
 #Number of probing actuator
 #nbprobe=2
-zone_to_correct='horizontal'#vertical
+zone_to_correct='vertical'#'horizontal'#vertical
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
 size_probes=400
@@ -97,9 +97,10 @@ centeringateachiter=0
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
 #WORK_PATH0=/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/
-WORK_PATH0=/vltuser/sphere/zwahhaj/efc/sphere_efc-main
+###WORK_PATH0=/vltuser/sphere/zwahhaj/efc/sphere_efc-main
 #WORK_PATH0=~/Documents/Research/SPHERE/Git_Software/sphere_efc
 #WORK_PATH0=~/Documents/Recherche/DonneesTHD/EFConSPHERE/sphere_efc
+WORK_PATH0=/home/rgalicher/projets_financements_proposals/projets/Sphere/2202_Sphere_EFC/All_data_from_efc_python/tt/
 
 
 ###################################################################

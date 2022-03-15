@@ -418,7 +418,7 @@ def resultEFC(param):
     solution1 = solution1*amplitudeEFCMatrix/rad_632_to_nm_opt
     solution1 = -gain*solution1
     slopes = VoltToSlope(MatrixDirectory, solution1)
-    return resultatestimation, slopes, imagecorrection, Images_to_display
+    return resultatestimation, slopes, imagecorrection, Images_to_display, solution1
         
 
 
@@ -523,12 +523,13 @@ def FullIterEFC(param):
         param['centery'] = centery
         #Estimation of the electric field using the pair-wise probing (return the electric field and the slopes)
         print('Estimating the electric field using the pair-wise probing:', flush=True)
-        estimation,pentespourcorrection,imagecorrection, Images_to_display = resultEFC(param)
+        estimation,pentespourcorrection,imagecorrection, Images_to_display,solution1 = resultEFC(param)
         #Record the slopes to apply for correction at the next iteration
         refslope = 'iter' + str(nbiter-2) + 'correction'
         recordslopes(pentespourcorrection, dir2, refslope, 'iter'+str(nbiter-1)+'correction')
-        
-        
+        #Record the volages of the current iteraction 
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'voltage.fits',solution1)
+
         #Display
         coherent_signal = abs(estimation)**2
         incoherent_signal = imagecorrection - coherent_signal
