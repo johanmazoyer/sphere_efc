@@ -199,6 +199,19 @@ def get_exptime(file):
     return exptime
 
 
+def FindNoisyPix(data,neighborhood_size,threshold):
+    hotpixmap = data*0 
+    data_med = ndimage.median_filter(data,neighborhood_size)
+    hotpixwh = np.where((np.abs(data_med - data) > (threshold*data)))
+    hotpixmap[hotpixwh] = 1
+    
+    return hotpixmap
+
+
+def noise_filter(data, neighborhood_size, threshold):
+    hotpixmap = FindNoisyPix(data,neighborhood_size,threshold)
+    image = mean_window_8pix(data,hotpixmap)
+    return image
 
 def mean_window_8pix(array, hotpix):
     """ --------------------------------------------------
@@ -218,6 +231,7 @@ def mean_window_8pix(array, hotpix):
     array_expand = np.zeros((np.shape(array)[0] + 2, np.shape(array)[1] + 2) )
     array_expand[:] = np.nan
     array_expand[1:-1,1:-1] = array
+    
 
     hotpix_expand = np.zeros((np.shape(array)[0] + 2, np.shape(array)[1] + 2))
     hotpix_expand[1:-1,1:-1] = hotpix
@@ -225,18 +239,19 @@ def mean_window_8pix(array, hotpix):
     wh_dead = np.where(hotpix_expand ==1)
     # we first nan the hot pix in case there is several close to each others
     array_expand[wh_dead] = np.nan
+    array_expand_copy = array_expand.copy()
 
     for numdead in range(len(wh_dead[0])):
             i = wh_dead[0][numdead]
             j = wh_dead[1][numdead]
-            array_expand[i,j] = np.nanmean([array_expand[i-1,j] , array_expand[i+1,j] , array_expand[i,j-1] , array_expand[i,j+1] , array_expand[i-1,j-1] , array_expand[i+1,j+1] , array_expand[i-1,j+1] , array_expand[i+1,j-1]]) 
+            array_expand[i,j] = np.nanmean([array_expand_copy[i-1,j] , array_expand_copy[i+1,j] , array_expand_copy[i,j-1] , array_expand_copy[i,j+1] , array_expand_copy[i-1,j-1] , array_expand_copy[i+1,j+1] , array_expand_copy[i-1,j+1] , array_expand_copy[i+1,j-1]]) 
 
     # finally we remove the nans that can happens if you have very large zones of hot pixs
     array_expand[np.isnan(array_expand)] = 0
     
     return array_expand[1:-1,1:-1]
 
-def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND):
+def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND, remove_bad_pix = True, high_pass_filter = True):
     """ --------------------------------------------------
     Processing of SPHERE images before being used and division by the maximum of the PSF
     
@@ -258,8 +273,8 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     -------------------------------------------------- """
     expim = get_exptime(file) #Get image exposure time
     back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] #Load dark that correspond to image exposure time
-    image = fits.getdata(file)[0] #Load image
-    image[:,:int(image.shape[1]/2)] = 0 #Cancel left part of image
+    image = np.mean(fits.getdata(file),axis = 0) #Load image
+    #image[:,:int(image.shape[1]/2)] = 0 #Cancel left part of image
     
     
     image_crop = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
@@ -267,13 +282,30 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     
     #  We replace hot pixels by the average of their neighbors
     hotpixmap = back_crop*0 
-    hotpixwh = np.where(back_crop > 20*np.nanmedian(back_crop))
+    hotpixwh = np.where(back_crop > 100*np.nanmedian(back_crop))
     hotpixmap[hotpixwh] = 1
     image = image_crop - back_crop #Subtract dark
-    image = mean_window_8pix(image,hotpixmap)
-    
-    #lowpass = ndimage.gaussian_filter(image, 2)
-    #image = image - lowpass
+        
+    if remove_bad_pix == True:
+        
+        image = mean_window_8pix(image,hotpixmap)
+        #image = noise_filter(image, 5, 0.1)
+        image = noise_filter(image, 3, 0.5)
+        
+        
+        # hotpixmap = back_crop*0 
+        # hotpixwh = np.where(back_crop< 0)
+        # hotpixmap[hotpixwh] = 1
+        # image = mean_window_8pix(image,hotpixmap)
+        
+        # hotpixmap = back_crop*0 
+        # hotpixwh = np.where(image< 0)
+        # hotpixmap[hotpixwh] = 1
+        # image = mean_window_8pix(image,hotpixmap)
+        
+    if high_pass_filter == True:
+        lowpass = ndimage.gaussian_filter(image, 2)
+        image = image - lowpass
 
     image = (image/expim)/(maxPSF*ND/exppsf)  #Divide by PSF max
     # image = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
@@ -283,7 +315,7 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
 def process_PSF(directory,lightsource_estim,centerx,centery,dimimages):
     file_PSF = last(directory+lightsource_estim+'OffAxisPSF*.fits')
     exppsf = get_exptime(file_PSF)
-    PSF = reduceimageSPHERE(file_PSF, directory, 1,int(centerx),int(centery),dimimages,1,1)
+    PSF = reduceimageSPHERE(file_PSF, directory, 1,int(centerx),int(centery),dimimages,1,1,remove_bad_pix=False,high_pass_filter=False)
     smoothPSF = snd.median_filter(PSF,size=3)
     maxPSF = PSF[np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] ]
     return PSF,smoothPSF,maxPSF,exppsf
