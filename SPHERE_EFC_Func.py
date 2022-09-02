@@ -158,11 +158,22 @@ def my_callback(params):
 def correl_mismatch(slice0, slice1):
     """ Negative correlation between the two images, flattened to 1D """
     correl = np.corrcoef(slice0.ravel(), slice1.ravel())[0, 1]
-    #print(correl)
     return -correl
     
 
 def last(files):
+    """
+    Extract last file with same names in folder
+
+    Parameters
+    ----------
+    files : File name to extract
+
+    Returns
+    -------
+    extract : last file in stack
+
+    """
     extract = sorted(glob.glob(files))[-1]
     return extract
 
@@ -188,11 +199,37 @@ def cropimage(img, ctr_x, ctr_y, newsizeimg):
 
 
 def get_exptime(file):
+    """
+    Extract exposure time in an image
+
+    Parameters
+    ----------
+    file : image file
+
+    Returns
+    -------
+    exptime : Exposure time in second
+
+    """
     exptime = int(round(fits.getval(file,'EXPTIME')))
     return exptime
 
 
 def FindNoisyPix(data,neighborhood_size,threshold):
+    """
+    Find noisy pixels in image an image
+
+    Parameters
+    ----------
+    data : dark image
+    neighborhood_size : typical distance between bad pixels
+    threshold : defined threshold
+
+    Returns
+    -------
+    hotpixmap : 2D map filled with 1 at hot pixel location
+
+    """
     hotpixmap = data*0 
     data_med = ndimage.median_filter(data,neighborhood_size)
     hotpixwh = np.where((np.abs(data_med - data) > (threshold*data)))
@@ -202,6 +239,20 @@ def FindNoisyPix(data,neighborhood_size,threshold):
 
 
 def noise_filter(data, neighborhood_size, threshold):
+    """
+    Filter noise pixels in image
+
+    Parameters
+    ----------
+    data : image
+    neighborhood_size : typical distance between bad pixels
+    threshold : defined threshold
+
+    Returns
+    -------
+    image : processed image, where hot pixels have been removed
+
+    """
     hotpixmap = FindNoisyPix(data,neighborhood_size,threshold)
     image = mean_window_8pix(data,hotpixmap)
     return image
@@ -221,19 +272,22 @@ def mean_window_8pix(array, hotpix):
     ------
     image: processed coronagraphic image, where hot pixels have been removed
     -------------------------------------------------- """
+    # The image is expanded
     array_expand = np.zeros((np.shape(array)[0] + 2, np.shape(array)[1] + 2) )
     array_expand[:] = np.nan
     array_expand[1:-1,1:-1] = array
     
-
+    # The hotpix map is expanded
     hotpix_expand = np.zeros((np.shape(array)[0] + 2, np.shape(array)[1] + 2))
     hotpix_expand[1:-1,1:-1] = hotpix
 
     wh_dead = np.where(hotpix_expand ==1)
-    # we first nan the hot pix in case there is several close to each others
+    # we first nan the hot pix in case there are several close to each others
     array_expand[wh_dead] = np.nan
+    # The expanded array is copied
     array_expand_copy = array_expand.copy()
-
+    
+    #At hot pixel locations, the pixel value is equal to the mean of the eight pixels around
     for numdead in range(len(wh_dead[0])):
             i = wh_dead[0][numdead]
             j = wh_dead[1][numdead]
@@ -250,8 +304,8 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     
     Parameters:
     ----------
-    image: 2D array, raw image
-    back: 2D array, background image
+    file: str, path to the file to process
+    directory: str, background directory
     maxPSF: int, maximum of the raw PSF
     ctr_x: int, center of processed image in the x direction
     ctr_y: int, center of processed image in the y direction
@@ -264,34 +318,61 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     ------
     image: processed coronagraphic image, normalized by the max of the PSF
     -------------------------------------------------- """
-    expim = get_exptime(file) #Get image exposure time
-    back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] #Load dark that correspond to image exposure time
-    image = np.mean(fits.getdata(file),axis = 0) #Load image
+    # Get image exposure time
+    expim = get_exptime(file) 
+    # Load dark that correspond to image exposure time
+    back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] 
+    # Load image
+    image = np.mean(fits.getdata(file),axis = 0) 
     
+    # Crop to keep relevant part of image
+    image_crop = cropimage(image,ctr_x,ctr_y,newsizeimg)
+    # Crop to keep relevant part of dark
+    back_crop = cropimage(back,ctr_x,ctr_y,newsizeimg) 
     
-    image_crop = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
-    back_crop = cropimage(back,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of dark
-    
-    #  We replace hot pixels by the average of their neighbors
+    # We find hot pix in dark
     hotpixmap = back_crop*0 
     hotpixwh = np.where(back_crop > 100*np.nanmedian(back_crop))
     hotpixmap[hotpixwh] = 1
-    image = image_crop - back_crop #Subtract dark
-        
+    
+    # We subtract the dark
+    image = image_crop - back_crop 
+    
+    # We remove the hot pixels found before
     if remove_bad_pix == True:
         image = mean_window_8pix(image,hotpixmap)
         image = noise_filter(image, 3, 0.5)
         
-        
+    # We process the image with a high pass filter    
     if high_pass_filter == True:
         lowpass = ndimage.gaussian_filter(image, 2)
         image = image - lowpass
 
-    image = (image/expim)/(maxPSF*ND/exppsf)  #Divide by PSF max
+    #We normalize the image with the max of the PSF
+    image = (image/expim)/(maxPSF*ND/exppsf)  
     return image
 
 
 def process_PSF(directory,lightsource_estim,centerx,centery,dimimages):
+    """
+    Process non coronagraphic point spread function and return relevant data
+
+    Parameters
+    ----------
+    directory : PSF path
+    lightsource_estim : on-sky or internal source?
+    centerx : unprecise position of the PSF in the image
+    centery : unprecise position of the PSF in the image
+    dimimages : Final PSF image dimension
+
+    Returns
+    -------
+    PSF : Processed PSF image
+    smoothPSF : Low-pass filtered PSF image
+    maxPSF : maximum value of PSF
+    exppsf : PSF exposure time
+
+    """
     file_PSF = last(directory+lightsource_estim+'OffAxisPSF*.fits')
     exppsf = get_exptime(file_PSF)
     PSF = reduceimageSPHERE(file_PSF, directory, 1,int(centerx),int(centery),dimimages,1,1,remove_bad_pix=False,high_pass_filter=False)
@@ -421,12 +502,39 @@ def display(image, axe, title, vmin, vmax , norm = None):
 
 
 def contrast_global(image,scoring_reg):
+    """
+    Calculate contrast in the scoring region
+
+    Parameters
+    ----------
+    image : Image
+    scoring_reg : Binary mask to define scoring region
+
+    Returns
+    -------
+    contrast_mean : mean contrast
+    contrast_std : contrast rms
+
+    """
     contrast_mean = np.nanmean(image[np.where(scoring_reg)])
     contrast_std = np.nanstd(image[np.where(scoring_reg)])
     return contrast_mean, contrast_std
     
 def extract_contrast_global(cubeimage, scoring_region):
-    nb_iter = len(cubeimage)#-1
+    """
+    Calculate contrast in image cube
+
+    Parameters
+    ----------
+    cubeimage : image cube
+    scoring_region : Binary mask to define scoring region
+
+    Returns
+    -------
+    contrast :array of mean contrast and contrast rms
+
+    """
+    nb_iter = len(cubeimage)
     contrast = []
     for i in np.arange(nb_iter):
         contrast.append(contrast_global(cubeimage[i], scoring_region))
