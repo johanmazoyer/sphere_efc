@@ -56,10 +56,6 @@ param = {
   "gain": gain
 }
 
-# plotting options
-#matplotlib.rcParams['font.size'] = 17
-#colors = [color['color'] for color in list(plt.rcParams['axes.prop_cycle'])]
-# Generic setup
 
 if onsky == 0:
     lightsource_estim = 'InternalPupil_'

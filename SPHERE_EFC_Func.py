@@ -135,13 +135,6 @@ def solutiontocorrect(mask, ResultatEstimate, invertG, WhichInPupil):
     solution[WhichInPupil] = cool
     return solution
     
-
-# def cost_function(xy_trans):
-#     # Function can use image slices defined in the global scope
-#     # Calculate X_t - image translated by x_trans
-#     unshifted = fancy_xy_trans_slice(imagecorrection, xy_trans)
-#     #Return mismatch measure for the translated image X_t
-#     return correl_mismatch(imageref,unshifted)
     
 def fancy_xy_trans_slice(img_slice, xy_trans):
     """ Return copy of `img_slice` translated by `x_vox_trans` pixels
@@ -274,7 +267,6 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     expim = get_exptime(file) #Get image exposure time
     back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] #Load dark that correspond to image exposure time
     image = np.mean(fits.getdata(file),axis = 0) #Load image
-    #image[:,:int(image.shape[1]/2)] = 0 #Cancel left part of image
     
     
     image_crop = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
@@ -287,28 +279,15 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     image = image_crop - back_crop #Subtract dark
         
     if remove_bad_pix == True:
-        
         image = mean_window_8pix(image,hotpixmap)
-        #image = noise_filter(image, 5, 0.1)
         image = noise_filter(image, 3, 0.5)
         
-        
-        # hotpixmap = back_crop*0 
-        # hotpixwh = np.where(back_crop< 0)
-        # hotpixmap[hotpixwh] = 1
-        # image = mean_window_8pix(image,hotpixmap)
-        
-        # hotpixmap = back_crop*0 
-        # hotpixwh = np.where(image< 0)
-        # hotpixmap[hotpixwh] = 1
-        # image = mean_window_8pix(image,hotpixmap)
         
     if high_pass_filter == True:
         lowpass = ndimage.gaussian_filter(image, 2)
         image = image - lowpass
 
     image = (image/expim)/(maxPSF*ND/exppsf)  #Divide by PSF max
-    # image = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
     return image
 
 
@@ -366,17 +345,14 @@ def createdifference(param):
     fileref = last(directory+'iter0_coro_image*.fits')
     imageref = reduceimageSPHERE(fileref,ImageDirectory,maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
     imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
-    #imageref=cropimage(imageref,int(dimimages/2),int(dimimages/2),int(dimimages/2))
 
     filecorrection = last(directory+'iter'+str(nbiter-2)+'_coro_image*.fits')
     imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
-    #imagecorrection2 = cropimage(imagecorrection,int(dimimages/2),int(dimimages/2),int(dimimages/2))
 
     def cost_function(xy_trans):
         # Function can use image slices defined in the global scope
         # Calculate X_t - image translated by x_trans
         unshifted = fancy_xy_trans_slice(imagecorrection, xy_trans)
-        #mask = roundpupil(int(dimimages/2),67)
         mask = roundpupil(dimimages,67)
         #Return mismatch measure for the translated image X_t
         return correl_mismatch(imageref[np.where(mask==0)], unshifted[np.where(mask==0)])
@@ -436,7 +412,6 @@ def display(image, axe, title, vmin, vmax , norm = None):
         axe.imshow(image, norm=LogNorm(vmin, vmax))
     else:
         axe.imshow(image, vmin = vmin, vmax = vmax)
-    #axe.imshow(image, norm = norm)
     axe.set_xticks([])
     axe.set_yticks([])
     axe.set_title(title,size=7)
@@ -446,11 +421,9 @@ def display(image, axe, title, vmin, vmax , norm = None):
 
 
 def contrast_global(image,scoring_reg):
-    #image = np.abs(image)
     contrast_mean = np.nanmean(image[np.where(scoring_reg)])
     contrast_std = np.nanstd(image[np.where(scoring_reg)])
-    #contrast_rms = rms(image[np.where(scoring_reg)])
-    return contrast_mean, contrast_std#, contrast_rms
+    return contrast_mean, contrast_std
     
 def extract_contrast_global(cubeimage, scoring_region):
     nb_iter = len(cubeimage)#-1
@@ -621,9 +594,6 @@ def FullIterEFC(param):
         Contrast_cor = str(format(extract_contrast_global([coherent_signal],maskDH)[0,0],'.2e'))
         Contrast_inc = str(format(extract_contrast_global([incoherent_signal],maskDH)[0,0],'.2e'))
         
-        #imagecorrection = cropimage(imagecorrection, int(dimimages/2), int(dimimages/2), int(dimimages/2))
-        #coherent_signal = cropimage(coherent_signal, int(dimimages/2), int(dimimages/2), int(dimimages/2))
-        #incoherent_signal = cropimage(incoherent_signal, int(dimimages/2), int(dimimages/2), int(dimimages/2))
         
         plt.close()
         fig = plt.figure(constrained_layout=True,figsize=(12,7.5))
@@ -647,7 +617,6 @@ def FullIterEFC(param):
             k=k+1
         
         ax3 = fig3.subplots(2,2)
-        #estimation_to_display = cropimage(estimation*maskDH, int(dimimages/2), int(dimimages/2), int(dimimages/2))
         display(coherent_signal, ax3.flat[0] , title='Coherent iter' + str(nbiter-2), vmin = 1e-7, vmax=1e-3, norm='log' )
         display(incoherent_signal, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = 1e-7, vmax= 1e-3, norm='log')
         fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits',coherent_signal)
@@ -706,7 +675,6 @@ def FullIterEFC(param):
             ax4.tick_params(axis='both', which='both', labelsize=8)
             ax4.set_title('Mean contrast in DH vs iteration',size=10)
             ax4.legend()
-        #fig.tight_layout()
         print('Close each image to proceed', flush=True)
         plt.draw()
         plt.show()
@@ -763,9 +731,7 @@ def recordCoswithvolt(param, amptopushinnm, refslope):
     xx, yy = np.meshgrid(np.arange(240)-(240)/2, np.arange(240)-(240)/2)
     cc = np.cos(2*np.pi*(xx*np.cos(0*np.pi/180.))*nbper/dim)
     coe = (cc.flatten())@IMF_inv
-    #print(np.amax(coe),np.amin(coe), flush=True)
-    coe = coe*amptopushinnm/rad_632_to_nm_opt#/37/rad_632_to_nm_opt
-    #print(np.amax(coe),np.amin(coe), flush=True)
+    coe = coe*amptopushinnm/rad_632_to_nm_opt
     slopetopush = VoltToSlope(MatrixDirectory, coe)
     recordslopes(slopetopush,dir,refslope,nam[0]+'_'+str(amptopushinnm)+'nm')
     return 0
