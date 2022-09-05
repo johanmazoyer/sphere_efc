@@ -103,6 +103,8 @@ WORK_PATH0=/vltuser/sphere/zwahhaj/efc/sphere_efc-main
 #WORK_PATH0=~/Documents/Research/SPHERE/Git_Software/sphere_efc
 #WORK_PATH0=~/Documents/Recherche/DonneesTHD/EFConSPHERE/sphere_efc
 
+SLOPE_INI='VisAcq.DET1.REFSLP'
+
 
 ###################################################################
 ###################################################################
@@ -237,6 +239,7 @@ if [ "$create_coro" -eq "1" ]; then
 	export centeringateachiter
 	export coro
 	export gain
+	export SLOPE_INI
 
 	#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 	echo "Launch python EFC code"

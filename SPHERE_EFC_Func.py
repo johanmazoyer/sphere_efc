@@ -660,6 +660,7 @@ def FullIterEFC(param):
     size_probes = param["size_probes"]
     dimimages = param["dimimages"]
     lightsource_estim = param["lightsource_estim"]
+    slope_ini = param["slope_ini"]
     #Check if the directory dir exists
     if os.path.isdir(dir) is False:
         #Create the directory
@@ -671,12 +672,10 @@ def FullIterEFC(param):
 
     if nbiter == 1:
         print('Creating slopes for Cosinus, PSFOffAxis and new probes...', flush=True)
-        #Reference slopes
-        refslope = 'VisAcq.DET1.REFSLP'
         #Copy the reference slope with the right name for iteration 0 of ExperimentXXXX
-        recordslopes(np.zeros(2480),dir,refslope,filenameroot+'iter0correction')
+        recordslopes(np.zeros(2480), dir, slope_ini, filenameroot+'iter0correction')
         #Create the cosine of 10nm peak-to-valley amplitude for centering
-        recordCoswithvolt(param,10,refslope)
+        recordCoswithvolt(param, 10, slope_ini)
     else:
         if nbiter == 2:
             #Calculate the center of the first coronagraphic image using the waffle
@@ -684,12 +683,12 @@ def FullIterEFC(param):
             data,centerx,centery = findingcenterwithcosinus(param)
             SaveFits([centerx,centery],['',0],dir2,'centerxy')
         
-        centerx,centery = fits.getdata(dir2+'centerxy.fits')
+        centerx, centery = fits.getdata(dir2 + 'centerxy.fits')
         param['centerx'] = centerx
         param['centery'] = centery
         #Estimation of the electric field using the pair-wise probing (return the electric field and the slopes)
         print('Estimating the electric field using the pair-wise probing:', flush=True)
-        estimation,pentespourcorrection,imagecorrection, Images_to_display = resultEFC(param)
+        estimation,pentespourcorrection, imagecorrection, Images_to_display = resultEFC(param)
         #Record the slopes to apply for correction at the next iteration
         refslope = 'iter' + str(nbiter-2) + 'correction'
         recordslopes(pentespourcorrection, dir2, refslope, 'iter'+str(nbiter-1)+'correction')
@@ -709,14 +708,14 @@ def FullIterEFC(param):
         fig1.suptitle('Coro image iter'+str(nbiter-2), size=10)
         fig2.suptitle('Probe images iter'+str(nbiter-2), size=10)
         
-        ax1 = fig1.subplots(1,1,sharex=True,sharey=True)      
+        ax1 = fig1.subplots(1, 1, sharex=True, sharey=True)      
         display(imagecorrection, ax1, '', vmin=1e-7, vmax=1e-3, norm='log')
         ax1.text(1, 12, 'Contrast = ' + Contrast_tot, size=15,color ='red', weight='bold')
-        PSF_to_display = process_PSF(dir,param['lightsource_estim'],centerx,centery,dimimages)[0]
+        PSF_to_display = process_PSF(dir, param['lightsource_estim'], centerx, centery, dimimages)[0]
         ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
         display(PSF_to_display, ax1bis, 'PSF' , vmin = 1, vmax = np.amax(PSF_to_display), norm='log')
 
-        ax2 = fig2.subplots(2,2,sharex=True,sharey=True)
+        ax2 = fig2.subplots(2, 2, sharex=True, sharey=True)
         k=0
         for j in np.arange(2):
             display(Images_to_display[k], ax2.flat[k] , title='+ '+str(posprobes[j]), vmin=-1e-4, vmax=1e-4)
@@ -727,13 +726,13 @@ def FullIterEFC(param):
         ax3 = fig3.subplots(2,2)
         display(coherent_signal, ax3.flat[0] , title='Coherent iter' + str(nbiter-2), vmin = 1e-7, vmax=1e-3, norm='log' )
         display(incoherent_signal, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = 1e-7, vmax= 1e-3, norm='log')
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits',coherent_signal)
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits',incoherent_signal)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits', coherent_signal)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal)
         print('Done with recording new slopes!', flush=True)
         
         slopes_to_display = pentespourcorrection + fits.getdata(dir2+refslope+'.fits')[0]
         display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[0], ax3.flat[1], title = 'Slopes SH in X to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
-        display(SHslopes2map(param['MatrixDirectory'],slopes_to_display, visu=False)[1], ax3.flat[3], title = 'Slopes SH in Y to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
+        display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[1], ax3.flat[3], title = 'Slopes SH in Y to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
         
         ax4 = fig4.subplots(1,1)
         print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast_tot, flush=True)
