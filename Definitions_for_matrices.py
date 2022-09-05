@@ -17,33 +17,54 @@ ishift=np.fft.ifftshift
 
 
 def Upload_CoroConfig(ModelDirectory, coro, wavelength):
+    """
+    
+
+    Parameters
+    ----------
+    ModelDirectory : path to model directory
+    coro : coro type
+    wavelength : 
+
+    Returns
+    -------
+    mask384 : 2D apodizer
+    Pup384 : 2D pupil
+    ALC : 2D focal plane mask
+    Lyot384: 2D Lyot stop
+
+    """
     if coro == 'APLC':
         mask384 = fits.getdata(ModelDirectory+'apod-4.0lovD_384-192.fits')
         Pup384 = fits.getdata(ModelDirectory+'generated_VLT_pup_384-192.fits')
         ALC = 'ALC2'
         Lyot384 = fits.getdata(ModelDirectory+'sphere_stop_ST_ALC2.fits')
-        #PSFcentering = 1
         
     elif coro == 'FQPM':
         #used to define the sampling of the focal images
         mask384 = roundpupil(384,int(384/2))#fits.getdata(ModelDirectory+'apod-4.0lovD_384-192.fits')
-        #pupsizetmp = mask384.shape[0]
-        #isz = int(int(definition_isz(pupsizetmp,wavelength)[0]/2)*2)
-        # Round pupil
-        #mask384 = zeropad(roundpupil(pupsizetmp,pupsizetmp/2),isz)
         # VLT pupil
         Pup384 = fits.getdata(ModelDirectory+'generated_VLT_pup_384-192.fits')
-        #Pup384 = zeropad(Pup384,isz)
         ALC=''
-        # Lyot stop (NEED TO BE UPDATED WITH THE FQPM LYOT FUNCTION)
+        # Lyot stop (AXEL: NEED TO BE UPDATED WITH THE FQPM LYOT FUNCTION)
         Lyot384 = fits.getdata(ModelDirectory+'sphere_stop_ST_ALC2.fits')
-        #Lyot384 = zeropad(Lyot384,isz)
-    #    maskoffaxis=translationFFTFQPM(30,30)
-        #PSFcentering = translationFFT(isz,.5,.5)
-    return mask384, Pup384, ALC, Lyot384#, PSFcentering
+    return mask384, Pup384, ALC, Lyot384
 
 
 def roundpupil(nbpix,prad1):
+    """
+    Generate unobstructed pupil
+
+    Parameters
+    ----------
+    nbpix : size image
+    prad1 : pupil radius in pixels
+
+    Returns
+    -------
+    pupilnormal : 2D pupil binary
+
+    """
     xx, yy = np.meshgrid(np.arange(nbpix)-(nbpix)/2, np.arange(nbpix)-(nbpix)/2)
     rr     = np.hypot(yy, xx)
     pupilnormal = np.zeros((nbpix,nbpix))
@@ -52,6 +73,27 @@ def roundpupil(nbpix,prad1):
 
 
 def SaveFits(image,head,doc_dir2,name,replace=False):
+    """
+    
+
+    Parameters
+    ----------
+    image : TYPE
+        DESCRIPTION.
+    head : TYPE
+        DESCRIPTION.
+    doc_dir2 : TYPE
+        DESCRIPTION.
+    name : TYPE
+        DESCRIPTION.
+    replace : TYPE, optional
+        DESCRIPTION. The default is False.
+
+    Returns
+    -------
+    None.
+
+    """
     hdu = fits.PrimaryHDU(image)
     hdul = fits.HDUList([hdu])
     hdr = hdul[0].header
@@ -62,6 +104,20 @@ def SaveFits(image,head,doc_dir2,name,replace=False):
 
 #RGa
 def definition_isz(pupsizetmp,wave):
+    """
+    Extract relevant data 
+
+    Parameters
+    ----------
+    pupsizetmp : Entrance pupil size in pix (should be 384)
+    wave : Wavelength
+
+    Returns
+    -------
+    isz: lyot plane image size
+    ld_mas: l/D in milliarcsec
+
+    """
     pupsizeinmeter = 8 #Pupsizeinmeter
 
     #Raccourcis conversions angles
@@ -77,79 +133,146 @@ def definition_isz(pupsizetmp,wave):
     ld_rad = wave / pupsizeinmeter #lambda/D en radian
     ld_p = ld_rad * resolinpix_rad  #lambda/D en pixel
     ld_mas = ld_rad / arcsec2rad *1e3 #lambda/D en milliarcsec
-    #print('pixel per resolution element:', ld_p)
-    #ld_p=3.5
     isz=int(pupsizetmp*ld_p)#-1 # Nombre de pixels dans le plan pupille pour atteindre la résolution ld_p voulue
-    #isz = int(int(isz/2)*2)
     return [isz,ld_mas]
 
 def pupiltodetector(input_wavefront, wave, lyot_mask, Name_ALC, isz_foc, coro, pupparf=False):
+    """
+    Propagate E-field from entrance pupil plane to detector
+
+    Parameters
+    ----------
+    input_wavefront : E-field in entrance pupil
+    wave : wavelength
+    lyot_mask : 2D Lyot mask
+    Name_ALC : Lyot focal mask
+    isz_foc : Processed image size on detector
+    coro : coronagraph type
+    pupparf : boolean representing perfect pupil
+
+    Raises
+    ------
+    ValueError
+        DESCRIPTION.
+
+    Returns
+    -------
+    detector_img: image on detector
+
+    """
     
     pup_shape = input_wavefront.shape
-    pupsize = pup_shape[0] #Size of pupil in pixel (384)
+    # Size of pupil in pixel (384)
+    pupsize = pup_shape[0]
     # Nombre de pixels dans le plan pupille pour atteindre la résolution ld_p voulue
     [isz_pup,ld_mas] = definition_isz(pupsize, wave)
 
     if coro == 'APLC':
 
         if Name_ALC == 'ALC2':
-            radFPMinld=92.5/ld_mas #Taille masque corono en lambda/D ALC2
+            # Taille masque corono en lambda/D ALC2
+            radFPMinld=92.5/ld_mas 
         elif Name_ALC == 'ALC3':
-            radFPMinld=120/ld_mas  #Taille masque corono en lambda/D ALC3
+            # Taille masque corono en lambda/D ALC3
+            radFPMinld=120/ld_mas  
         else:
            raise ValueError("ALC name unsupported")
 
-        #print('Size Lyot mask in l/d:', radFPMinld)
-
-
-        mft_sampling = 100 #[pixels/(l/D)] sampling factor of the computed focal plane field with the MFT
-        occulter_fov = 5  #focal plane field of view for computing the field.
-        occ_rad_pix = radFPMinld * mft_sampling    #radius of the occulting mask in pixels.
-        npix         = (int(np.round(occulter_fov * mft_sampling)) // 2 ) *2 # force even dimension
+        # [pixels/(l/D)] sampling factor of the computed focal plane field with the MFT
+        mft_sampling = 100
+        # focal plane field of view for computing the field. REQUIRED??
+        occulter_fov = 5
+        # radius of the occulting mask in pixels.
+        occ_rad_pix = radFPMinld * mft_sampling
+        # force even dimension
+        npix         = (int(np.round(occulter_fov * mft_sampling)) // 2 ) *2
+        # focal plane field of view for computing the field.
         occulter_fov = float(npix) / float(mft_sampling)
-    
+        
+        # Computing focal plane image
         focal_plane = matrixDFT.matrix_dft(input_wavefront, occulter_fov, npix, centering='FFTSTYLE')
     
-    
+        # Computing occulted area in pixel
         occulter_area = roundpupil(npix, occ_rad_pix)
+        # Computing rejected lyot plane
         lyot_plane_rejected = matrixDFT.matrix_dft(focal_plane*occulter_area, occulter_fov, pup_shape, inverse=True, centering='FFTSTYLE')
-        focal_plane = focal_plane*(1.-.8*occulter_area)
     
+        # E-field Lyot stop
         before_lyot_stop = (input_wavefront - lyot_plane_rejected)
         after_lyot_stop = before_lyot_stop * lyot_mask
+        
+        # Resample Lyot stop
         after_lyot_stop2 = zeropad(after_lyot_stop, isz_pup)  
         
         
     elif coro == 'FQPM':
+        # Proper sampling of input entrance pupil E-field and Lyot
         input_wavefront = zeropad(input_wavefront, isz_pup)
         lyot_mask = zeropad(lyot_mask, isz_pup)
+        # Centering between 4 pixels
         PSFcentering = translationFFT(isz_pup,.5,.5)
+        # Create FQPM
         fqpm_mask = create_fqpm(isz_pup)
         
+        # Compute Lyot stop E-field
         before_lyot_stop = goto_pupil(goto_focal(input_wavefront*PSFcentering)*fqpm_mask)
      
+        # Return perfect pupil for FQPM (i.e. pupil that null the E-field in the focal plane with no aberration)
+        # Axel: I think it is unnecessary
         if pupparf == True:
             pupperf = (shift(ifft(fft(shift(before_lyot_stop*(1-lyot_mask)))*fqpm_mask))*np.conjugate(PSFcentering))#[int(isz_pup/2-pupsize/2):int(isz_pup/2+pupsize/2),int(isz_pup/2-pupsize/2):int(isz_pup/2+pupsize/2)]
             return cropimage(pupperf, isz_pup/2, isz_pup/2, pupsize)
  
+        # Filtering Lyot stop E field with Lyot stop pupil
         after_lyot_stop2 = before_lyot_stop * lyot_mask * np.conjugate(PSFcentering)
  
         
     else:
         print('coro should be APLC or FQPM')
 
+    # Propagate LS to detector
     detector_img = goto_focal(after_lyot_stop2)#[int(isz_pup/2-isz_foc/2):int(isz_pup/2+isz_foc/2),int(isz_pup/2-isz_foc/2):int(isz_pup/2+isz_foc/2)]
+    
+    # Crop image to relevant size
     detector_img = cropimage(detector_img, isz_pup/2, isz_pup/2, isz_foc)
     
     return detector_img
     
 def goto_focal(pupil_plane):
+    """
+    Propagate E-field from pupil plane to focal plane
+
+    Parameters
+    ----------
+    pupil_plane : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    focal_plane : TYPE
+        DESCRIPTION.
+
+    """
     pupil_plane = shift(pupil_plane)
     focal_plane = fft(pupil_plane)
     focal_plane = shift(focal_plane)
     return focal_plane
 
 def goto_pupil(focal_plane):
+    """
+    Propagate E-field from focal plane to pupil plane
+
+    Parameters
+    ----------
+    focal_plane : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    pupil_plane : TYPE
+        DESCRIPTION.
+
+    """
     focal_plane = ishift(focal_plane)
     pupil_plane = ifft(focal_plane)
     pupil_plane = ishift(pupil_plane)
@@ -158,6 +281,28 @@ def goto_pupil(focal_plane):
     
     
 def invertDSCC(interact, cut ,goal='e', regul="truncation", visu=False):
+    """
+    Invert with SVD + regularization
+
+    Parameters
+    ----------
+    interact : TYPE
+        DESCRIPTION.
+    cut : TYPE
+        DESCRIPTION.
+    goal : TYPE, optional
+        DESCRIPTION. The default is 'e'.
+    regul : TYPE, optional
+        DESCRIPTION. The default is "truncation".
+    visu : TYPE, optional
+        DESCRIPTION. The default is False.
+
+    Returns
+    -------
+    list
+        DESCRIPTION.
+
+    """
     U, s, V = np.linalg.svd(interact, full_matrices=False)
     S = np.diag(s)
     InvS=np.linalg.inv(S)
@@ -186,8 +331,40 @@ def invertDSCC(interact, cut ,goal='e', regul="truncation", visu=False):
 
 
 def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, posprobes , cutsvd, coro):
+    """
+    Create PW matrix
+
+    Parameters
+    ----------
+    input_wavefront : TYPE
+        DESCRIPTION.
+    wave : TYPE
+        DESCRIPTION.
+    lyot_mask : TYPE
+        DESCRIPTION.
+    Name_ALC : TYPE
+        DESCRIPTION.
+    isz_foc : TYPE
+        DESCRIPTION.
+    pushact : TYPE
+        DESCRIPTION.
+    posprobes : TYPE
+        DESCRIPTION.
+    cutsvd : TYPE
+        DESCRIPTION.
+    coro : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    list
+        DESCRIPTION.
+
+    """
+    # Initialize parameters
     pup_shape = input_wavefront.shape
-    pupsize = pup_shape[0] #Size of pupil in pixel (384)
+    # Size of pupil in pixel (384)
+    pupsize = pup_shape[0]
     numprobe = len(posprobes)
     deltapsik = np.zeros((numprobe , isz_foc , isz_foc),dtype=complex)
     probephase = np.zeros((numprobe , pupsize , pupsize))
@@ -197,24 +374,31 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
     
     
     [isz_pup,ld_mas] = definition_isz(pupsize, wave)
+    # Create off-axis PSF
     maskoffaxis = cropimage(translationFFT(isz_pup,30,30), int(isz_pup/2), int(isz_pup)/2, pupsize)
     OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc,coro)
     squaremaxPSF = np.amax(np.abs(OffAxisPSF))
 
+    # Regularization
     cutsvd = 0.3*squaremaxPSF*8/(400/37)
     
+    # Get constant E-field in the detector with corono
     pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc,coro)
 
     k=0
     for i in posprobes:
         print(i)
+        # Poke one actuator and compute complex entrance pupil
         probephase[k] = pushact[i]
         probephase[k] = 2*np.pi*(probephase[k])*1e-9/wave
-        input_wavefront_k = input_wavefront*(1+1j*probephase[k]) #entrance pupil plane field (can be real, or complex with amplitude and phase)
+        #entrance pupil plane field (can be real, or complex with amplitude and phase)
+        input_wavefront_k = input_wavefront*(1+1j*probephase[k])
+        # Propagate input through the coronagraph, remove constant E-field and normalize with PSF
         deltapsikbis = pupiltodetector(input_wavefront_k, wave,lyot_mask,Name_ALC,isz_foc,coro)
         deltapsik[k] = (deltapsikbis-pupilnoabb)/squaremaxPSF
         k=k+1
 
+    # invert matrix
     l=0
     for i in np.arange(isz_foc):
         for j in np.arange(isz_foc):
@@ -232,6 +416,24 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
     
 
 def creatingWhichinPupil(pupil, pushact, cutinpupil):
+    """
+    Compute an array with actuator indices that are located inside the pupil
+
+    Parameters
+    ----------
+    pupil : TYPE
+        DESCRIPTION.
+    pushact : TYPE
+        DESCRIPTION.
+    cutinpupil : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    WhichInPupil : TYPE
+        DESCRIPTION.
+
+    """
     WhichInPupil = []
     for i in np.arange(len(pushact)):
         Psivector = - pushact[i]
@@ -307,36 +509,90 @@ def creatingMaskDH(dimimages,
     
     
 def creatingCorrectionmatrix(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, Whichact, coro):
+    """
+    Create full jacobian
+
+    Parameters
+    ----------
+    input_wavefront : TYPE
+        DESCRIPTION.
+    wave : TYPE
+        DESCRIPTION.
+    lyot_mask : TYPE
+        DESCRIPTION.
+    Name_ALC : TYPE
+        DESCRIPTION.
+    isz_foc : TYPE
+        DESCRIPTION.
+    pushact : TYPE
+        DESCRIPTION.
+    Whichact : TYPE
+        DESCRIPTION.
+    coro : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    Gmatrixbis : TYPE
+        DESCRIPTION.
+
+    """
     pup_shape = input_wavefront.shape
-    pupsize = pup_shape[0] #Size of pupil in pixel (384)
+    # Size of pupil in pixel (384)
+    pupsize = pup_shape[0]
     [isz_pup,ld_mas] = definition_isz(pupsize, wave)
+    # Create off-axis PSF
     maskoffaxis = cropimage(translationFFT(isz_pup,30,30), int(isz_pup/2), int(isz_pup)/2, pupsize)
     OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, coro)
     squaremaxPSF = np.amax(np.abs(OffAxisPSF))
     
+    # Get constant E-field in the detector with corono
     pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc, coro)
     
+    # Jacobian calculation cube (Real-Imag, pixels, nb modes)
     Gmatrixbis=np.zeros((2,int(isz_foc*isz_foc),len(Whichact)))
 
     k=0
     for i in Whichact:
         print(i)
+        # Poke one actuator and compute complex entrance pupil
         Psivector = pushact[i]
         Psivector = 2*np.pi*(Psivector)*1e-9/wave
-        input_wavefront_k = input_wavefront*(1+1j*Psivector) #entrance pupil plane field (can be real, or complex with amplitude and phase)
-    
+        # Entrance pupil plane field (can be real, or complex with amplitude and phase)
+        input_wavefront_k = input_wavefront*(1+1j*Psivector)
+        # Propagate input through the coronagraph, remove constant E-field and normalize with PSF
         Gvectorbisbis = (pupiltodetector(input_wavefront_k , wave , lyot_mask , Name_ALC , isz_foc, coro)- pupilnoabb)/squaremaxPSF
     
+        # Fill jacobian with real data
         Gmatrixbis[0,:,k] = np.real(Gvectorbisbis).flatten()
+        
+        # Fill jacobian with imag data
         Gmatrixbis[1,:,k] = np.imag(Gvectorbisbis).flatten()
         k=k+1
     return Gmatrixbis
 
 
 def get_masked_jacobian(complex_jacobian, mask):
+    """
+    Extract DH pixels in jacobian calculated with creatingCorrectionmatrix
+
+    Parameters
+    ----------
+    complex_jacobian : (Real-Imag, pixels, nb modes)
+    mask : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    masked_jacobian : TYPE
+        DESCRIPTION.
+
+    """
     mask_flattened = mask.flatten()
+    # Create jacobian in good dimensions (real values + imag values, nb modes)
     masked_jacobian = np.zeros((2*int(np.sum(mask)),complex_jacobian.shape[2]))
     
+    # Fill in jacobian
     masked_jacobian[0:int(np.sum(mask))] = complex_jacobian[0,np.where(mask_flattened)]
     masked_jacobian[int(np.sum(mask)):] = complex_jacobian[1,np.where(mask_flattened)]
     
@@ -365,13 +621,26 @@ def translationFFT(dim_im,a,b):
         Phase ramp
     -------------------------------------------------- """
     # Verify this function works
-    maska = np.linspace(-np.pi * a, np.pi * a, dim_im)
-    maskb = np.linspace(-np.pi * b, np.pi * b, dim_im)
+    maska = np.linspace(-np.pi * a, np.pi * a, dim_im, endpoint = False)
+    maskb = np.linspace(-np.pi * b, np.pi * b, dim_im, endpoint = False)
     xx, yy = np.meshgrid(maska, maskb)
     return np.exp(-1j * xx) * np.exp(-1j * yy)
 
 
 def zeropad(tab,dim):
+    """
+    Zero padding around image
+
+    Parameters
+    ----------
+    tab : image
+    dim : new image dimension
+
+    Returns
+    -------
+    newtab : image in new dimension, padded with zeroes
+
+    """
     newtab = np.zeros((dim,dim),dtype=complex)
     left = int(dim/2-tab.shape[0]/2)
     right = int(dim/2+tab.shape[0]/2)
@@ -399,7 +668,20 @@ def cropimage(img, ctr_x, ctr_y, newsizeimg):
     cropped = img[int(ctr_x-newimgs2):int(ctr_x+newimgs2),int(ctr_y-newimgs2):int(ctr_y+newimgs2)]
     return cropped
 
-def create_fqpm(isz_pup):        
+def create_fqpm(isz_pup): 
+    """
+    Create Four Quadrant Phase Mask of size isz_pup
+
+    Parameters
+    ----------
+    isz_pup : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """       
     fqpm_mask = np.ones((isz_pup,isz_pup))
     fqpm_mask[0:int(isz_pup/2),0:int(isz_pup/2)] = -1
     fqpm_mask[int(isz_pup/2):isz_pup,int(isz_pup/2):isz_pup] = -1

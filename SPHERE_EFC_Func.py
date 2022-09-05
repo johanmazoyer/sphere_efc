@@ -272,8 +272,8 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     image = image_crop - back_crop #Subtract dark
     image = mean_window_8pix(image,hotpixmap)
     
-    lowpass = ndimage.gaussian_filter(image, 2)
-    image = image - lowpass
+    #lowpass = ndimage.gaussian_filter(image, 2)
+    #image = image - lowpass
 
     image = (image/expim)/(maxPSF*ND/exppsf)  #Divide by PSF max
     # image = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
@@ -459,7 +459,7 @@ def resultEFC(param):
     
     vectoressai = fits.getdata(MatrixDirectory+lightsource_estim+'VecteurEstimation_'+zone_to_correct+str(size_probes)+'nm.fits')
     WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
-    maskDH = fits.getdata(MatrixDirectory+lightsource_estim+'mask_DH'+str(dhsize)+'.fits')
+    maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
     invertGDH = fits.getdata(MatrixDirectory+lightsource_corr+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
 
     print('- Creating difference of images...', flush=True)
@@ -554,7 +554,7 @@ def FullIterEFC(param):
     dir2 = dir + filenameroot
         
     dhsize = param["dhsize"]
-    maskDH = fits.getdata(MatrixDirectory+lightsource_estim+'mask_DH'+str(dhsize)+'.fits')
+    maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
 
     if nbiter == 1:
         print('Creating slopes for Cosinus, PSFOffAxis and new probes...', flush=True)
