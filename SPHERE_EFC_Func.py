@@ -345,12 +345,106 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
         
     # We process the image with a high pass filter    
     if high_pass_filter == True:
-        lowpass = ndimage.gaussian_filter(image, 2)
-        image = image - lowpass
+        image = high_pass_filter_gauss(image, 2)
 
     #We normalize the image with the max of the PSF
     image = (image/expim)/(maxPSF*ND/exppsf)  
     return image
+
+
+def high_pass_filter_gauss(image, sigma):
+    """
+    
+
+    Parameters
+    ----------
+    image : Image to filter
+    sigma : gaussian parameter in pixel
+
+    Returns
+    -------
+    image : filtered image
+
+    """
+    lowpass = ndimage.gaussian_filter(image, sigma)
+    image = image - lowpass
+    return image
+
+def rescale_coherent_component(signal_co, signal_tot, maskDH, nb_loop):
+    """
+    
+
+    Parameters
+    ----------
+    signal_co : Image resulted from PW, removed from bad pixels, with halo
+    signal_tot : Coro image, with halo
+    maskDH : region where scaling is calculated
+    nb_loop: number of iterations for calculation (10)
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
+    # Copy coherent signal to preserve
+    signal_co_copy = signal_co.copy()
+
+    # High pass filter coherent and total signals
+    filtered_co = high_pass_filter_gauss(signal_co_copy, 2)
+    filtered_tot = high_pass_filter_gauss(signal_tot, 2)
+
+    # Trying to match filtered coherent signal and filtered total intensity in DH
+    best_params = []
+    best_params2 = []
+    best_params3 = []
+    for i in np.arange(nb_loop):
+        # Translation in x,y
+        def cost_function(xy_trans):
+            # Function can use image slices defined in the global scope
+            # Calculate X_t - image translated by x_trans
+            unshifted = fancy_xy_trans_slice(filtered_co, xy_trans)
+            #Return mismatch measure for the translated image X_t
+            return np.sum(np.abs(filtered_tot[np.where(maskDH)] - unshifted[np.where(maskDH)])**2*1e5)
+            
+        # Compute solution
+        best_params.append( fmin_powell(cost_function, [0, 0], disp=0, callback=None) )
+        # Apply solution
+        filtered_co = fancy_xy_trans_slice(filtered_co, best_params[-1])
+        
+        # Translation in z
+        def cost_function2(factor):
+            a = filtered_co + factor
+            return np.sum(np.abs(filtered_tot[np.where(maskDH)] - a[np.where(maskDH)])*1e5)
+        
+        # Compute solution
+        best_params2.append( fmin_powell(cost_function2, 1e-5, disp=0, callback=None) )
+        # Apply solution
+        filtered_co = filtered_co + best_params2[-1]
+        
+        # Scaling in z
+        def cost_function3(factor):
+            a = filtered_co * factor
+            return np.sum(np.abs(filtered_tot[np.where(maskDH)] - a[np.where(maskDH)])*1e5)
+        
+        # Compute solution
+        best_params3.append( fmin_powell(cost_function3, 0.9, disp=0, callback=None) )
+        # Apply solution
+        filtered_co = filtered_co * best_params3[-1]
+    
+    # Global scaling
+    scaling = np.prod( best_params3 )
+    
+    # Compute solution to unfiltered data
+    for i in np.arange(len(best_params)):
+        signal_co_copy = fancy_xy_trans_slice( signal_co_copy, best_params[i] )
+        signal_co_copy = signal_co_copy + best_params2[i]
+        signal_co_copy = signal_co_copy * best_params3[i]
+    
+    # Compute unfiltered incoherent component    
+    signal_inco = signal_tot - signal_co_copy
+    
+    return signal_co_copy, signal_inco, scaling
 
 
 def process_PSF(directory,lightsource_estim,centerx,centery,dimimages):
@@ -379,6 +473,8 @@ def process_PSF(directory,lightsource_estim,centerx,centery,dimimages):
     smoothPSF = snd.median_filter(PSF,size=3)
     maxPSF = PSF[np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] ]
     return PSF,smoothPSF,maxPSF,exppsf
+
+
 
 def createdifference(param):
     """ --------------------------------------------------
@@ -579,12 +675,17 @@ def resultEFC(param):
     Difference, imagecorrection, Images_to_display = createdifference(param)
     print('- Estimating the focal plane electric field...', flush=True)
     resultatestimation = estimateEab(Difference, vectoressai)
+    print('- Rescaling solution and computing incoherent component...', flush=True)
+    intensity_co = np.abs(resultatestimation)**2
+    intensity_co, intensity_inco, scaling = rescale_coherent_component(intensity_co, imagecorrection, maskDH, 10)
+    print('- Applied factor = ' + str(scaling), flush=True)
+    resultatestimation = resultatestimation * scaling
     print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
     solution1 = solutiontocorrect(maskDH, resultatestimation, invertGDH, WhichInPupil)
     solution1 = solution1*amplitudeEFCMatrix/rad_632_to_nm_opt
     solution1 = -gain*solution1
     slopes = VoltToSlope(MatrixDirectory, solution1)
-    return resultatestimation, slopes, imagecorrection, Images_to_display
+    return intensity_co, intensity_inco, imagecorrection, Images_to_display, slopes
         
 
 
@@ -681,22 +782,20 @@ def FullIterEFC(param):
             #Calculate the center of the first coronagraphic image using the waffle
             print('Calculating center of the first coronagraphic image:', flush=True)
             data,centerx,centery = findingcenterwithcosinus(param)
-            SaveFits([centerx,centery],['',0],dir2,'centerxy')
+            SaveFits([centerx,centery], ['',0], dir2, 'centerxy')
         
         centerx, centery = fits.getdata(dir2 + 'centerxy.fits')
         param['centerx'] = centerx
         param['centery'] = centery
         #Estimation of the electric field using the pair-wise probing (return the electric field and the slopes)
         print('Estimating the electric field using the pair-wise probing:', flush=True)
-        estimation,pentespourcorrection, imagecorrection, Images_to_display = resultEFC(param)
+        coherent_signal, incoherent_signal, imagecorrection, Images_to_display, pentespourcorrection  = resultEFC(param)
         #Record the slopes to apply for correction at the next iteration
         refslope = 'iter' + str(nbiter-2) + 'correction'
         recordslopes(pentespourcorrection, dir2, refslope, 'iter'+str(nbiter-1)+'correction')
         
         
         #Display
-        coherent_signal = abs(estimation)**2
-        incoherent_signal = imagecorrection - coherent_signal
         Contrast_tot=  str(format(extract_contrast_global([imagecorrection],maskDH)[0,0],'.2e'))
         Contrast_cor = str(format(extract_contrast_global([coherent_signal],maskDH)[0,0],'.2e'))
         Contrast_inc = str(format(extract_contrast_global([incoherent_signal],maskDH)[0,0],'.2e'))
@@ -710,7 +809,7 @@ def FullIterEFC(param):
         
         ax1 = fig1.subplots(1, 1, sharex=True, sharey=True)      
         display(imagecorrection, ax1, '', vmin=1e-7, vmax=1e-3, norm='log')
-        ax1.text(1, 12, 'Contrast = ' + Contrast_tot, size=15,color ='red', weight='bold')
+        ax1.text(1, 12, 'Contrast = ' + Contrast_tot, size=15, color ='red', weight='bold')
         PSF_to_display = process_PSF(dir, param['lightsource_estim'], centerx, centery, dimimages)[0]
         ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
         display(PSF_to_display, ax1bis, 'PSF' , vmin = 1, vmax = np.amax(PSF_to_display), norm='log')
@@ -728,6 +827,7 @@ def FullIterEFC(param):
         display(incoherent_signal, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = 1e-7, vmax= 1e-3, norm='log')
         fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits', coherent_signal)
         fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection)
         print('Done with recording new slopes!', flush=True)
         
         slopes_to_display = pentespourcorrection + fits.getdata(dir2+refslope+'.fits')[0]
