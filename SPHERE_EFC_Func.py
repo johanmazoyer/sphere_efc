@@ -298,7 +298,7 @@ def mean_window_8pix(array, hotpix):
     
     return array_expand[1:-1,1:-1]
 
-def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND, remove_bad_pix = True, high_pass_filter = True):
+def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND, remove_bad_pix = True, high_pass_filter = False):
     """ --------------------------------------------------
     Processing of SPHERE images before being used and division by the maximum of the PSF
     
@@ -520,11 +520,11 @@ def createdifference(param):
     
     #Traitement de l'image de référence (première image corono et recentrage subpixelique)
     fileref = last(directory+'iter0_coro_image*.fits')
-    imageref = reduceimageSPHERE(fileref,ImageDirectory,maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
+    imageref = reduceimageSPHERE(fileref, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
     imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
 
     filecorrection = last(directory+'iter'+str(nbiter-2)+'_coro_image*.fits')
-    imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
+    imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
 
     def cost_function(xy_trans):
         # Function can use image slices defined in the global scope
@@ -555,13 +555,13 @@ def createdifference(param):
     for i in posprobes:
         image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-        Ikplus = reduceimageSPHERE(image_name, ImageDirectory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
+        Ikplus = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
         Images_to_display.append(Ikplus-imagecorrection)
         j = j + 1
         image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-        Ikmoins = reduceimageSPHERE(image_name, ImageDirectory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
+        Ikmoins = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
         Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
         Images_to_display.append(Ikmoins-imagecorrection)
         j = j + 1
