@@ -119,7 +119,7 @@ if [ "$ONSKY" -eq "1" ]; then
 	lightsource_estim='VLTPupil_'
 else
 	echo "The NCPA compensation is done from the calibration source measurements"
-	lightsource_estim = 'InternalPupil_'
+	lightsource_estim='InternalPupil_'
 fi
 
 lightsource_estim=${lightsource_estim}${coro}_

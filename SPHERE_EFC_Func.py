@@ -270,7 +270,7 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     hotpixwh = np.where(back_crop > 20*np.nanmedian(back_crop))
     hotpixmap[hotpixwh] = 1
     image = image_crop - back_crop #Subtract dark
-    image = mean_window_8pix(image,hotpixmap)
+    #image = mean_window_8pix(image,hotpixmap)
     
     #lowpass = ndimage.gaussian_filter(image, 2)
     #image = image - lowpass
