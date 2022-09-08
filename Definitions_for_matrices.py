@@ -46,8 +46,8 @@ def Upload_CoroConfig(ModelDirectory, coro, wavelength):
         # VLT pupil
         Pup384 = fits.getdata(ModelDirectory+'generated_VLT_pup_384-192.fits')
         ALC=''
-        # Lyot stop (AXEL: NEED TO BE UPDATED WITH THE FQPM LYOT FUNCTION)
-        Lyot384 = fits.getdata(ModelDirectory+'sphere_stop_ST_ALC2.fits')
+        # Lyot stop
+        Lyot384 = fits.getdata(ModelDirectory+'generated_ST_4QPM_Potier.fits')
     return mask384, Pup384, ALC, Lyot384
 
 
