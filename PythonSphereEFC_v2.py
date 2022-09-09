@@ -78,10 +78,19 @@ lightsource_corr = lightsource_corr + coro + '_'
 param['lightsource_estim'] = lightsource_estim
 param['lightsource_corr'] = lightsource_corr
 
-if zone_to_correct == 'vertical':
-    posprobes=[678,679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
-elif zone_to_correct == 'horizontal':
-    posprobes=[893,934]
+if coro == 'APLC':
+    if zone_to_correct == 'vertical':
+        posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
+    elif zone_to_correct == 'horizontal':
+        posprobes = [893 , 934]
+
+    
+elif coro == 'FQPM':
+    if zone_to_correct == 'vertical':
+        posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
+    elif zone_to_correct == 'horizontal':
+        posprobes = [1089 , 1125] #FQPM
+
 param['posprobes'] = posprobes
 
 

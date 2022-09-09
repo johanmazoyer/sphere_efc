@@ -38,8 +38,8 @@ dimimages = 200
 wave = 1.667e-6
 onsky = 0 #1 if on sky correction
 
-zone_to_correct = 'horizontal' #vertical
-createPW = False
+zone_to_correct = 'vertical' #vertical
+createPW = True
 
 createwhich = False
 createjacobian = False
@@ -51,7 +51,7 @@ createmask = False
 
 nbmodes = 600
 corr_mode='1'
-createEFCmatrix = True
+createEFCmatrix = False
 
 
 
@@ -87,11 +87,20 @@ if createPW == True:
     print('...Creating VectorProbes...')
     pushact = amplitudePW * raw_pushact
     # Choose probes positions
-    if zone_to_correct == 'vertical':
-        posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
-    elif zone_to_correct == 'horizontal':
-        posprobes = [893 , 934]
-    #Choose the truncation above where the pixels won't be taken into account for estimation
+    if coro == 'APLC':
+        if zone_to_correct == 'vertical':
+            posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
+        elif zone_to_correct == 'horizontal':
+            posprobes = [893 , 934]
+    
+        
+    elif coro == 'FQPM':
+        if zone_to_correct == 'vertical':
+            posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
+        elif zone_to_correct == 'horizontal':
+            posprobes = [1089 , 1125] #FQPM
+        
+    #Choose the truncation above where the pixels won't be taken into account for estimation (not used currently here)
     cutestimation = 0#0.3*squaremaxPSF*8/amplitudePW
 
     vectoressai,SVD = def_mat.createvectorprobes(input_wavefront,
