@@ -94,6 +94,8 @@ Y1UP=1511 #X position of the bottom PSF echo in python
 
 #Do you want to center your image at each iteration. Set 1 for yes, 0 for no.
 centeringateachiter=0
+#Do you want to rescale the coherent intensity to match the total intensity in the DH?
+rescaling=0
 
 
 # Path common to wsre and wsrsgw
@@ -102,6 +104,8 @@ DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
 WORK_PATH0=/vltuser/sphere/zwahhaj/efc/sphere_efc-main
 #WORK_PATH0=~/Documents/Research/SPHERE/Git_Software/sphere_efc
 #WORK_PATH0=~/Documents/Recherche/DonneesTHD/EFConSPHERE/sphere_efc
+
+SLOPE_INI='VisAcq.DET1.REFSLP'
 
 
 ###################################################################
@@ -237,6 +241,8 @@ if [ "$create_coro" -eq "1" ]; then
 	export centeringateachiter
 	export coro
 	export gain
+	export SLOPE_INI
+	export rescaling
 
 	#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 	echo "Launch python EFC code"
