@@ -47,7 +47,7 @@ def Upload_CoroConfig(ModelDirectory, coro, wavelength):
         Pup384 = fits.getdata(ModelDirectory+'generated_VLT_pup_384-192.fits')
         ALC=''
         # Lyot stop
-        Lyot384 = fits.getdata(ModelDirectory+'generated_ST_4QPM_Potier.fits')
+        Lyot384 = fits.getdata(ModelDirectory+'generated_ST_4QPM2_Potier.fits')
     return mask384, Pup384, ALC, Lyot384
 
 
