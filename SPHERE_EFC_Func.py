@@ -618,8 +618,8 @@ def FullIterEFC(param):
         #estimation_to_display = cropimage(estimation*maskDH, int(dimimages/2), int(dimimages/2), int(dimimages/2))
         display(coherent_signal, ax3.flat[0] , title='Coherent iter' + str(nbiter-2), vmin = 1e-7, vmax=1e-3, norm='log' )
         display(incoherent_signal, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = 1e-7, vmax= 1e-3, norm='log')
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits',coherent_signal)
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits',incoherent_signal)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits',coherent_signal, overwrite=True)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits',incoherent_signal, overwrite=True)
         print('Done with recording new slopes!', flush=True)
         
         slopes_to_display = pentespourcorrection + fits.getdata(dir2+refslope+'.fits')[0]
@@ -728,14 +728,16 @@ def recordCoswithvolt(param, amptopushinnm, refslope):
     nam = ['cos_00deg','cos_30deg','cos_90deg']
     nbper = 10.
     dim = 240
+    angle = 30
     xx, yy = np.meshgrid(np.arange(240)-(240)/2, np.arange(240)-(240)/2)
-    cc = np.cos(2*np.pi*(xx*np.cos(0*np.pi/180.))*nbper/dim)
+    cc = np.cos(2*np.pi*(xx*np.cos(0*np.pi/180.))*nbper/dim) #45 instead of 0?
+    cc = ndimage.rotate(cc, angle, reshape = False, mode = 'grid-mirror')
     coe = (cc.flatten())@IMF_inv
     #print(np.amax(coe),np.amin(coe), flush=True)
     coe = coe*amptopushinnm/rad_632_to_nm_opt#/37/rad_632_to_nm_opt
     #print(np.amax(coe),np.amin(coe), flush=True)
     slopetopush = VoltToSlope(MatrixDirectory, coe)
-    recordslopes(slopetopush,dir,refslope,nam[0]+'_'+str(amptopushinnm)+'nm')
+    recordslopes(slopetopush, dir, refslope, nam[0] + '_' + str(amptopushinnm) + 'nm')
     return 0
     
     
