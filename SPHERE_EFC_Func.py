@@ -664,7 +664,8 @@ def resultEFC(param):
     size_probes = param["size_probes"]
     dhsize = param["dhsize"]
     corr_mode = param['corr_mode']
-    gain = param['gain'] 
+    gain = param['gain']
+    rescaling = param['rescaling']
     
     vectoressai = fits.getdata(MatrixDirectory+lightsource_estim+'VecteurEstimation_'+zone_to_correct+str(size_probes)+'nm.fits')
     WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
@@ -675,11 +676,17 @@ def resultEFC(param):
     Difference, imagecorrection, Images_to_display = createdifference(param)
     print('- Estimating the focal plane electric field...', flush=True)
     resultatestimation = estimateEab(Difference, vectoressai)
-    print('- Rescaling solution and computing incoherent component...', flush=True)
     intensity_co = np.abs(resultatestimation)**2
-    intensity_co, intensity_inco, scaling = rescale_coherent_component(intensity_co, imagecorrection, maskDH, 10)
-    print('- Applied factor = ' + str(scaling), flush=True)
-    resultatestimation = resultatestimation * scaling
+    
+    if rescaling == 1:
+        print('- Rescaling solution and computing incoherent component...', flush=True)
+        intensity_co, intensity_inco, scaling = rescale_coherent_component(intensity_co, imagecorrection, maskDH, 10)
+        print('- Applied factor = ' + str(scaling), flush=True)
+        resultatestimation = resultatestimation * scaling
+        
+    else:
+        intensity_inco = imagecorrection - intensity_co
+    
     print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
     solution1 = solutiontocorrect(maskDH, resultatestimation, invertGDH, WhichInPupil)
     solution1 = solution1*amplitudeEFCMatrix/rad_632_to_nm_opt

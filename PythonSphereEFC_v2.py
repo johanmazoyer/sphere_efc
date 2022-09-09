@@ -30,6 +30,7 @@ centeringateachiter = int(os.environ['centeringateachiter'])#If 1: Do the recent
 coro = os.environ['coro']
 gain = float(os.environ['gain'])
 slope_ini = os.environ['SLOPE_INI']
+rescaling = int(os.environ['rescaling'])
 
 print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name), flush=True)
 
@@ -55,7 +56,8 @@ param = {
   "amplitudeEFCMatrix": 8, #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
   "dimimages": 200,
   "gain": gain,
-  "slope_ini": slope_ini
+  "slope_ini": slope_ini,
+  "rescaling": rescaling
 }
 
 
