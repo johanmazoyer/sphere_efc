@@ -832,9 +832,9 @@ def FullIterEFC(param):
         ax3 = fig3.subplots(2,2)
         display(coherent_signal, ax3.flat[0] , title='Coherent iter' + str(nbiter-2), vmin = 1e-7, vmax=1e-3, norm='log' )
         display(incoherent_signal, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = 1e-7, vmax= 1e-3, norm='log')
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits', coherent_signal)
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal)
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits', coherent_signal, overwrite = True)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal, overwrite = True)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection, overwrite = True)
         print('Done with recording new slopes!', flush=True)
         
         slopes_to_display = pentespourcorrection + fits.getdata(dir2+refslope+'.fits')[0]

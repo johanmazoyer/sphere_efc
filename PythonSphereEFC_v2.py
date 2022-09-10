@@ -10,7 +10,7 @@ warnings.filterwarnings("ignore")
 # RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
 # ImageDirectory = os.environ['WORK_PATH']#RootDirectory+'SlopesAndImages/'
 # MatrixDirectory = os.environ['MATRIX_PATH']#RootDirectory+'MatricesAndModel/'
-RootDirectory = '/vltuser/sphere/zwahhaj/efc/sphere_efc-main/'
+RootDirectory = '/vltuser/sphere/zwahhaj/efc/'
 ImageDirectory = RootDirectory+'SlopesAndImages/'
 MatrixDirectory = RootDirectory+'MatricesAndModel/'
 nbiter = int(os.environ['nbiter']) #nb of the iteration (first iteration is 1)
