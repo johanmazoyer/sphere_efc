@@ -87,10 +87,10 @@ size_probes=400
 
 # First guess for the PSF echo position used for image centering (WARNING X and Y are inverted here)
 # (adding a cosine to DM phase)
-X0UP= #548 #544 #Y position of the upper PSF echo in python #553
-Y0UP= #1511 #X position of the upper PSF echo in python
-X1UP= #478 #474 #Y position of the bottom PSF echo in python #485
-Y1UP= #1511 #X position of the bottom PSF echo in python
+X0UP=490 #548 #544 #Y position of the upper PSF echo in python #553
+Y0UP=1494 #1511 #X position of the upper PSF echo in python
+X1UP=550 #478 #474 #Y position of the bottom PSF echo in python #485
+Y1UP=1531 #1511 #X position of the bottom PSF echo in python
 
 #Do you want to center your image at each iteration. Set 1 for yes, 0 for no.
 centeringateachiter=0

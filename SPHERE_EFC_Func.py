@@ -336,7 +336,7 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     # We remove the hot pixels found in dark
     if remove_bad_pix == True:
         # We find hot pix in dark
-        hotpixmap = find_hot_pix_in_dark(back_crop, 100)
+        hotpixmap = find_hot_pix_in_dark(back_crop, 10)
         image = mean_window_8pix(image,hotpixmap)
         
     # We process the image with a high pass filter    
@@ -350,7 +350,7 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
 
 def find_hot_pix_in_dark(dark, threshold):
     hotpixmap = dark*0 
-    hotpixwh = np.where(dark > threshold*np.nanmedian(dark))
+    hotpixwh = np.where(np.abs(dark) > threshold*np.nanstd(dark))
     hotpixmap[hotpixwh] = 1
     return hotpixmap
 
