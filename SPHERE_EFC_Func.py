@@ -298,7 +298,7 @@ def mean_window_8pix(array, hotpix):
     
     return array_expand[1:-1,1:-1]
 
-def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND, remove_bad_pix = False, high_pass_filter = False):
+def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND, remove_bad_pix = True, high_pass_filter = False):
     """ --------------------------------------------------
     Processing of SPHERE images before being used and division by the maximum of the PSF
     
@@ -328,20 +328,16 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     # Crop to keep relevant part of image
     image_crop = cropimage(image,ctr_x,ctr_y,newsizeimg)
     # Crop to keep relevant part of dark
-    back_crop = cropimage(back,ctr_x,ctr_y,newsizeimg) 
-    
-    # We find hot pix in dark
-    hotpixmap = back_crop*0 
-    hotpixwh = np.where(back_crop > 100*np.nanmedian(back_crop))
-    hotpixmap[hotpixwh] = 1
+    back_crop = cropimage(back,ctr_x,ctr_y,newsizeimg)    
     
     # We subtract the dark
     image = image_crop - back_crop 
     
-    # We remove the hot pixels found before
+    # We remove the hot pixels found in dark
     if remove_bad_pix == True:
+        # We find hot pix in dark
+        hotpixmap = find_hot_pix_in_dark(back_crop, 100)
         image = mean_window_8pix(image,hotpixmap)
-        image = noise_filter(image, 3, 0.5)
         
     # We process the image with a high pass filter    
     if high_pass_filter == True:
@@ -351,6 +347,12 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     image = (image/expim)/(maxPSF*ND/exppsf)  
     return image
 
+
+def find_hot_pix_in_dark(dark, threshold):
+    hotpixmap = dark*0 
+    hotpixwh = np.where(dark > threshold*np.nanmedian(dark))
+    hotpixmap[hotpixwh] = 1
+    return hotpixmap
 
 def high_pass_filter_gauss(image, sigma):
     """
@@ -469,7 +471,7 @@ def process_PSF(directory,lightsource_estim,centerx,centery,dimimages):
     """
     file_PSF = last(directory+lightsource_estim+'OffAxisPSF*.fits')
     exppsf = get_exptime(file_PSF)
-    PSF = reduceimageSPHERE(file_PSF, directory, 1,int(centerx),int(centery),dimimages,1,1,remove_bad_pix=False,high_pass_filter=False)
+    PSF = reduceimageSPHERE(file_PSF, directory, 1, int(centerx), int(centery), dimimages, 1, 1, remove_bad_pix = False, high_pass_filter=False)
     smoothPSF = snd.median_filter(PSF,size=3)
     maxPSF = PSF[np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] ]
     return PSF,smoothPSF,maxPSF,exppsf
@@ -517,25 +519,23 @@ def createdifference(param):
     print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ',maxPSF, flush=True)
     
     #Correction
-    
-    #Traitement de l'image de référence (première image corono et recentrage subpixelique)
-    fileref = last(directory+'iter0_coro_image*.fits')
-    imageref = reduceimageSPHERE(fileref, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
-    imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
-
-    filecorrection = last(directory+'iter'+str(nbiter-2)+'_coro_image*.fits')
+    filecorrection = last(directory + 'iter' + str(nbiter-2) + '_coro_image*.fits')
     imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
-
-    def cost_function(xy_trans):
-        # Function can use image slices defined in the global scope
-        # Calculate X_t - image translated by x_trans
-        unshifted = fancy_xy_trans_slice(imagecorrection, xy_trans)
-        mask = roundpupil(dimimages,67)
-        #Return mismatch measure for the translated image X_t
-        return correl_mismatch(imageref[np.where(mask==0)], unshifted[np.where(mask==0)])
         
-    
+    #Traitement de l'image de référence (première image corono et recentrage subpixelique)
     if centeringateachiter == 1:
+        fileref = last(directory + 'iter0_coro_image*.fits')
+        imageref = reduceimageSPHERE(fileref, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+        imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
+        
+        def cost_function(xy_trans):
+            # Function can use image slices defined in the global scope
+            # Calculate X_t - image translated by x_trans
+            unshifted = fancy_xy_trans_slice(imagecorrection, xy_trans)
+            mask = roundpupil(dimimages, 67)
+            #Return mismatch measure for the translated image X_t
+            return correl_mismatch(imageref[np.where(mask == 0)], unshifted[np.where(mask == 0)])
+        
         #Calcul de la translation du centre par rapport à la réference: best param.
         #Les images probes sont ensuite translatées de best param
         best_params = fmin_powell(cost_function, [0, 0], disp=0, callback=None) #callback=my_callback
@@ -813,6 +813,8 @@ def FullIterEFC(param):
         Contrast_cor = str(format(extract_contrast_global([coherent_signal],maskDH)[0,0],'.2e'))
         Contrast_inc = str(format(extract_contrast_global([incoherent_signal],maskDH)[0,0],'.2e'))
         
+        print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast_tot, flush=True)
+        
         to_write = [Contrast_tot, Contrast_cor, Contrast_inc]
         if os.path.exists(dir2 + 'Contrast_vs_iter.txt'):
             with open(dir2 + 'Contrast_vs_iter.txt', 'r') as f:
@@ -869,14 +871,13 @@ def FullIterEFC(param):
         ax3 = fig3.subplots(2,2)
         display(coherent_signal_to_display, ax3.flat[0] , title='Coherent iter' + str(nbiter-2), vmin = vmin, vmax = vmax, norm = norm )
         display(incoherent_signal_to_display, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = vmin, vmax = vmax, norm = norm)
-        print('Done with recording new slopes!', flush=True)
+        
         
         slopes_to_display = pentespourcorrection + fits.getdata(dir2+refslope+'.fits')[0]
         display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[0], ax3.flat[1], title = 'Slopes SH in X to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
         display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[1], ax3.flat[3], title = 'Slopes SH in Y to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
         
         ax4 = fig4.subplots(1,1)
-        print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast_tot, flush=True)
                 
             
 
@@ -914,6 +915,7 @@ def FullIterEFC(param):
     #Record the slopes to apply for probing at the next iteration
     refslope = 'iter' + str(nbiter-1) + 'correction'
     recordnewprobes(MatrixDirectory, size_probes, posprobes, dir2, refslope, nbiter)
+    print('Done with recording new slopes!', flush=True)
         
     return 0
 
