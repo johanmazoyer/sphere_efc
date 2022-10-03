@@ -298,7 +298,7 @@ def mean_window_8pix(array, hotpix):
     
     return array_expand[1:-1,1:-1]
 
-def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND, remove_bad_pix = True, high_pass_filter = False):
+def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND, remove_bad_pix = False, high_pass_filter = False):
     """ --------------------------------------------------
     Processing of SPHERE images before being used and division by the maximum of the PSF
     
@@ -379,7 +379,7 @@ def rescale_coherent_component(signal_co, signal_tot, maskDH, nb_loop):
     signal_co : Image resulted from PW, removed from bad pixels, with halo
     signal_tot : Coro image, with halo
     maskDH : region where scaling is calculated
-    nb_loop: number of iterations for calculation (10)
+    nb_loop: number of iterations for calculation
 
     Returns
     -------
@@ -557,13 +557,13 @@ def createdifference(param):
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
         Ikplus = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
-        Images_to_display.append(Ikplus-imagecorrection)
+        Images_to_display.append((Ikplus-imagecorrection)[30:170,30:170])
         j = j + 1
         image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
         Ikmoins = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
         Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
-        Images_to_display.append(Ikmoins-imagecorrection)
+        Images_to_display.append((Ikmoins-imagecorrection)[30:170,30:170])
         j = j + 1
         Difference[k] = (Ikplus-Ikmoins)
         k = k + 1
@@ -585,10 +585,11 @@ def display(image, axe, title, vmin, vmax , norm = None):
     norm: Can be LogNorm
 
     -------------------------------------------------- """
+    cmap = 'inferno'
     if norm == 'log':
-        axe.imshow(image, norm=LogNorm(vmin, vmax))
+        axe.imshow(image, norm=LogNorm(vmin, vmax), cmap = cmap)
     else:
-        axe.imshow(image, vmin = vmin, vmax = vmax)
+        axe.imshow(image, vmin = vmin, vmax = vmax, cmap = cmap)
     axe.set_xticks([])
     axe.set_yticks([])
     axe.set_title(title,size=7)
@@ -680,7 +681,7 @@ def resultEFC(param):
     
     if rescaling == 1:
         print('- Rescaling solution and computing incoherent component...', flush=True)
-        intensity_co, intensity_inco, scaling = rescale_coherent_component(intensity_co, imagecorrection, maskDH, 10)
+        intensity_co, intensity_inco, scaling = rescale_coherent_component(intensity_co, imagecorrection, maskDH, 5)
         print('- Applied factor = ' + str(scaling), flush=True)
         resultatestimation = resultatestimation * scaling
         
@@ -768,6 +769,7 @@ def FullIterEFC(param):
     size_probes = param["size_probes"]
     dimimages = param["dimimages"]
     lightsource_estim = param["lightsource_estim"]
+    onsky = param["onsky"]
     slope_ini = param["slope_ini"]
     #Check if the directory dir exists
     if os.path.isdir(dir) is False:
@@ -802,47 +804,14 @@ def FullIterEFC(param):
         recordslopes(pentespourcorrection, dir2, refslope, 'iter'+str(nbiter-1)+'correction')
         
         
-        #Display
-        Contrast_tot=  str(format(extract_contrast_global([imagecorrection],maskDH)[0,0],'.2e'))
-        Contrast_cor = str(format(extract_contrast_global([coherent_signal],maskDH)[0,0],'.2e'))
-        Contrast_inc = str(format(extract_contrast_global([incoherent_signal],maskDH)[0,0],'.2e'))
-        
-        
-        plt.close()
-        fig = plt.figure(constrained_layout=True,figsize=(12,7.5))
-        ( fig1 , fig2 ) , ( fig3 , fig4 ) = fig.subfigures(2, 2)
-        fig1.suptitle('Coro image iter'+str(nbiter-2), size=10)
-        fig2.suptitle('Probe images iter'+str(nbiter-2), size=10)
-        
-        ax1 = fig1.subplots(1, 1, sharex=True, sharey=True)      
-        display(imagecorrection, ax1, '', vmin=1e-7, vmax=1e-3, norm='log')
-        ax1.text(1, 12, 'Contrast = ' + Contrast_tot, size=15, color ='red', weight='bold')
-        PSF_to_display = process_PSF(dir, param['lightsource_estim'], centerx, centery, dimimages)[0]
-        ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
-        display(PSF_to_display, ax1bis, 'PSF' , vmin = 1, vmax = np.amax(PSF_to_display), norm='log')
-
-        ax2 = fig2.subplots(2, 2, sharex=True, sharey=True)
-        k=0
-        for j in np.arange(2):
-            display(Images_to_display[k], ax2.flat[k] , title='+ '+str(posprobes[j]), vmin=-1e-4, vmax=1e-4)
-            k=k+1
-            display(Images_to_display[k], ax2.flat[k] , title='- '+str(posprobes[j]), vmin=-1e-4, vmax=1e-4)
-            k=k+1
-        
-        ax3 = fig3.subplots(2,2)
-        display(coherent_signal, ax3.flat[0] , title='Coherent iter' + str(nbiter-2), vmin = 1e-7, vmax=1e-3, norm='log' )
-        display(incoherent_signal, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = 1e-7, vmax= 1e-3, norm='log')
+        #Save data 
         fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits', coherent_signal, overwrite = True)
         fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal, overwrite = True)
         fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection, overwrite = True)
-        print('Done with recording new slopes!', flush=True)
         
-        slopes_to_display = pentespourcorrection + fits.getdata(dir2+refslope+'.fits')[0]
-        display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[0], ax3.flat[1], title = 'Slopes SH in X to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
-        display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[1], ax3.flat[3], title = 'Slopes SH in Y to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
-        
-        ax4 = fig4.subplots(1,1)
-        print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast_tot, flush=True)
+        Contrast_tot=  str(format(extract_contrast_global([imagecorrection],maskDH)[0,0],'.2e'))
+        Contrast_cor = str(format(extract_contrast_global([coherent_signal],maskDH)[0,0],'.2e'))
+        Contrast_inc = str(format(extract_contrast_global([incoherent_signal],maskDH)[0,0],'.2e'))
         
         to_write = [Contrast_tot, Contrast_cor, Contrast_inc]
         if os.path.exists(dir2 + 'Contrast_vs_iter.txt'):
@@ -860,10 +829,59 @@ def FullIterEFC(param):
             with open(dir2 + 'Contrast_vs_iter.txt', 'w') as f:
                 f.writelines( text_in_file )
                 
+        # Display data
+        imagecorrection_to_display = high_pass_filter_gauss(imagecorrection, 2)[30:170,30:170]
+        coherent_signal_to_display = high_pass_filter_gauss(coherent_signal, 2)[30:170,30:170]
+        incoherent_signal_to_display = high_pass_filter_gauss(incoherent_signal, 2)[30:170,30:170] 
+        
+        
+        if onsky == 1:
+            vmin = -6e-6 #1e-7
+            vmax = 6e-6 #1e-3
+            norm = None #'log'
+        
+        else:
+            vmin = -6e-6 #1e-7
+            vmax = 6e-6 #1e-3
+            norm = None #'log'
+        
+        plt.close()
+        fig = plt.figure(constrained_layout=True,figsize=(12,7.5))
+        ( fig1 , fig2 ) , ( fig3 , fig4 ) = fig.subfigures(2, 2)
+        fig1.suptitle('Coro image iter'+str(nbiter-2), size=10)
+        fig2.suptitle('Probe images iter'+str(nbiter-2), size=10)
+        
+        ax1 = fig1.subplots(1, 1, sharex=True, sharey=True)      
+        display(imagecorrection_to_display, ax1, '', vmin = vmin, vmax = vmax, norm = norm)
+        ax1.text(1, 12, 'Contrast = ' + Contrast_tot, size=15, color ='red', weight='bold')
+        PSF_to_display = process_PSF(dir, param['lightsource_estim'], centerx, centery, dimimages)[0]
+        ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
+        display(PSF_to_display, ax1bis, 'PSF' , vmin = 1, vmax = np.amax(PSF_to_display), norm='log')
+
+        ax2 = fig2.subplots(2, 2, sharex=True, sharey=True)
+        k=0
+        for j in np.arange(2):
+            display(Images_to_display[k], ax2.flat[k] , title='+ '+str(posprobes[j]), vmin=-1e-4, vmax=1e-4)
+            k=k+1
+            display(Images_to_display[k], ax2.flat[k] , title='- '+str(posprobes[j]), vmin=-1e-4, vmax=1e-4)
+            k=k+1
+        
+        ax3 = fig3.subplots(2,2)
+        display(coherent_signal_to_display, ax3.flat[0] , title='Coherent iter' + str(nbiter-2), vmin = vmin, vmax = vmax, norm = norm )
+        display(incoherent_signal_to_display, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = vmin, vmax = vmax, norm = norm)
+        print('Done with recording new slopes!', flush=True)
+        
+        slopes_to_display = pentespourcorrection + fits.getdata(dir2+refslope+'.fits')[0]
+        display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[0], ax3.flat[1], title = 'Slopes SH in X to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
+        display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[1], ax3.flat[3], title = 'Slopes SH in Y to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
+        
+        ax4 = fig4.subplots(1,1)
+        print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast_tot, flush=True)
+                
             
 
         
-        if nbiter==2:
+        if nbiter == 2:
             print('!!!! ACTION: CHECK CENTERX AND CENTERY CORRESPOND TO THE CENTER OF THE CORO IMAGE AND CLOSE THE WINDOW', flush=True)
             print('If false, change the guess in the MainEFCBash.sh file and run the iter again', flush=True)
             
@@ -880,14 +898,14 @@ def FullIterEFC(param):
                     pastContrast_co.append(pastContrast[1])
                     pastContrast_inco.append(pastContrast[2]) 
                 
-            ax4.plot(pastContrast_tot, marker='o', markersize= 8, mfc='none', label = 'tot')
-            ax4.plot(pastContrast_co, marker='o', markersize= 8, mfc='none', label = 'coherent')
-            ax4.plot(pastContrast_inco, marker='o', markersize= 8, mfc='none', label = 'incoherent')
+            ax4.plot(pastContrast_tot, marker = 'P', ms=10,  linewidth = 2, label = 'tot')
+            ax4.plot(pastContrast_co ,marker = 'P', ms=10,  linewidth = 2, label = 'coherent')
+            ax4.plot(pastContrast_inco, marker = 'P', ms=10,  linewidth = 2, label = 'incoherent')
             
             ax4.set_yscale('log')
             ax4.set_ylim(1e-7,1e-4)
             ax4.tick_params(axis='both', which='both', labelsize=8)
-            ax4.set_title('Mean contrast in DH vs iteration',size=10)
+            ax4.set_title('Mean contrast in DH vs iteration', size=10)
             ax4.legend()
         print('Close each image to proceed', flush=True)
         plt.draw()
