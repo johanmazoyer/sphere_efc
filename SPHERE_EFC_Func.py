@@ -232,7 +232,7 @@ def FindNoisyPix(data,neighborhood_size,threshold):
     """
     hotpixmap = data*0 
     data_med = ndimage.median_filter(data,neighborhood_size)
-    hotpixwh = np.where((np.abs(data_med - data) > (threshold*data)))
+    hotpixwh = np.where((np.abs(data_med - data) > (threshold*data_med)))
     hotpixmap[hotpixwh] = 1
     
     return hotpixmap
@@ -335,9 +335,7 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     
     # We remove the hot pixels found in dark
     if remove_bad_pix == True:
-        # We find hot pix in dark
-        hotpixmap = find_hot_pix_in_dark(back_crop, 10)
-        image = mean_window_8pix(image,hotpixmap)
+        image = noise_filter(image, 3, 0.5)
         
     # We process the image with a high pass filter    
     if high_pass_filter == True:
