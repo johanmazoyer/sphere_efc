@@ -97,3 +97,6 @@ param['posprobes'] = posprobes
 
 func.FullIterEFC(param)
 
+# file_path = ''
+# func.record_slope_from_file(param, file_path, amplitude_in_nm, slope_ini, name_slope_file)
+

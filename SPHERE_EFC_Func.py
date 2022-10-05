@@ -971,6 +971,32 @@ def recordCoswithvolt(param, amptopushinnm, refslope):
     slopetopush = VoltToSlope(MatrixDirectory, coe)
     recordslopes(slopetopush, dir, refslope, nam[0] + '_' + str(amptopushinnm) + 'nm')
     return 0
+
+
+def record_slope_from_file(param, file_path, amptopushinnm, refslope, name):
+    """ --------------------------------------------------
+    Creation of the phase shape (in slope) to apply on the DM    
+    
+    Parameters:
+    ----------
+    amptopushinnm:
+    dir:
+    refslope:
+
+    -------------------------------------------------- """
+    MatrixDirectory = param["MatrixDirectory"]
+    dir = param["ImageDirectory"]
+    # Read SAXO calibrations
+    # static calibrations
+    IMF_inv = fits.getdata(MatrixDirectory + 'SAXO_DM_IFM_INV.fits', ignore_missing_end = True)
+    
+    cc = fits.getdata(file_path)
+    coe = (cc.flatten())@IMF_inv
+    coe = coe * amptopushinnm / rad_632_to_nm_opt
+    slopetopush = VoltToSlope(MatrixDirectory, coe)
+    recordslopes(slopetopush, dir, refslope, name)
+    return 0    
+    
     
     
     
