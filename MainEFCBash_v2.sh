@@ -87,21 +87,25 @@ size_probes=400
 
 # First guess for the PSF echo position used for image centering (WARNING X and Y are inverted here)
 # (adding a cosine to DM phase)
-X0UP=548 #544 #Y position of the upper PSF echo in python #553
-Y0UP=1511 #X position of the upper PSF echo in python
-X1UP=478 #474 #Y position of the bottom PSF echo in python #485
-Y1UP=1511 #X position of the bottom PSF echo in python
+X0UP=490 #548 #544 #Y position of the upper PSF echo in python #553
+Y0UP=1494 #1511 #X position of the upper PSF echo in python
+X1UP=550 #478 #474 #Y position of the bottom PSF echo in python #485
+Y1UP=1531 #1511 #X position of the bottom PSF echo in python
 
 #Do you want to center your image at each iteration. Set 1 for yes, 0 for no.
 centeringateachiter=0
+#Do you want to rescale the coherent intensity to match the total intensity in the DH?
+rescaling=0
 
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
 #WORK_PATH0=/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/
-WORK_PATH0=/vltuser/sphere/zwahhaj/efc/sphere_efc-main
+WORK_PATH0=/vltuser/sphere/zwahhaj/efc
 #WORK_PATH0=~/Documents/Research/SPHERE/Git_Software/sphere_efc
 #WORK_PATH0=~/Documents/Recherche/DonneesTHD/EFConSPHERE/sphere_efc
+
+SLOPE_INI='VisAcq.DET1.REFSLP'
 
 
 ###################################################################
@@ -119,7 +123,7 @@ if [ "$ONSKY" -eq "1" ]; then
 	lightsource_estim='VLTPupil_'
 else
 	echo "The NCPA compensation is done from the calibration source measurements"
-	lightsource_estim = 'InternalPupil_'
+	lightsource_estim='InternalPupil_'
 fi
 
 lightsource_estim=${lightsource_estim}${coro}_
@@ -237,6 +241,8 @@ if [ "$create_coro" -eq "1" ]; then
 	export centeringateachiter
 	export coro
 	export gain
+	export SLOPE_INI
+	export rescaling
 
 	#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 	echo "Launch python EFC code"

@@ -135,13 +135,6 @@ def solutiontocorrect(mask, ResultatEstimate, invertG, WhichInPupil):
     solution[WhichInPupil] = cool
     return solution
     
-
-# def cost_function(xy_trans):
-#     # Function can use image slices defined in the global scope
-#     # Calculate X_t - image translated by x_trans
-#     unshifted = fancy_xy_trans_slice(imagecorrection, xy_trans)
-#     #Return mismatch measure for the translated image X_t
-#     return correl_mismatch(imageref,unshifted)
     
 def fancy_xy_trans_slice(img_slice, xy_trans):
     """ Return copy of `img_slice` translated by `x_vox_trans` pixels
@@ -165,11 +158,22 @@ def my_callback(params):
 def correl_mismatch(slice0, slice1):
     """ Negative correlation between the two images, flattened to 1D """
     correl = np.corrcoef(slice0.ravel(), slice1.ravel())[0, 1]
-    #print(correl)
     return -correl
     
 
 def last(files):
+    """
+    Extract last file with same names in folder
+
+    Parameters
+    ----------
+    files : File name to extract
+
+    Returns
+    -------
+    extract : last file in stack
+
+    """
     extract = sorted(glob.glob(files))[-1]
     return extract
 
@@ -195,10 +199,63 @@ def cropimage(img, ctr_x, ctr_y, newsizeimg):
 
 
 def get_exptime(file):
+    """
+    Extract exposure time in an image
+
+    Parameters
+    ----------
+    file : image file
+
+    Returns
+    -------
+    exptime : Exposure time in second
+
+    """
     exptime = int(round(fits.getval(file,'EXPTIME')))
     return exptime
 
 
+def FindNoisyPix(data,neighborhood_size,threshold):
+    """
+    Find noisy pixels in image an image
+
+    Parameters
+    ----------
+    data : dark image
+    neighborhood_size : typical distance between bad pixels
+    threshold : defined threshold
+
+    Returns
+    -------
+    hotpixmap : 2D map filled with 1 at hot pixel location
+
+    """
+    hotpixmap = data*0 
+    data_med = ndimage.median_filter(data,neighborhood_size)
+    hotpixwh = np.where((np.abs(data_med - data) > (threshold*data_med)))
+    hotpixmap[hotpixwh] = 1
+    
+    return hotpixmap
+
+
+def noise_filter(data, neighborhood_size, threshold):
+    """
+    Filter noise pixels in image
+
+    Parameters
+    ----------
+    data : image
+    neighborhood_size : typical distance between bad pixels
+    threshold : defined threshold
+
+    Returns
+    -------
+    image : processed image, where hot pixels have been removed
+
+    """
+    hotpixmap = FindNoisyPix(data,neighborhood_size,threshold)
+    image = mean_window_8pix(data,hotpixmap)
+    return image
 
 def mean_window_8pix(array, hotpix):
     """ --------------------------------------------------
@@ -215,35 +272,40 @@ def mean_window_8pix(array, hotpix):
     ------
     image: processed coronagraphic image, where hot pixels have been removed
     -------------------------------------------------- """
+    # The image is expanded
     array_expand = np.zeros((np.shape(array)[0] + 2, np.shape(array)[1] + 2) )
     array_expand[:] = np.nan
     array_expand[1:-1,1:-1] = array
-
+    
+    # The hotpix map is expanded
     hotpix_expand = np.zeros((np.shape(array)[0] + 2, np.shape(array)[1] + 2))
     hotpix_expand[1:-1,1:-1] = hotpix
 
     wh_dead = np.where(hotpix_expand ==1)
-    # we first nan the hot pix in case there is several close to each others
+    # we first nan the hot pix in case there are several close to each others
     array_expand[wh_dead] = np.nan
-
+    # The expanded array is copied
+    array_expand_copy = array_expand.copy()
+    
+    #At hot pixel locations, the pixel value is equal to the mean of the eight pixels around
     for numdead in range(len(wh_dead[0])):
             i = wh_dead[0][numdead]
             j = wh_dead[1][numdead]
-            array_expand[i,j] = np.nanmean([array_expand[i-1,j] , array_expand[i+1,j] , array_expand[i,j-1] , array_expand[i,j+1] , array_expand[i-1,j-1] , array_expand[i+1,j+1] , array_expand[i-1,j+1] , array_expand[i+1,j-1]]) 
+            array_expand[i,j] = np.nanmean([array_expand_copy[i-1,j] , array_expand_copy[i+1,j] , array_expand_copy[i,j-1] , array_expand_copy[i,j+1] , array_expand_copy[i-1,j-1] , array_expand_copy[i+1,j+1] , array_expand_copy[i-1,j+1] , array_expand_copy[i+1,j-1]]) 
 
     # finally we remove the nans that can happens if you have very large zones of hot pixs
     array_expand[np.isnan(array_expand)] = 0
     
     return array_expand[1:-1,1:-1]
 
-def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND):
+def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND, remove_bad_pix = True, high_pass_filter = False):
     """ --------------------------------------------------
     Processing of SPHERE images before being used and division by the maximum of the PSF
     
     Parameters:
     ----------
-    image: 2D array, raw image
-    back: 2D array, background image
+    file: str, path to the file to process
+    directory: str, background directory
     maxPSF: int, maximum of the raw PSF
     ctr_x: int, center of processed image in the x direction
     ctr_y: int, center of processed image in the y direction
@@ -256,37 +318,163 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     ------
     image: processed coronagraphic image, normalized by the max of the PSF
     -------------------------------------------------- """
-    expim = get_exptime(file) #Get image exposure time
-    back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] #Load dark that correspond to image exposure time
-    image = fits.getdata(file)[0] #Load image
-    image[:,:int(image.shape[1]/2)] = 0 #Cancel left part of image
+    # Get image exposure time
+    expim = get_exptime(file) 
+    # Load dark that correspond to image exposure time
+    back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] 
+    # Load image
+    image = np.mean(fits.getdata(file),axis = 0) 
     
+    # Crop to keep relevant part of image
+    image_crop = cropimage(image,ctr_x,ctr_y,newsizeimg)
+    # Crop to keep relevant part of dark
+    back_crop = cropimage(back,ctr_x,ctr_y,newsizeimg)    
     
-    image_crop = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
-    back_crop = cropimage(back,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of dark
+    # We subtract the dark
+    image = image_crop - back_crop 
     
-    #  We replace hot pixels by the average of their neighbors
-    hotpixmap = back_crop*0 
-    hotpixwh = np.where(back_crop > 20*np.nanmedian(back_crop))
-    hotpixmap[hotpixwh] = 1
-    image = image_crop - back_crop #Subtract dark
-    image = mean_window_8pix(image,hotpixmap)
-    
-    #lowpass = ndimage.gaussian_filter(image, 2)
-    #image = image - lowpass
+    # We remove the hot pixels found in dark
+    if remove_bad_pix == True:
+        image = noise_filter(image, 3, 0.5)
+        
+    # We process the image with a high pass filter    
+    if high_pass_filter == True:
+        image = high_pass_filter_gauss(image, 2)
 
-    image = (image/expim)/(maxPSF*ND/exppsf)  #Divide by PSF max
-    # image = cropimage(image,ctr_x,ctr_y,newsizeimg) #Crop to keep relevant part of image
+    #We normalize the image with the max of the PSF
+    image = (image/expim)/(maxPSF*ND/exppsf)  
     return image
 
 
+def find_hot_pix_in_dark(dark, threshold):
+    hotpixmap = dark*0 
+    hotpixwh = np.where(np.abs(dark) > threshold*np.nanstd(dark))
+    hotpixmap[hotpixwh] = 1
+    return hotpixmap
+
+def high_pass_filter_gauss(image, sigma):
+    """
+    
+
+    Parameters
+    ----------
+    image : Image to filter
+    sigma : gaussian parameter in pixel
+
+    Returns
+    -------
+    image : filtered image
+
+    """
+    lowpass = ndimage.gaussian_filter(image, sigma)
+    image = image - lowpass
+    return image
+
+def rescale_coherent_component(signal_co, signal_tot, maskDH, nb_loop):
+    """
+    
+
+    Parameters
+    ----------
+    signal_co : Image resulted from PW, removed from bad pixels, with halo
+    signal_tot : Coro image, with halo
+    maskDH : region where scaling is calculated
+    nb_loop: number of iterations for calculation
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
+    # Copy coherent signal to preserve
+    signal_co_copy = signal_co.copy()
+
+    # High pass filter coherent and total signals
+    filtered_co = high_pass_filter_gauss(signal_co_copy, 2)
+    filtered_tot = high_pass_filter_gauss(signal_tot, 2)
+
+    # Trying to match filtered coherent signal and filtered total intensity in DH
+    best_params = []
+    best_params2 = []
+    best_params3 = []
+    for i in np.arange(nb_loop):
+        # Translation in x,y
+        def cost_function(xy_trans):
+            # Function can use image slices defined in the global scope
+            # Calculate X_t - image translated by x_trans
+            unshifted = fancy_xy_trans_slice(filtered_co, xy_trans)
+            #Return mismatch measure for the translated image X_t
+            return np.sum(np.abs(filtered_tot[np.where(maskDH)] - unshifted[np.where(maskDH)])**2*1e5)
+            
+        # Compute solution
+        best_params.append( fmin_powell(cost_function, [0, 0], disp=0, callback=None) )
+        # Apply solution
+        filtered_co = fancy_xy_trans_slice(filtered_co, best_params[-1])
+        
+        # Translation in z
+        def cost_function2(factor):
+            a = filtered_co + factor
+            return np.sum(np.abs(filtered_tot[np.where(maskDH)] - a[np.where(maskDH)])*1e5)
+        
+        # Compute solution
+        best_params2.append( fmin_powell(cost_function2, 1e-5, disp=0, callback=None) )
+        # Apply solution
+        filtered_co = filtered_co + best_params2[-1]
+        
+        # Scaling in z
+        def cost_function3(factor):
+            a = filtered_co * factor
+            return np.sum(np.abs(filtered_tot[np.where(maskDH)] - a[np.where(maskDH)])*1e5)
+        
+        # Compute solution
+        best_params3.append( fmin_powell(cost_function3, 0.9, disp=0, callback=None) )
+        # Apply solution
+        filtered_co = filtered_co * best_params3[-1]
+    
+    # Global scaling
+    scaling = np.prod( best_params3 )
+    
+    # Compute solution to unfiltered data
+    for i in np.arange(len(best_params)):
+        signal_co_copy = fancy_xy_trans_slice( signal_co_copy, best_params[i] )
+        signal_co_copy = signal_co_copy + best_params2[i]
+        signal_co_copy = signal_co_copy * best_params3[i]
+    
+    # Compute unfiltered incoherent component    
+    signal_inco = signal_tot - signal_co_copy
+    
+    return signal_co_copy, signal_inco, scaling
+
+
 def process_PSF(directory,lightsource_estim,centerx,centery,dimimages):
+    """
+    Process non coronagraphic point spread function and return relevant data
+
+    Parameters
+    ----------
+    directory : PSF path
+    lightsource_estim : on-sky or internal source?
+    centerx : unprecise position of the PSF in the image
+    centery : unprecise position of the PSF in the image
+    dimimages : Final PSF image dimension
+
+    Returns
+    -------
+    PSF : Processed PSF image
+    smoothPSF : Low-pass filtered PSF image
+    maxPSF : maximum value of PSF
+    exppsf : PSF exposure time
+
+    """
     file_PSF = last(directory+lightsource_estim+'OffAxisPSF*.fits')
     exppsf = get_exptime(file_PSF)
-    PSF = reduceimageSPHERE(file_PSF, directory, 1,int(centerx),int(centery),dimimages,1,1)
+    PSF = reduceimageSPHERE(file_PSF, directory, 1, int(centerx), int(centery), dimimages, 1, 1, remove_bad_pix = False, high_pass_filter=False)
     smoothPSF = snd.median_filter(PSF,size=3)
     maxPSF = PSF[np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] ]
     return PSF,smoothPSF,maxPSF,exppsf
+
+
 
 def createdifference(param):
     """ --------------------------------------------------
@@ -329,28 +517,23 @@ def createdifference(param):
     print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ',maxPSF, flush=True)
     
     #Correction
-    
-    #Traitement de l'image de référence (première image corono et recentrage subpixelique)
-    fileref = last(directory+'iter0_coro_image*.fits')
-    imageref = reduceimageSPHERE(fileref,ImageDirectory,maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
-    imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
-    #imageref=cropimage(imageref,int(dimimages/2),int(dimimages/2),int(dimimages/2))
-
-    filecorrection = last(directory+'iter'+str(nbiter-2)+'_coro_image*.fits')
-    imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
-    #imagecorrection2 = cropimage(imagecorrection,int(dimimages/2),int(dimimages/2),int(dimimages/2))
-
-    def cost_function(xy_trans):
-        # Function can use image slices defined in the global scope
-        # Calculate X_t - image translated by x_trans
-        unshifted = fancy_xy_trans_slice(imagecorrection, xy_trans)
-        #mask = roundpupil(int(dimimages/2),67)
-        mask = roundpupil(dimimages,67)
-        #Return mismatch measure for the translated image X_t
-        return correl_mismatch(imageref[np.where(mask==0)], unshifted[np.where(mask==0)])
+    filecorrection = last(directory + 'iter' + str(nbiter-2) + '_coro_image*.fits')
+    imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
         
-    
+    #Traitement de l'image de référence (première image corono et recentrage subpixelique)
     if centeringateachiter == 1:
+        fileref = last(directory + 'iter0_coro_image*.fits')
+        imageref = reduceimageSPHERE(fileref, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+        imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
+        
+        def cost_function(xy_trans):
+            # Function can use image slices defined in the global scope
+            # Calculate X_t - image translated by x_trans
+            unshifted = fancy_xy_trans_slice(imagecorrection, xy_trans)
+            mask = roundpupil(dimimages, 67)
+            #Return mismatch measure for the translated image X_t
+            return correl_mismatch(imageref[np.where(mask == 0)], unshifted[np.where(mask == 0)])
+        
         #Calcul de la translation du centre par rapport à la réference: best param.
         #Les images probes sont ensuite translatées de best param
         best_params = fmin_powell(cost_function, [0, 0], disp=0, callback=None) #callback=my_callback
@@ -370,15 +553,15 @@ def createdifference(param):
     for i in posprobes:
         image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-        Ikplus = reduceimageSPHERE(image_name, ImageDirectory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
+        Ikplus = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
-        Images_to_display.append(Ikplus-imagecorrection)
+        Images_to_display.append((Ikplus-imagecorrection)[30:170,30:170])
         j = j + 1
         image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-        Ikmoins = reduceimageSPHERE(image_name, ImageDirectory, maxPSF,int(centerx),int(centery),dimimages,exppsf,ND)
+        Ikmoins = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
         Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
-        Images_to_display.append(Ikmoins-imagecorrection)
+        Images_to_display.append((Ikmoins-imagecorrection)[30:170,30:170])
         j = j + 1
         Difference[k] = (Ikplus-Ikmoins)
         k = k + 1
@@ -400,11 +583,11 @@ def display(image, axe, title, vmin, vmax , norm = None):
     norm: Can be LogNorm
 
     -------------------------------------------------- """
+    cmap = 'inferno'
     if norm == 'log':
-        axe.imshow(image, norm=LogNorm(vmin, vmax))
+        axe.imshow(image, norm=LogNorm(vmin, vmax), cmap = cmap)
     else:
-        axe.imshow(image, vmin = vmin, vmax = vmax)
-    #axe.imshow(image, norm = norm)
+        axe.imshow(image, vmin = vmin, vmax = vmax, cmap = cmap)
     axe.set_xticks([])
     axe.set_yticks([])
     axe.set_title(title,size=7)
@@ -414,14 +597,39 @@ def display(image, axe, title, vmin, vmax , norm = None):
 
 
 def contrast_global(image,scoring_reg):
-    #image = np.abs(image)
+    """
+    Calculate contrast in the scoring region
+
+    Parameters
+    ----------
+    image : Image
+    scoring_reg : Binary mask to define scoring region
+
+    Returns
+    -------
+    contrast_mean : mean contrast
+    contrast_std : contrast rms
+
+    """
     contrast_mean = np.nanmean(image[np.where(scoring_reg)])
     contrast_std = np.nanstd(image[np.where(scoring_reg)])
-    #contrast_rms = rms(image[np.where(scoring_reg)])
-    return contrast_mean, contrast_std#, contrast_rms
+    return contrast_mean, contrast_std
     
 def extract_contrast_global(cubeimage, scoring_region):
-    nb_iter = len(cubeimage)#-1
+    """
+    Calculate contrast in image cube
+
+    Parameters
+    ----------
+    cubeimage : image cube
+    scoring_region : Binary mask to define scoring region
+
+    Returns
+    -------
+    contrast :array of mean contrast and contrast rms
+
+    """
+    nb_iter = len(cubeimage)
     contrast = []
     for i in np.arange(nb_iter):
         contrast.append(contrast_global(cubeimage[i], scoring_region))
@@ -455,7 +663,8 @@ def resultEFC(param):
     size_probes = param["size_probes"]
     dhsize = param["dhsize"]
     corr_mode = param['corr_mode']
-    gain = param['gain'] 
+    gain = param['gain']
+    rescaling = param['rescaling']
     
     vectoressai = fits.getdata(MatrixDirectory+lightsource_estim+'VecteurEstimation_'+zone_to_correct+str(size_probes)+'nm.fits')
     WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
@@ -466,12 +675,23 @@ def resultEFC(param):
     Difference, imagecorrection, Images_to_display = createdifference(param)
     print('- Estimating the focal plane electric field...', flush=True)
     resultatestimation = estimateEab(Difference, vectoressai)
+    intensity_co = np.abs(resultatestimation)**2
+    
+    if rescaling == 1:
+        print('- Rescaling solution and computing incoherent component...', flush=True)
+        intensity_co, intensity_inco, scaling = rescale_coherent_component(intensity_co, imagecorrection, maskDH, 5)
+        print('- Applied factor = ' + str(scaling), flush=True)
+        resultatestimation = resultatestimation * scaling
+        
+    else:
+        intensity_inco = imagecorrection - intensity_co
+    
     print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
     solution1 = solutiontocorrect(maskDH, resultatestimation, invertGDH, WhichInPupil)
     solution1 = solution1*amplitudeEFCMatrix/rad_632_to_nm_opt
     solution1 = -gain*solution1
     slopes = VoltToSlope(MatrixDirectory, solution1)
-    return resultatestimation, slopes, imagecorrection, Images_to_display
+    return intensity_co, intensity_inco, imagecorrection, Images_to_display, slopes
         
 
 
@@ -547,6 +767,8 @@ def FullIterEFC(param):
     size_probes = param["size_probes"]
     dimimages = param["dimimages"]
     lightsource_estim = param["lightsource_estim"]
+    onsky = param["onsky"]
+    slope_ini = param["slope_ini"]
     #Check if the directory dir exists
     if os.path.isdir(dir) is False:
         #Create the directory
@@ -558,75 +780,37 @@ def FullIterEFC(param):
 
     if nbiter == 1:
         print('Creating slopes for Cosinus, PSFOffAxis and new probes...', flush=True)
-        #Reference slopes
-        refslope = 'VisAcq.DET1.REFSLP'
         #Copy the reference slope with the right name for iteration 0 of ExperimentXXXX
-        recordslopes(np.zeros(2480),dir,refslope,filenameroot+'iter0correction')
+        recordslopes(np.zeros(2480), dir, slope_ini, filenameroot+'iter0correction')
         #Create the cosine of 10nm peak-to-valley amplitude for centering
-        recordCoswithvolt(param,10,refslope)
+        recordCoswithvolt(param, 10, slope_ini)
     else:
         if nbiter == 2:
             #Calculate the center of the first coronagraphic image using the waffle
             print('Calculating center of the first coronagraphic image:', flush=True)
             data,centerx,centery = findingcenterwithcosinus(param)
-            SaveFits([centerx,centery],['',0],dir2,'centerxy')
+            SaveFits([centerx,centery], ['',0], dir2, 'centerxy')
         
-        centerx,centery = fits.getdata(dir2+'centerxy.fits')
+        centerx, centery = fits.getdata(dir2 + 'centerxy.fits')
         param['centerx'] = centerx
         param['centery'] = centery
         #Estimation of the electric field using the pair-wise probing (return the electric field and the slopes)
         print('Estimating the electric field using the pair-wise probing:', flush=True)
-        estimation,pentespourcorrection,imagecorrection, Images_to_display = resultEFC(param)
+        coherent_signal, incoherent_signal, imagecorrection, Images_to_display, pentespourcorrection  = resultEFC(param)
         #Record the slopes to apply for correction at the next iteration
         refslope = 'iter' + str(nbiter-2) + 'correction'
         recordslopes(pentespourcorrection, dir2, refslope, 'iter'+str(nbiter-1)+'correction')
         
         
-        #Display
-        coherent_signal = abs(estimation)**2
-        incoherent_signal = imagecorrection - coherent_signal
+        #Save data 
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits', coherent_signal, overwrite = True)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal, overwrite = True)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection, overwrite = True)
+        
         Contrast_tot=  str(format(extract_contrast_global([imagecorrection],maskDH)[0,0],'.2e'))
         Contrast_cor = str(format(extract_contrast_global([coherent_signal],maskDH)[0,0],'.2e'))
         Contrast_inc = str(format(extract_contrast_global([incoherent_signal],maskDH)[0,0],'.2e'))
         
-        #imagecorrection = cropimage(imagecorrection, int(dimimages/2), int(dimimages/2), int(dimimages/2))
-        #coherent_signal = cropimage(coherent_signal, int(dimimages/2), int(dimimages/2), int(dimimages/2))
-        #incoherent_signal = cropimage(incoherent_signal, int(dimimages/2), int(dimimages/2), int(dimimages/2))
-        
-        plt.close()
-        fig = plt.figure(constrained_layout=True,figsize=(12,7.5))
-        ( fig1 , fig2 ) , ( fig3 , fig4 ) = fig.subfigures(2, 2)
-        fig1.suptitle('Coro image iter'+str(nbiter-2), size=10)
-        fig2.suptitle('Probe images iter'+str(nbiter-2), size=10)
-        
-        ax1 = fig1.subplots(1,1,sharex=True,sharey=True)      
-        display(imagecorrection, ax1, '', vmin=1e-7, vmax=1e-3, norm='log')
-        ax1.text(1, 12, 'Contrast = ' + Contrast_tot, size=15,color ='red', weight='bold')
-        PSF_to_display = process_PSF(dir,param['lightsource_estim'],centerx,centery,dimimages)[0]
-        ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
-        display(PSF_to_display, ax1bis, 'PSF' , vmin = 1, vmax = np.amax(PSF_to_display), norm='log')
-
-        ax2 = fig2.subplots(2,2,sharex=True,sharey=True)
-        k=0
-        for j in np.arange(2):
-            display(Images_to_display[k], ax2.flat[k] , title='+ '+str(posprobes[j]), vmin=-1e-4, vmax=1e-4)
-            k=k+1
-            display(Images_to_display[k], ax2.flat[k] , title='- '+str(posprobes[j]), vmin=-1e-4, vmax=1e-4)
-            k=k+1
-        
-        ax3 = fig3.subplots(2,2)
-        #estimation_to_display = cropimage(estimation*maskDH, int(dimimages/2), int(dimimages/2), int(dimimages/2))
-        display(coherent_signal, ax3.flat[0] , title='Coherent iter' + str(nbiter-2), vmin = 1e-7, vmax=1e-3, norm='log' )
-        display(incoherent_signal, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = 1e-7, vmax= 1e-3, norm='log')
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits',coherent_signal)
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits',incoherent_signal)
-        print('Done with recording new slopes!', flush=True)
-        
-        slopes_to_display = pentespourcorrection + fits.getdata(dir2+refslope+'.fits')[0]
-        display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[0], ax3.flat[1], title = 'Slopes SH in X to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
-        display(SHslopes2map(param['MatrixDirectory'],slopes_to_display, visu=False)[1], ax3.flat[3], title = 'Slopes SH in Y to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
-        
-        ax4 = fig4.subplots(1,1)
         print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast_tot, flush=True)
         
         to_write = [Contrast_tot, Contrast_cor, Contrast_inc]
@@ -645,10 +829,58 @@ def FullIterEFC(param):
             with open(dir2 + 'Contrast_vs_iter.txt', 'w') as f:
                 f.writelines( text_in_file )
                 
+        # Display data
+        imagecorrection_to_display = high_pass_filter_gauss(imagecorrection, 2)[30:170,30:170]
+        coherent_signal_to_display = high_pass_filter_gauss(coherent_signal, 2)[30:170,30:170]
+        incoherent_signal_to_display = high_pass_filter_gauss(incoherent_signal, 2)[30:170,30:170] 
+        
+        
+        if onsky == 1:
+            vmin = -6e-6 #1e-7
+            vmax = 6e-6 #1e-3
+            norm = None #'log'
+        
+        else:
+            vmin = -6e-6 #1e-7
+            vmax = 6e-6 #1e-3
+            norm = None #'log'
+        
+        plt.close()
+        fig = plt.figure(constrained_layout=True,figsize=(12,7.5))
+        ( fig1 , fig2 ) , ( fig3 , fig4 ) = fig.subfigures(2, 2)
+        fig1.suptitle('Coro image iter'+str(nbiter-2), size=10)
+        fig2.suptitle('Probe images iter'+str(nbiter-2), size=10)
+        
+        ax1 = fig1.subplots(1, 1, sharex=True, sharey=True)      
+        display(imagecorrection_to_display, ax1, '', vmin = vmin, vmax = vmax, norm = norm)
+        ax1.text(1, 12, 'Contrast = ' + Contrast_tot, size=15, color ='red', weight='bold')
+        PSF_to_display = process_PSF(dir, param['lightsource_estim'], centerx, centery, dimimages)[0]
+        ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
+        display(PSF_to_display, ax1bis, 'PSF' , vmin = 1, vmax = np.amax(PSF_to_display), norm='log')
+
+        ax2 = fig2.subplots(2, 2, sharex=True, sharey=True)
+        k=0
+        for j in np.arange(2):
+            display(Images_to_display[k], ax2.flat[k] , title='+ '+str(posprobes[j]), vmin=-1e-4, vmax=1e-4)
+            k=k+1
+            display(Images_to_display[k], ax2.flat[k] , title='- '+str(posprobes[j]), vmin=-1e-4, vmax=1e-4)
+            k=k+1
+        
+        ax3 = fig3.subplots(2,2)
+        display(coherent_signal_to_display, ax3.flat[0] , title='Coherent iter' + str(nbiter-2), vmin = vmin, vmax = vmax, norm = norm )
+        display(incoherent_signal_to_display, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = vmin, vmax = vmax, norm = norm)
+        
+        
+        slopes_to_display = pentespourcorrection + fits.getdata(dir2+refslope+'.fits')[0]
+        display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[0], ax3.flat[1], title = 'Slopes SH in X to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
+        display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[1], ax3.flat[3], title = 'Slopes SH in Y to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
+        
+        ax4 = fig4.subplots(1,1)
+                
             
 
         
-        if nbiter==2:
+        if nbiter == 2:
             print('!!!! ACTION: CHECK CENTERX AND CENTERY CORRESPOND TO THE CENTER OF THE CORO IMAGE AND CLOSE THE WINDOW', flush=True)
             print('If false, change the guess in the MainEFCBash.sh file and run the iter again', flush=True)
             
@@ -665,16 +897,15 @@ def FullIterEFC(param):
                     pastContrast_co.append(pastContrast[1])
                     pastContrast_inco.append(pastContrast[2]) 
                 
-            ax4.plot(pastContrast_tot, marker='o', markersize= 8, mfc='none', label = 'tot')
-            ax4.plot(pastContrast_co, marker='o', markersize= 8, mfc='none', label = 'coherent')
-            ax4.plot(pastContrast_inco, marker='o', markersize= 8, mfc='none', label = 'incoherent')
+            ax4.plot(pastContrast_tot, marker = 'P', ms=10,  linewidth = 2, label = 'tot')
+            ax4.plot(pastContrast_co ,marker = 'P', ms=10,  linewidth = 2, label = 'coherent')
+            ax4.plot(pastContrast_inco, marker = 'P', ms=10,  linewidth = 2, label = 'incoherent')
             
             ax4.set_yscale('log')
             ax4.set_ylim(1e-7,1e-4)
             ax4.tick_params(axis='both', which='both', labelsize=8)
-            ax4.set_title('Mean contrast in DH vs iteration',size=10)
+            ax4.set_title('Mean contrast in DH vs iteration', size=10)
             ax4.legend()
-        #fig.tight_layout()
         print('Close each image to proceed', flush=True)
         plt.draw()
         plt.show()
@@ -682,6 +913,7 @@ def FullIterEFC(param):
     #Record the slopes to apply for probing at the next iteration
     refslope = 'iter' + str(nbiter-1) + 'correction'
     recordnewprobes(MatrixDirectory, size_probes, posprobes, dir2, refslope, nbiter)
+    print('Done with recording new slopes!', flush=True)
         
     return 0
 
@@ -728,15 +960,41 @@ def recordCoswithvolt(param, amptopushinnm, refslope):
     nam = ['cos_00deg','cos_30deg','cos_90deg']
     nbper = 10.
     dim = 240
+    angle = 30
     xx, yy = np.meshgrid(np.arange(240)-(240)/2, np.arange(240)-(240)/2)
-    cc = np.cos(2*np.pi*(xx*np.cos(0*np.pi/180.))*nbper/dim)
+    cc = np.cos(2*np.pi*(xx*np.cos(0*np.pi/180.))*nbper/dim) #45 instead of 0?
+    cc = ndimage.rotate(cc, angle, reshape = False, mode = 'grid-mirror')
     coe = (cc.flatten())@IMF_inv
-    #print(np.amax(coe),np.amin(coe), flush=True)
-    coe = coe*amptopushinnm/rad_632_to_nm_opt#/37/rad_632_to_nm_opt
-    #print(np.amax(coe),np.amin(coe), flush=True)
+    coe = coe*amptopushinnm/rad_632_to_nm_opt
     slopetopush = VoltToSlope(MatrixDirectory, coe)
-    recordslopes(slopetopush,dir,refslope,nam[0]+'_'+str(amptopushinnm)+'nm')
+    recordslopes(slopetopush, dir, refslope, nam[0] + '_' + str(amptopushinnm) + 'nm')
     return 0
+
+
+def record_slope_from_file(param, file_path, amptopushinnm, refslope, name):
+    """ --------------------------------------------------
+    Creation of the phase shape (in slope) to apply on the DM    
+    
+    Parameters:
+    ----------
+    amptopushinnm:
+    dir:
+    refslope:
+
+    -------------------------------------------------- """
+    MatrixDirectory = param["MatrixDirectory"]
+    dir = param["ImageDirectory"]
+    # Read SAXO calibrations
+    # static calibrations
+    IMF_inv = fits.getdata(MatrixDirectory + 'SAXO_DM_IFM_INV.fits', ignore_missing_end = True)
+    
+    cc = fits.getdata(file_path)
+    coe = (cc.flatten())@IMF_inv
+    coe = coe * amptopushinnm / rad_632_to_nm_opt
+    slopetopush = VoltToSlope(MatrixDirectory, coe)
+    recordslopes(slopetopush, dir, refslope, name)
+    return 0    
+    
     
     
     

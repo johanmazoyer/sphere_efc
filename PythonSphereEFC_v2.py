@@ -10,7 +10,7 @@ warnings.filterwarnings("ignore")
 # RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
 # ImageDirectory = os.environ['WORK_PATH']#RootDirectory+'SlopesAndImages/'
 # MatrixDirectory = os.environ['MATRIX_PATH']#RootDirectory+'MatricesAndModel/'
-RootDirectory = '/vltuser/sphere/zwahhaj/efc/sphere_efc-main/'
+RootDirectory = '/vltuser/sphere/zwahhaj/efc/'
 ImageDirectory = RootDirectory+'SlopesAndImages/'
 MatrixDirectory = RootDirectory+'MatricesAndModel/'
 nbiter = int(os.environ['nbiter']) #nb of the iteration (first iteration is 1)
@@ -29,6 +29,8 @@ size_probes = int(os.environ['size_probes'])# Set the size of the probes for the
 centeringateachiter = int(os.environ['centeringateachiter'])#If 1: Do the recentering at each iteration ; If 0: Do not do it
 coro = os.environ['coro']
 gain = float(os.environ['gain'])
+slope_ini = os.environ['SLOPE_INI']
+rescaling = int(os.environ['rescaling'])
 
 print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name), flush=True)
 
@@ -53,13 +55,11 @@ param = {
   "centeringateachiter": centeringateachiter,
   "amplitudeEFCMatrix": 8, #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
   "dimimages": 200,
-  "gain": gain
+  "gain": gain,
+  "slope_ini": slope_ini,
+  "rescaling": rescaling
 }
 
-# plotting options
-#matplotlib.rcParams['font.size'] = 17
-#colors = [color['color'] for color in list(plt.rcParams['axes.prop_cycle'])]
-# Generic setup
 
 if onsky == 0:
     lightsource_estim = 'InternalPupil_'
@@ -78,13 +78,25 @@ lightsource_corr = lightsource_corr + coro + '_'
 param['lightsource_estim'] = lightsource_estim
 param['lightsource_corr'] = lightsource_corr
 
-if zone_to_correct == 'vertical':
-    posprobes=[678,679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
-elif zone_to_correct == 'horizontal':
-    posprobes=[893,934]
+if coro == 'APLC':
+    if zone_to_correct == 'vertical':
+        posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
+    elif zone_to_correct == 'horizontal':
+        posprobes = [893 , 934]
+
+    
+elif coro == 'FQPM':
+    if zone_to_correct == 'vertical':
+        posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
+    elif zone_to_correct == 'horizontal':
+        posprobes = [1089 , 1125] #FQPM
+
 param['posprobes'] = posprobes
 
 
 
 func.FullIterEFC(param)
+
+# file_path = ''
+# func.record_slope_from_file(param, file_path, amplitude_in_nm, slope_ini, name_slope_file)
 
