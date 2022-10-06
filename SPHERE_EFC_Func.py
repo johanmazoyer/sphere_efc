@@ -215,47 +215,69 @@ def get_exptime(file):
     return exptime
 
 
-def FindNoisyPix(data,neighborhood_size,threshold):
-    """
-    Find noisy pixels in image an image
+# def FindNoisyPix(data,neighborhood_size,threshold):
+#     """
+#     Find noisy pixels in image an image
 
-    Parameters
-    ----------
-    data : dark image
-    neighborhood_size : typical distance between bad pixels
-    threshold : defined threshold
+#     Parameters
+#     ----------
+#     data : dark image
+#     neighborhood_size : typical distance between bad pixels
+#     threshold : defined threshold
 
-    Returns
-    -------
-    hotpixmap : 2D map filled with 1 at hot pixel location
+#     Returns
+#     -------
+#     hotpixmap : 2D map filled with 1 at hot pixel location
 
-    """
-    hotpixmap = data*0 
-    data_med = ndimage.median_filter(data,neighborhood_size)
-    hotpixwh = np.where((np.abs(data_med - data) > (threshold*data_med)))
-    hotpixmap[hotpixwh] = 1
+#     """
+
+#     def std_dev_data(x):
+#         return np.nanstd(x)
+
+#     def mean_data(x):
+#         return np.nanmean(x)
+
+#     if neighborhood_size % 2 == 0:
+#         raise Exception("please use an odd number of neighborhood_size")
+
+#     # this is the real sigma filter that Johan coded. This is actually long and not great
+#     # hotpixmap = data*0 
+#     # footprint = np.ones((neighborhood_size, neighborhood_size))
+#     # footprint[neighborhood_size // 2, neighborhood_size // 2] = 0
+
+#     # data_sigm = ndimage.generic_filter(data, std_dev_data, footprint=footprint)
+#     # data_mean = ndimage.generic_filter(data, mean_data, footprint=footprint)
+#     # hotpixwh = np.where(np.abs(data - data_mean) > (threshold * data_sigm))
+
+#     # previous method by axel. not good either
+#     hotpixmap = data*0 
+#     data_med = ndimage.median_filter(data,neighborhood_size)
+#     hotpixwh = np.where((np.abs(data_med - data) > (threshold*data_med)))
+#     hotpixmap[hotpixwh] = 1
     
-    return hotpixmap
+#     return hotpixmap
 
+# def noise_filter(data, neighborhood_size, threshold):
+#     """
+#     Filter noise pixels in image
 
-def noise_filter(data, neighborhood_size, threshold):
-    """
-    Filter noise pixels in image
+#     Parameters
+#     ----------
+#     data : image
+#     neighborhood_size : typical distance between bad pixels
+#     threshold : defined threshold
 
-    Parameters
-    ----------
-    data : image
-    neighborhood_size : typical distance between bad pixels
-    threshold : defined threshold
+#     Commented by JM : You should not do that: bad pix is much more easy to find in dark
+#     but you need to filter images
 
-    Returns
-    -------
-    image : processed image, where hot pixels have been removed
+#     Returns
+#     -------
+#     image : processed image, where hot pixels have been removed
 
-    """
-    hotpixmap = FindNoisyPix(data,neighborhood_size,threshold)
-    image = mean_window_8pix(data,hotpixmap)
-    return image
+#     """
+#     hotpixmap = FindNoisyPix(data,neighborhood_size,threshold)
+#     image = mean_window_8pix(data,hotpixmap)
+#     return image
 
 def mean_window_8pix(array, hotpix):
     """ --------------------------------------------------
@@ -335,7 +357,8 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     
     # We remove the hot pixels found in dark
     if remove_bad_pix == True:
-        image = noise_filter(image, 3, 0.5)
+        hotpixmap = find_hot_pix_in_dark(back_crop)
+        image = mean_window_8pix(image,hotpixmap)
         
     # We process the image with a high pass filter    
     if high_pass_filter == True:
@@ -346,10 +369,33 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     return image
 
 
-def find_hot_pix_in_dark(dark, threshold):
-    hotpixmap = dark*0 
-    hotpixwh = np.where(np.abs(dark) > threshold*np.nanstd(dark))
-    hotpixmap[hotpixwh] = 1
+def find_hot_pix_in_dark(dark):
+    """
+    Find noisy pixels in image an dark. I checked with Philippe Delorme, this
+    is what they are doing on sphere. This is super fast and not that bad
+        JM
+    Parameters
+    ----------
+    dark : dark image
+    
+    Returns
+    -------
+    hotpixmap : 2D map filled with 1 at hot pixel location
+
+    """
+
+    # We do a first pass just to remove very brigh pix in darks
+    threshold_bad_pix = 1000
+
+    above_threshold_pix =  dark*0
+    above_threshold_pix[np.where(dark > threshold_bad_pix)] = 1
+    dark[np.where(dark > threshold_bad_pix)] = np.nan
+
+    # We do a second pass based on a 3 sigma filter globally
+    remaining_noisy_pix = dark*0
+    remaining_noisy_pix[np.where(dark - np.nanmean(dark)> 3* np.nanstd(dark))] = 1
+
+    hotpixmap = np.clip(above_threshold_pix +remaining_noisy_pix, 0,1 )
     return hotpixmap
 
 def high_pass_filter_gauss(image, sigma):
