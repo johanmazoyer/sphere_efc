@@ -117,6 +117,7 @@ SLOPE_INI='VisAcq.DET1.REFSLP'
 MATRIX_PATH=$WORK_PATH0'/MatricesAndModel'
 WORK_PATH=$WORK_PATH0'/SlopesAndImages'
 
+PAUSE_TIME=2
 
 if [ "$ONSKY" -eq "1" ]; then
 	echo "The NCPA compensation is done from on-sky measurements"
@@ -171,8 +172,8 @@ if [ "$create_PSF" -eq "1" ]; then
     #read -n1 -r key
     
     msgSend -n wsre sroControl SETUP "-function INS.FILT2.NAME "$WHICH_ND
-    echo "Waiting 3s for the ND to be loaded"
-    /bin/sleep 3
+    #echo "Waiting 3s for the ND to be loaded"
+    #/bin/sleep 3
     
 
 
@@ -280,8 +281,8 @@ if [ "$create_coro" -eq "1" ]; then
 			rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP 
 			rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\""
 
-			echo "Waiting 3s for the slopes to be loaded"
-			/bin/sleep 3
+			echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
+			/bin/sleep ${PAUSE_TIME}
 			echo ' * slopes loaded'
 
 			echo "Acquire Cosinus"
@@ -290,7 +291,6 @@ if [ "$create_coro" -eq "1" ]; then
 			msgSend -n wsre sroControl START "-detId IRDIS"
 			msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
-			/bin/sleep 2
 		done
 	fi
 
@@ -307,8 +307,8 @@ if [ "$create_coro" -eq "1" ]; then
 	rsh wsrsgw cdmsLoad -f ${FILE_WFS} -r VisAcq.DET1.REFSLP 
 	rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\""
 
-	echo "Waiting 3s for the slopes to be loaded"
-	/bin/sleep 3
+	echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
+	/bin/sleep ${PAUSE_TIME}
 	echo ' * slopes loaded'
 
 
@@ -334,8 +334,8 @@ if [ "$create_coro" -eq "1" ]; then
 		rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP 
 		rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\""
 
-		echo "Waiting 3s for the slopes to be loaded"
-		/bin/sleep 3
+		echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
+		/bin/sleep ${PAUSE_TIME}
 		echo ' * slopes loaded'
 
 		echo "Acquire Probe"
