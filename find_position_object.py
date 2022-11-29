@@ -5,6 +5,12 @@ Created on  March 4 2022
 code to fin the position of an object to dig the dark hole at the good position with SPHERE
 @author: J Mazoyer
 
+# test beta-pictoris irdis dataset 2015-02-05
+# timestring = '2015-02-05T00:24:51.25' # start time in cube
+# timestring = '2015-02-05T03:55:24.57' # end time in cube
+# and ~3 hours of observations checks out with the cube where we see the planet by eye
+
+
 requires atroplan
 conda install -c conda-forge astroplan
 don't forget to cite https://ui.adsabs.harvard.edu/abs/2018AJ....155..128M/abstract
@@ -154,27 +160,40 @@ def plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,esti
 
 
     ax.set_title("Position planet in next {0} hour(s) (radius in pixel, dot is now)".format(time_in_hour), va='bottom')
-    plt.show()
+    # plt.show()
+    plt.savefig("/Users/jmazoyer/Desktop/graphe_pos_planets/" +f"{target_name}_start{timestring}_duration{time_in_hour}h.pdf" )
 
 
 
+target_name = "HD 4113 C"
+timestring = '2022-10-06T04:00:00' # start time in cube
+
+#beta pic b 
+# estimated_onsky_PA_of_the_planet = 212.58 # degree https://doi.org/10.1051/0004-6361/201834302
+# estimated_sep_of_the_planet = 332.42 # mas https://doi.org/10.1051/0004-6361/201834302
+
+# HR 87 99 d JAson site http://whereistheplanet.com/
+# estimated_onsky_PA_of_the_planet = 238 # degree
+# estimated_sep_of_the_planet = 695.8 # mas 
+
+# HR 87 99 e JAson site http://whereistheplanet.com/
+# estimated_onsky_PA_of_the_planet = 319.6 # degree
+# estimated_sep_of_the_planet = 398 # mas 
 
 
+# HD 984b / HIP 1134 JAson site http://whereistheplanet.com/
+# estimated_onsky_PA_of_the_planet = 39.5 # degree
+# estimated_sep_of_the_planet = 253 # mas 
 
-
-# test beta-pictoris irdis dataset 2015-02-05
-target_name = "Beta Pictoris"
-timestring = '2015-02-05T00:24:51.25' # start time in cube
-# timestring = '2015-02-05T03:55:24.57' # end time in cube
-
-estimated_onsky_PA_of_the_planet = 212.58 # degree https://doi.org/10.1051/0004-6361/201834302
-estimated_sep_of_the_planet = 332.42 # mas https://doi.org/10.1051/0004-6361/201834302
-
+# HD 4113 C
+# https://www.aanda.org/articles/aa/pdf/2018/06/aa30136-16.pdf
+estimated_onsky_PA_of_the_planet = 42 # degree
+estimated_sep_of_the_planet = 530 # mas 
 
 
 time_now = Time(timestring, format='isot', scale='utc')
 PA_on_detector(target_name, time_now, estimated_onsky_PA_of_the_planet, verbose = True)
-plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,estimated_sep_of_the_planet, time_in_hour = 3)
+plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,estimated_sep_of_the_planet, time_in_hour = 1)
 
 
 # just to check in betapic cube
