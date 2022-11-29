@@ -87,10 +87,10 @@ size_probes=400
 
 # First guess for the PSF echo position used for image centering (WARNING X and Y are inverted here)
 # (adding a cosine to DM phase)
-X0UP=490 #548 #544 #Y position of the upper PSF echo in python #553
-Y0UP=1494 #1511 #X position of the upper PSF echo in python
-X1UP=550 #478 #474 #Y position of the bottom PSF echo in python #485
-Y1UP=1531 #1511 #X position of the bottom PSF echo in python
+X0UP=114    #490 #548 #544 #Y position of the upper PSF echo in python #553
+Y0UP=128    #1494 #1511 #X position of the upper PSF echo in python
+X1UP=164    #550 #478 #474 #Y position of the bottom PSF echo in python #485
+Y1UP=174    #1531 #1511 #X position of the bottom PSF echo in python
 
 #Do you want to center your image at each iteration. Set 1 for yes, 0 for no.
 centeringateachiter=0
@@ -118,6 +118,9 @@ MATRIX_PATH=$WORK_PATH0'/MatricesAndModel'
 WORK_PATH=$WORK_PATH0'/SlopesAndImages'
 
 PAUSE_TIME=2
+SX=364
+SY=1364
+N=300
 
 if [ "$ONSKY" -eq "1" ]; then
 	echo "The NCPA compensation is done from on-sky measurements"
@@ -145,7 +148,7 @@ if [ "$create_bkgrd" -eq "1" ]; then
 
     # acquire background
     echo "Acquire background"
-    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_bkgrd} OCS1.DET1.NDIT ${NDIT_bkgrd} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_bkgrd} OCS1.DET1.NDIT ${NDIT_bkgrd} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX ${N} OCS1.DET1.SEQ1.WIN.NY ${N}"
     msgSend -n wsre sroControl START "-detId IRDIS"
     msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
@@ -184,7 +187,7 @@ if [ "$create_PSF" -eq "1" ]; then
 
     echo "Acquire OFF-Axis PSF"
     echo ' * acquiring image'
-    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_PSF} OCS1.DET1.NDIT ${NDIT_PSF} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${lightsource_estim}OffAxisPSF_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_PSF} OCS1.DET1.NDIT ${NDIT_PSF} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${lightsource_estim}OffAxisPSF_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX ${N} OCS1.DET1.SEQ1.WIN.NY ${N}"
     msgSend -n wsre sroControl START "-detId IRDIS"
     msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
@@ -287,7 +290,7 @@ if [ "$create_coro" -eq "1" ]; then
 
 			echo "Acquire Cosinus"
 			echo ' * acquiring image'
-			msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_cosinus} OCS1.DET1.NDIT ${NDIT_cosinus} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosinusForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+			msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_cosinus} OCS1.DET1.NDIT ${NDIT_cosinus} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosinusForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX ${N} OCS1.DET1.SEQ1.WIN.NY ${N}"
 			msgSend -n wsre sroControl START "-detId IRDIS"
 			msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
@@ -316,7 +319,7 @@ if [ "$create_coro" -eq "1" ]; then
 	echo ' * acquiring image'
 	let imgnb=$nbiter-1
 	#echo ${imgnb}
-	msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${imgnb}_coro_image_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+	msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${imgnb}_coro_image_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX ${N} OCS1.DET1.SEQ1.WIN.NY ${N}"
 	msgSend -n wsre sroControl START "-detId IRDIS"
 	msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
@@ -340,7 +343,7 @@ if [ "$create_coro" -eq "1" ]; then
 
 		echo "Acquire Probe"
 		echo ' * acquiring image'
-		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_probe} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${k}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_probe} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${k}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX ${N} OCS1.DET1.SEQ1.WIN.NY ${N}"
 		msgSend -n wsre sroControl START "-detId IRDIS"
 		msgSend -n wsre sroControl WAIT "-detId IRDIS"
 		let k=$k+1
