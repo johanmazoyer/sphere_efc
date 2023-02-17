@@ -412,7 +412,7 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
                 SVD[:,i,j] = np.zeros(2)
                 Vecteurenvoi[l] = np.zeros((2,numprobe))
             l = l+1  
-    return [Vecteurenvoi,SVD]
+    return [Vecteurenvoi,SVD,abs(deltapsik[0])**2,abs(deltapsik[1])**2]
     
 
 def creatingWhichinPupil(pupil, pushact, cutinpupil):

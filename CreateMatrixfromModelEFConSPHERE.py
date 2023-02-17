@@ -103,15 +103,15 @@ if createPW == True:
     #Choose the truncation above where the pixels won't be taken into account for estimation (not used currently here)
     cutestimation = 0#0.3*squaremaxPSF*8/amplitudePW
 
-    vectoressai,SVD = def_mat.createvectorprobes(input_wavefront,
-                                                 wave,
-                                                 Lyot384 ,
-                                                 ALC ,
-                                                 dimimages ,
-                                                 pushact ,
-                                                 posprobes ,
-                                                 cutestimation,
-                                                 coro)
+    vectoressai,SVD,int_probe1,int_probe2 = def_mat.createvectorprobes(input_wavefront,
+                                                                         wave,
+                                                                         Lyot384 ,
+                                                                         ALC ,
+                                                                         dimimages ,
+                                                                         pushact ,
+                                                                         posprobes ,
+                                                                         cutestimation,
+                                                                         coro)
     ##
     choosepixvisu = [-55,55,-55,55]
     maskvisu = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
@@ -122,6 +122,11 @@ if createPW == True:
     def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource+zone_to_correct+'CorrectedZone',replace=True)
     ##
     def_mat.SaveFits(vectoressai, ['',0], MatrixDirectory, lightsource+'VecteurEstimation_'+zone_to_correct+str(int(amplitudePW*37))+'nm', replace=True)
+    ##
+    def_mat.SaveFits(int_probe1, ['',0], MatrixDirectory, lightsource+'Intensity_probe'+str(posprobes[0])+'_'+str(int(amplitudePW*37))+'nm', replace=True)
+    ##
+    def_mat.SaveFits(int_probe2, ['',0], MatrixDirectory, lightsource+'Intensity_probe'+str(posprobes[1])+'_'+str(int(amplitudePW*37))+'nm', replace=True)
+
 
 #### Pour correction 
 
