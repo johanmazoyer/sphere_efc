@@ -31,6 +31,7 @@ coro = os.environ['coro']
 gain = float(os.environ['gain'])
 slope_ini = os.environ['SLOPE_INI']
 rescaling = int(os.environ['rescaling'])
+estim_algorithm = os.environ['ESTIM_ALGORITHM']
 
 print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name), flush=True)
 
@@ -57,7 +58,8 @@ param = {
   "dimimages": 200,
   "gain": gain,
   "slope_ini": slope_ini,
-  "rescaling": rescaling
+  "rescaling": rescaling,
+  "estim_algorithm": estim_algorithm
 }
 
 

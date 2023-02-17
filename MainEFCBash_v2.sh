@@ -78,6 +78,9 @@ DHsize=1
 corr_mode=1
 gain=0.5
 
+#Algorithm for estimation. Should be either PWP or BTW
+ESTIM_ALGORITHM='PWP'
+
 #Number of probing actuator
 #nbprobe=2
 zone_to_correct='horizontal' #vertical

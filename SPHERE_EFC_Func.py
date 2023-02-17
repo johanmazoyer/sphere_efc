@@ -341,7 +341,8 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     image: processed coronagraphic image, normalized by the max of the PSF
     -------------------------------------------------- """
     # Get image exposure time
-    expim = get_exptime(file) 
+    expim = get_exptime(file)
+    #if expim>100: expim=96
     # Load dark that correspond to image exposure time
     back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] 
     # Load image
@@ -557,6 +558,10 @@ def createdifference(param):
     centery = param['centery']
     nbiter = param['nbiter']
     posprobes = param['posprobes']
+    estim_algorithm = param['estim_algorithm']
+    MatrixDirectory = param["MatrixDirectory"]
+    size_probes = param["size_probes"]
+    
 
     #PSF
     PSF,smoothPSF,maxPSF,exppsf = process_PSF(ImageDirectory,lightsource_estim,centerx,centery,dimimages)
@@ -603,12 +608,25 @@ def createdifference(param):
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
         Images_to_display.append((Ikplus-imagecorrection)[30:170,30:170])
         j = j + 1
-        image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
-        #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-        Ikmoins = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
-        Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
-        Images_to_display.append((Ikmoins-imagecorrection)[30:170,30:170])
-        j = j + 1
+        
+        if estim_algorithm == 'PWP':
+            image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
+            #print('Loading the probe image {0:s}'.format(image_name), flush=True)
+            Ikmoins = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+            Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
+            Images_to_display.append((Ikmoins-imagecorrection)[30:170,30:170])
+            j = j + 1
+            
+        elif estim_algorithm == 'BTW':
+            Probe_intens = fits.getdata(MatrixDirectory+lightsource_estim+'Intensity_probe'+str(posprobes[i])+'_'+str(size_probes)+'nm.fits')
+            Ikplus = 2*Ikplus
+            Ikmoins = 2*(imagecorrection + Probe_intens) #Missing model component
+            Images_to_display.append(np.zeros((170-130,170-130)))
+        
+        else: 
+            print('ERROR: Unvalid ESTIM_ALGORITHM value: should either be PWP or BTW', flush=True)
+            break
+            
         Difference[k] = (Ikplus-Ikmoins)
         k = k + 1
 
@@ -763,7 +781,7 @@ def recordslopes(slopes, dir, refslope, namerecord):
    
    
     
-def recordnewprobes(MatrixDirectory, amptopush, acttopush, dir, refslope, nbiter):
+def recordnewprobes(MatrixDirectory, amptopush, acttopush, dir, refslope, nbiter, estim_algorithm):
     """ --------------------------------------------------
     Save new slopes to create PW probes on the DM
     
@@ -784,11 +802,12 @@ def recordnewprobes(MatrixDirectory, amptopush, acttopush, dir, refslope, nbiter
         recordslopes(slopetopush, dir, refslope, 'iter'+str(nbiter)+'probe'+str(k))
         k = k + 1
         
-        tensionDM = np.zeros(1377)
-        tensionDM[j] = -amptopush/37/rad_632_to_nm_opt
-        slopetopush = VoltToSlope(MatrixDirectory, tensionDM)
-        recordslopes(slopetopush,dir,refslope,'iter'+str(nbiter)+'probe'+str(k))
-        k = k + 1
+        if estim_algorithm == 'PWP':
+            tensionDM = np.zeros(1377)
+            tensionDM[j] = -amptopush/37/rad_632_to_nm_opt
+            slopetopush = VoltToSlope(MatrixDirectory, tensionDM)
+            recordslopes(slopetopush,dir,refslope,'iter'+str(nbiter)+'probe'+str(k))
+            k = k + 1
     return 0
         
 def FullIterEFC(param):
@@ -812,9 +831,9 @@ def FullIterEFC(param):
     filenameroot = param["exp_name"]
     size_probes = param["size_probes"]
     dimimages = param["dimimages"]
-    lightsource_estim = param["lightsource_estim"]
     onsky = param["onsky"]
     slope_ini = param["slope_ini"]
+    estim_algorithm = param['estim_algorithm']
     #Check if the directory dir exists
     if os.path.isdir(dir) is False:
         #Create the directory
@@ -958,7 +977,7 @@ def FullIterEFC(param):
         
     #Record the slopes to apply for probing at the next iteration
     refslope = 'iter' + str(nbiter-1) + 'correction'
-    recordnewprobes(MatrixDirectory, size_probes, posprobes, dir2, refslope, nbiter)
+    recordnewprobes(MatrixDirectory, size_probes, posprobes, dir2, refslope, nbiter, estim_algorithm)
     print('Done with recording new slopes!', flush=True)
         
     return 0
