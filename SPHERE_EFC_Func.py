@@ -618,7 +618,7 @@ def createdifference(param):
             j = j + 1
             
         elif estim_algorithm == 'BTW':
-            Probe_intens = fits.getdata(MatrixDirectory+lightsource_estim+'Intensity_probe'+str(posprobes[i])+'_'+str(size_probes)+'nm.fits')
+            Probe_intens = fits.getdata(MatrixDirectory+lightsource_estim+'Intensity_probe'+str(i)+'_'+str(size_probes)+'nm.fits')
             Ikplus = 2*Ikplus
             Ikmoins = 2*(imagecorrection + Probe_intens) #Missing model component
             Images_to_display.append(np.zeros((170-130,170-130)))
