@@ -7,7 +7,7 @@ alpha+=(7 10)
 SLOPE_INI='VisAcq.DET1.REFSLP'
 
 WORK_PATH0=/vltuser/sphere/zwahhaj/efc
-WORK_PATH0=~/Documents/Research/SPHERE/Git_Software/sphere_efc
+#WORK_PATH0=~/Documents/Research/SPHERE/Git_Software/sphere_efc
 MATRIX_PATH=$WORK_PATH0'/MatricesAndModel/'
 WORK_PATH=$WORK_PATH0'/SlopesAndImages/'
 
@@ -25,7 +25,7 @@ export SLOPE_INI
 echo "Run python Zernike script"
 python SPHERE_zernikes.py #Should be python3 on SPHERE
 
-read -n1 -r key
+#read -n1 -r key
 
 echo "Introduce zernikes on the DM"
 FILE_COS=( `/bin/ls ${WORK_PATH}/Zernikes.fits` )
