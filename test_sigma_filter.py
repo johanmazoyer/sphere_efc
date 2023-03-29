@@ -3,8 +3,11 @@ import time
 from astropy.io import fits
 from scipy import ndimage
 
+import glob
+
 import numpy as np
 from scipy.ndimage.filters import generic_filter
+from pathlib import Path
 
 
 def sigma_filter(image, box_width, n_sigma=3, ignore_edges=False, monitor=False):
@@ -206,9 +209,43 @@ def mean_window_8pix(array, hotpix):
     return array
 
 
-orig_data = fits.getdata(
-    "/Users/jmazoyer/Dropbox/ExchangeFolder/efc_sphere_may23/20230328/Experiment0002_iter0_coro_image_087_0001.fits")[
-        0, 74:250, 1420:1600]
+def find_hot_pix_in_dark(dark):
+    """
+    Find noisy pixels in image an dark. I checked with Philippe Delorme, this
+    is what they are doing on sphere. This is super fast and not that bad
+        JM
+    Parameters
+    ----------
+    dark : dark image
+    
+    Returns
+    -------
+    hotpixmap : 2D map filled with 1 at hot pixel location
+
+    """
+
+    # We do a first pass just to remove very brigh pix in darks
+    threshold_sup_bad_pix = 100
+    threshold_inf_bad_pix = -100
+
+    above_threshold_pix = np.zeros(dark.shape)
+    above_threshold_pix[np.where(dark > threshold_sup_bad_pix)] = 1
+
+    under_threshold_pix = np.zeros(dark.shape)
+    under_threshold_pix[np.where(dark < threshold_inf_bad_pix)] = 1
+
+    copy_dark_nan_pix = np.copy(dark)
+
+    copy_dark_nan_pix[np.where(dark > threshold_sup_bad_pix)] = np.nan
+    copy_dark_nan_pix[np.where(dark < threshold_inf_bad_pix)] = np.nan
+
+    # We do a second pass based on a 3 sigma filter globally
+    remaining_noisy_pix = np.zeros(dark.shape)
+    remaining_noisy_pix[np.where(copy_dark_nan_pix - np.nanmean(copy_dark_nan_pix)> 3* np.nanstd(copy_dark_nan_pix))] = 1
+
+    hotpixmap = np.clip(above_threshold_pix + under_threshold_pix + remaining_noisy_pix, 0,1 )
+    return hotpixmap
+
 
 dark1 = fits.getdata(
     "/Users/jmazoyer/Dropbox/ExchangeFolder/efc_sphere_may23/20230328/SPHERE_BKGRD_EFC_1s_087_0001.fits")[0, 74:250,
@@ -220,7 +257,11 @@ dark2 = fits.getdata(
 
 dark = (dark1 + dark2) / 2
 
-init_dark = np.copy(dark)
+# fits.writeto(outputdir + "dark1.fits", dark1, overwrite=True)
+# fits.writeto(outputdir + "dark2.fits", dark2, overwrite=True)
+# fits.writeto(outputdir + "dark.fits", dark, overwrite=True)
+
+copy_dark_nan_pix = np.copy(dark)
 
 outputdir = "/Users/jmazoyer/Desktop/test_badpix_new/"
 
@@ -228,52 +269,53 @@ outputdir = "/Users/jmazoyer/Desktop/test_badpix_new/"
 # Noisy_pix = FindNoisyPix(dark, 3,2)
 # fits.writeto(outputdir + "Noisy_pix.fits", Noisy_pix, overwrite=True)
 
-threshold_sup_bad_pix = 200
-threshold_inf_bad_pix = -50
+threshold_sup_bad_pix = 100
+threshold_inf_bad_pix = -100
 
-above_threshold_pix = orig_data * 0
+above_threshold_pix = np.zeros(dark.shape)
 above_threshold_pix[np.where(dark > threshold_sup_bad_pix)] = 1
-fits.writeto(outputdir + "above_threshold_pix.fits", above_threshold_pix, overwrite=True)
+# fits.writeto(outputdir + "above_threshold_pix.fits", above_threshold_pix, overwrite=True)
 
-under_threshold_pix = orig_data * 0
+under_threshold_pix = np.zeros(dark.shape)
 under_threshold_pix[np.where(dark < threshold_inf_bad_pix)] = 1
-fits.writeto(outputdir + "under_threshold_pix.fits", under_threshold_pix, overwrite=True)
+# fits.writeto(outputdir + "under_threshold_pix.fits", under_threshold_pix, overwrite=True)
 
-dark[np.where(dark > threshold_sup_bad_pix)] = np.nan
-dark[np.where(dark < threshold_inf_bad_pix)] = np.nan
+copy_dark_nan_pix[np.where(dark > threshold_sup_bad_pix)] = np.nan
+copy_dark_nan_pix[np.where(dark < threshold_inf_bad_pix)] = np.nan
 
-remaining_noisy_pix_dark = orig_data * 0
-remaining_noisy_pix_dark[np.where(dark - np.nanmean(dark) > 3 * np.nanstd(dark))] = 1
-fits.writeto(outputdir + "remaining_noisy_pix.fits", remaining_noisy_pix_dark, overwrite=True)
+remaining_noisy_pix_dark = np.zeros(dark.shape)
+remaining_noisy_pix_dark[np.where(copy_dark_nan_pix - np.nanmean(copy_dark_nan_pix) > 3 * np.nanstd(copy_dark_nan_pix))] = 1
+# fits.writeto(outputdir + "remaining_noisy_pix.fits", remaining_noisy_pix_dark, overwrite=True)
 
 Noisy_pix = np.clip(above_threshold_pix + under_threshold_pix + remaining_noisy_pix_dark, 0, 1)
 
-fits.writeto(outputdir + "all_noisy_pix.fits", Noisy_pix, overwrite=True)
+# fits.writeto(outputdir + "all_noisy_pix.fits", Noisy_pix, overwrite=True)
 
-# Noisy_pix_bis = orig_data*0
-# Noisy_pix_bis[np.where(dark - np.nanmean(dark)> 3* np.nanstd(dark))] = 1
 
-# fits.writeto(outputdir + "Noisy_pix_bis.fits", Noisy_pix_bis, overwrite=True)
+fullpath =  "/Users/jmazoyer/Dropbox/ExchangeFolder/efc_sphere_may23/20230328/Experiment0002_iter0_coro_image_087_0001.fits"
+list_file = glob.glob("/Users/jmazoyer/Dropbox/ExchangeFolder/efc_sphere_may23/20230328/*_coro_image_087_0001.fits")
 
-# asd
+for fullpath in list_file:
 
-filter_data = mean_window_8pix(orig_data - dark, Noisy_pix)
-# print(time.time() - start_time)
+    orig_data = fits.getdata(fullpath)[0, 74:250, 1420:1600]
+    filename = Path(fullpath).stem
 
-fits.writeto(outputdir + "orig.fits", orig_data, overwrite=True)
-fits.writeto(outputdir + "orig_minus_dark.fits", orig_data - init_dark, overwrite=True)
+    fits.writeto(outputdir + filename+"_darksub.fits", orig_data - dark, overwrite=True)
 
-# fits.writeto(outputdir + "dark1.fits", dark1, overwrite=True)
-# fits.writeto(outputdir + "dark2.fits", dark2, overwrite=True)
-fits.writeto(outputdir + "dark.fits", dark, overwrite=True)
 
-fits.writeto(outputdir + "filter.fits", filter_data, overwrite=True)
+    # filter_data = mean_window_8pix(orig_data - dark, Noisy_pix)
+    # fits.writeto(outputdir + filename+ "_nobadpix.fits", filter_data, overwrite=True)
 
-# sigma_filt_ignore_edges = sigma_filter(filter_data, box_width=3, n_sigma=7, monitor=True, ignore_edges=True)
-sigma_filt_with_edges = sigma_filter(filter_data, box_width=3, n_sigma=7, monitor=True, ignore_edges=False)
 
-# fits.writeto(outputdir + "sigma_filt_ignore_edges.fits", sigma_filt_ignore_edges, overwrite=True)
-fits.writeto(outputdir + "sigma_filt_with_edges.fits", sigma_filt_with_edges, overwrite=True)
 
-just_sigma_filt = sigma_filter(orig_data - init_dark, box_width=3, n_sigma=7, monitor=True, ignore_edges=False)
-fits.writeto(outputdir + "just_sigma_filt.fits", just_sigma_filt, overwrite=True)
+    filter_data_real_func = mean_window_8pix(orig_data - dark, find_hot_pix_in_dark(dark))
+    fits.writeto(outputdir + filename+ "_nobadpix_func.fits", filter_data_real_func, overwrite=True)
+
+
+
+    # sigma_filt_ignore_edges = sigma_filter(filter_data, box_width=3, n_sigma=7, monitor=True, ignore_edges=True)
+    sigma_filt_with_edges = sigma_filter(filter_data_real_func, box_width=3, n_sigma=7, monitor=True, ignore_edges=False)
+
+    # fits.writeto(outputdir + "sigma_filt_ignore_edges.fits", sigma_filt_ignore_edges, overwrite=True)
+    fits.writeto(outputdir + filename+ "_nobadpix_sigma_filt.fits" , sigma_filt_with_edges, overwrite=True)
+
