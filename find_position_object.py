@@ -1,5 +1,3 @@
-
-
 """
 Created on  March 4 2022
 code to fin the position of an object to dig the dark hole at the good position with SPHERE
@@ -16,8 +14,10 @@ conda install -c conda-forge astroplan
 don't forget to cite https://ui.adsabs.harvard.edu/abs/2018AJ....155..128M/abstract
 """
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
-import numpy as np 
+import numpy as np
 
 import matplotlib.pyplot as plt
 
@@ -29,8 +29,7 @@ from astroplan import Observer, FixedTarget
 # print(EarthLocation.get_site_names())
 
 
-def PA_on_detector(target_name, time_now, estimated_onsky_PA_of_the_planet, verbose = False):
-    
+def PA_on_detector(target_name, time_now, estimated_onsky_PA_of_the_planet, verbose=False):
     """ --------------------------------------------------
     Measure the planet position in SPHERE detector at the given time
 
@@ -57,9 +56,8 @@ def PA_on_detector(target_name, time_now, estimated_onsky_PA_of_the_planet, verb
     -------------------------------------------------- """
 
     vlt = Observer.at_site('Paranal Observatory', timezone="UTC")
-    PUPOFFSET = 135.87 # ±0.03 deg 
-    True_North = -1.75 #+/-0.08 deg (https://arxiv.org/pdf/1609.06681.pdf)
-
+    PUPOFFSET = 135.87  # ±0.03 deg
+    True_North = -1.75  #+/-0.08 deg (https://arxiv.org/pdf/1609.06681.pdf)
 
     target = FixedTarget.from_name(target_name)
 
@@ -69,26 +67,29 @@ def PA_on_detector(target_name, time_now, estimated_onsky_PA_of_the_planet, verb
     # -PARANGLE_deg - PUPOFFSET - True_North
 
     ### zeformula given by Gael
-    ### PA_onsky = PA_detector + PARANGLE_deg + True_North + PUPOFFSET 
+    ### PA_onsky = PA_detector + PARANGLE_deg + True_North + PUPOFFSET
 
-    PA_detector = estimated_onsky_PA_of_the_planet - PARANGLE_deg - True_North - PUPOFFSET 
+    PA_detector = estimated_onsky_PA_of_the_planet - PARANGLE_deg - True_North - PUPOFFSET
 
     if verbose:
         print("")
         print("")
-        print("target: ",target_name)
-        print("planet estimated Postion angle is:", estimated_onsky_PA_of_the_planet )
-        print("at observation time: ",time_now)
+        print("target: ", target_name)
+        print("planet estimated Postion angle is:", estimated_onsky_PA_of_the_planet)
+        print("at observation time: ", time_now)
         # print("parralactic angle given in SPHERE reduc parang files (to check): ", round(-PARANGLE_deg - PUPOFFSET - True_North,4))
-        print("PA on detector angle is: ", round(PA_detector,2))
+        print("PA on detector angle is: ", round(PA_detector, 2))
         print("")
         print("")
     return PA_detector
 
 
-
-
-def plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,estimated_sep_of_the_planet, time_in_hour = 1):
+def plot_pos_planet(target_name,
+                    time_now,
+                    estimated_onsky_PA_of_the_planet,
+                    estimated_sep_of_the_planet,
+                    time_in_hour=1,
+                    folderplot=''):
     """ --------------------------------------------------
     Plot the planet position in SPHERE detector in the next hour of the given time
 
@@ -112,8 +113,8 @@ def plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,esti
 
     NA
     -------------------------------------------------- """
-    
-    sphere_plate_scale = 12.25 #mas.pix−1
+
+    sphere_plate_scale = 12.25  #mas.pix−1
 
     t1 = Time('2010-01-01 00:00:00')
     t2 = Time('2010-01-01 00:10:00')
@@ -121,29 +122,28 @@ def plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,esti
 
     # print(dt10minutes.sec)
 
-    total_timein10min = np.ceil(time_in_hour*60/10)
+    total_timein10min = np.ceil(time_in_hour * 60 / 10)
 
-    time_plots = time_now + dt10minutes * np.arange(0,total_timein10min + 1)
+    time_plots = time_now + dt10minutes * np.arange(0, total_timein10min + 1)
 
-
-    radiuses_plot = np.zeros(len(time_plots)) + estimated_sep_of_the_planet/sphere_plate_scale
-    positions_angles_plot = np.zeros(len(time_plots)) 
+    radiuses_plot = np.zeros(len(time_plots)) + estimated_sep_of_the_planet / sphere_plate_scale
+    positions_angles_plot = np.zeros(len(time_plots))
 
     for i, timehere in enumerate(time_plots):
-        positions_angles_plot[i] = np.radians(PA_on_detector(target_name, time_plots[i], estimated_onsky_PA_of_the_planet, verbose = False))
-    
-    print("")
-    print("")
-    print("at ", time_plots[0])
-    print("angle on detector is ", np.degrees(positions_angles_plot[0] ) )
+        positions_angles_plot[i] = np.radians(
+            PA_on_detector(target_name, time_plots[i], estimated_onsky_PA_of_the_planet, verbose=False))
 
-    print("at ", time_plots[-1])
-    print("angle on detector is ",  np.degrees(positions_angles_plot[-1] ) )
-    print("")
-    print("")
+    # print("")
+    # print("")
+    # print("at ", time_plots[0])
+    # print("angle on detector is ", np.degrees(positions_angles_plot[0]))
+
+    # print("at ", time_plots[-1])
+    # print("angle on detector is ", np.degrees(positions_angles_plot[-1]))
+    # print("")
+    # print("")
 
     colors = positions_angles_plot
-
 
     fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
     ax.set_theta_zero_location("N")
@@ -155,46 +155,99 @@ def plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,esti
     # ax.set_rlabel_position(-22.5)  # Move radial labels away from plotted line
     ax.grid(True)
 
-    plt.text(np.radians(225), 90, target_name, fontsize = 12,ha ='center')
-    plt.text(np.radians(135), 90,  time_plots[0], fontsize = 12,ha ='center',c='red')
+    plt.text(np.radians(225), 90, target_name, fontsize=12, ha='center')
+    plt.text(np.radians(135), 90, time_plots[0], fontsize=12, ha='center', c='red')
+    plt.text(np.radians(180), 75, "Time in UT, Position in the FITS file", fontsize=9, ha='center')
 
 
     ax.set_title("Position planet in next {0} hour(s) (radius in pixel, dot is now)".format(time_in_hour), va='bottom')
     # plt.show()
-    plt.savefig("/Users/jmazoyer/Desktop/graphe_pos_planets/" +f"{target_name}_start{timestring}_duration{time_in_hour}h.pdf" )
+    plt.savefig(folderplot + f"{target_name}_start{timestring}_duration{time_in_hour}h.pdf")
 
 
+timestring = '2023-04-01T05:00:00'  # start time in cube
+duration_obs = 1  # in hours
 
-target_name = "HD 4113 C"
-timestring = '2022-10-06T04:00:00' # start time in cube
+# #beta pic b
+target_name = "Beta pictoris"
+estimated_sep_of_the_planet = 546  # mas https://doi.org/10.1051/0004-6361/201834302
+estimated_onsky_PA_of_the_planet = 31.6  # degree https://doi.org/10.1051/0004-6361/201834302
 
-#beta pic b 
-# estimated_onsky_PA_of_the_planet = 212.58 # degree https://doi.org/10.1051/0004-6361/201834302
-# estimated_sep_of_the_planet = 332.42 # mas https://doi.org/10.1051/0004-6361/201834302
+# HD 95086 b JAson site http://whereistheplanet.com/
+# target_name = "HD 95086"
+# estimated_sep_of_the_planet = 630 # mas\
+# estimated_onsky_PA_of_the_planet = 140 # degree
 
-# HR 87 99 d JAson site http://whereistheplanet.com/
-# estimated_onsky_PA_of_the_planet = 238 # degree
-# estimated_sep_of_the_planet = 695.8 # mas 
+# # HD 141569
+# target_name = "HD 141569"
+# estimated_sep_of_the_planet = 250 # mas\
+# estimated_onsky_PA_of_the_planet = 90 # degree
 
-# HR 87 99 e JAson site http://whereistheplanet.com/
-# estimated_onsky_PA_of_the_planet = 319.6 # degree
-# estimated_sep_of_the_planet = 398 # mas 
-
-
-# HD 984b / HIP 1134 JAson site http://whereistheplanet.com/
-# estimated_onsky_PA_of_the_planet = 39.5 # degree
-# estimated_sep_of_the_planet = 253 # mas 
-
-# HD 4113 C
-# https://www.aanda.org/articles/aa/pdf/2018/06/aa30136-16.pdf
-estimated_onsky_PA_of_the_planet = 42 # degree
-estimated_sep_of_the_planet = 530 # mas 
+# AF Lep
+# target_name = "AF Lep"
+# estimated_sep_of_the_planet = 330 # mas\
+# estimated_onsky_PA_of_the_planet = 70 # degree
 
 
-time_now = Time(timestring, format='isot', scale='utc')
-PA_on_detector(target_name, time_now, estimated_onsky_PA_of_the_planet, verbose = True)
-plot_pos_planet(target_name, time_now, estimated_onsky_PA_of_the_planet,estimated_sep_of_the_planet, time_in_hour = 1)
+# HIP 21152
+# target_name = "HIP 21152"
+# estimated_sep_of_the_planet = 370 # mas\
+# estimated_onsky_PA_of_the_planet = 215 # degree
 
+# 51 eri
+# target_name = "51 eri"
+# estimated_sep_of_the_planet = 324 # mas\
+# estimated_onsky_PA_of_the_planet = 115 # degree
+
+# HD 60584
+# target_name = "HD 60584"
+# estimated_sep_of_the_planet = 540 # mas
+# estimated_onsky_PA_of_the_planet = 50 # degree
+
+# HD 111161
+# target_name = "HD 111161"
+# estimated_sep_of_the_planet = 250 # mas
+# estimated_onsky_PA_of_the_planet = 180 # degree
+
+# HD 117214
+# target_name = "HD 117214"
+# estimated_sep_of_the_planet = 120 # mas semi minor axis
+# estimated_onsky_PA_of_the_planet = 270 # degree semi minor axis WEST
+
+# estimated_sep_of_the_planet = 450 # mas semi major axis
+# estimated_onsky_PA_of_the_planet = 0 # degree semi minor axis North
+
+# time_obs_start = Time(timestring, format='isot', scale='utc')
+# PA_on_detector(target_name, time_obs_start, estimated_onsky_PA_of_the_planet, verbose=True)
+# plot_pos_planet(target_name,
+#                 time_obs_start,
+#                 estimated_onsky_PA_of_the_planet,
+#                 estimated_sep_of_the_planet,
+#                 time_in_hour=duration_obs,
+#                 folderplot="/Users/jmazoyer/Desktop/graphe_pos_planets/")
+
+
+firstnightstring = "2023-03-31"
+secondnightstring = "2023-04-01"
+
+for i, strinday in enumerate([firstnightstring, secondnightstring]):
+
+    if i == 0 :
+        hour_array = ["23"]
+    else:
+        hour_array = ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09"]
+
+    for hourstringi in hour_array:
+        timestring = f"{strinday}T{hourstringi}:00:00"
+
+        time_obs_start = Time(timestring, format='isot', scale='utc')
+        PA_on_detector(target_name, time_obs_start, estimated_onsky_PA_of_the_planet, verbose=False)
+        plot_pos_planet(target_name,
+                        time_obs_start,
+                        estimated_onsky_PA_of_the_planet,
+                        estimated_sep_of_the_planet,
+                        time_in_hour=duration_obs,
+                        folderplot="/Users/jmazoyer/Desktop/graphe_pos_planets/")
 
 # just to check in betapic cube
 # posplanet = [488,504] # position of seen planet in the cube in pixel at start
