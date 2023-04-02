@@ -8,6 +8,7 @@ code to fin the position of an object to dig the dark hole at the good position 
 # timestring = '2015-02-05T03:55:24.57' # end time in cube
 # and ~3 hours of observations checks out with the cube where we see the planet by eye
 
+to find planet position, you can use Jason's site http://whereistheplanet.com/
 
 requires atroplan
 conda install -c conda-forge astroplan
