@@ -11,7 +11,7 @@ from pathlib import Path
 from SPHERE_EFC_Func import mean_window_8pix, find_hot_pix_in_dark, sigma_filter
 
 
-folder_data = "/Users/jmazoyer/Dropbox/ExchangeFolder/efc_sphere_may23/20230328/"
+folder_data = "/Users/jmazoyer/Dropbox/ExchangeFolder/efc_sphere_mars23/20230328/"
 
 outputdir = "/Users/jmazoyer/Desktop/test_badpix_new/"
 
