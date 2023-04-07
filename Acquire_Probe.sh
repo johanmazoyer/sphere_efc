@@ -16,7 +16,7 @@ NDIT_probe=1
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
 #WORK_PATH0=/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/
-WORK_PATH0=/vltuser/sphere/zwahhaj/efc/sphere_efc-main
+WORK_PATH0=/vltuser/sphere/zwahhaj/efc
 #WORK_PATH0=~/Documents/Research/SPHERE/Git_Software/sphere_efc
 #WORK_PATH0=~/Documents/Recherche/DonneesTHD/EFConSPHERE/sphere_efc
 
@@ -30,7 +30,9 @@ WORK_PATH0=/vltuser/sphere/zwahhaj/efc/sphere_efc-main
 MATRIX_PATH=$WORK_PATH0'/MatricesAndModel'
 WORK_PATH=$WORK_PATH0'/SlopesAndImages'
 
-
+SX=1
+SY=1220
+N=300
 
 	if [ -f "$WORK_PATH/Experiment0000_iter0correction.fits" ]
 	then
@@ -67,7 +69,7 @@ WORK_PATH=$WORK_PATH0'/SlopesAndImages'
 
 		echo "Acquire Probe"
 		echo ' * acquiring image'
-		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_probe} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${which_probe}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS"
+		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_probe} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${which_probe}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
 		msgSend -n wsre sroControl START "-detId IRDIS"
 		msgSend -n wsre sroControl WAIT "-detId IRDIS"
 	done

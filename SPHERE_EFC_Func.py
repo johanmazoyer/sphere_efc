@@ -367,7 +367,7 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
         image = high_pass_filter_gauss(image, 2)
 
     #We normalize the image with the max of the PSF
-    image = (image/expim)/(maxPSF*ND/exppsf)  
+    image = (image/expim)/(maxPSF*ND)  
     return image
 
 def find_hot_pix_in_dark(dark):
