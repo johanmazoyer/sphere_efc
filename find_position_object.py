@@ -166,13 +166,21 @@ def plot_pos_planet(target_name,
     plt.savefig(folderplot + f"{target_name}_start{timestring}_duration{time_in_hour}h.pdf")
 
 
-timestring = '2023-04-01T05:00:00'  # start time in cube
+timestring = '2023-04-07T05:00:00'  # start time in cube
 duration_obs = 1  # in hours
 
-# #beta pic b
-target_name = "Beta pictoris"
-estimated_sep_of_the_planet = 546  # mas https://doi.org/10.1051/0004-6361/201834302
-estimated_onsky_PA_of_the_planet = 31.6  # degree https://doi.org/10.1051/0004-6361/201834302
+# #beta pic b  http://whereistheplanet.com/ on April 7 
+target_name = "Beta pictoris"  
+estimated_sep_of_the_planet = 547.310  # mas https://doi.org/10.1051/0004-6361/201834302
+estimated_onsky_PA_of_the_planet = 31.627  # degree https://doi.org/10.1051/0004-6361/201834302
+
+
+# #beta pic c http://whereistheplanet.com/ on April 7 
+# target_name = "Beta pictoris"
+# estimated_sep_of_the_planet = 108.793  # mas https://doi.org/10.1051/0004-6361/201834302
+# estimated_onsky_PA_of_the_planet = 210.519  # degree https://doi.org/10.1051/0004-6361/201834302
+
+
 
 # HD 95086 b JAson site http://whereistheplanet.com/
 # target_name = "HD 95086"
