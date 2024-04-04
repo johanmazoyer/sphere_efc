@@ -90,10 +90,10 @@ size_probes=400
 
 # First guess for the PSF echo position used for image centering (WARNING X and Y are inverted here)
 # (adding a cosine to DM phase)
-X0UP=114    #490 #548 #544 #Y position of the upper PSF echo in python #553
-Y0UP=128    #1494 #1511 #X position of the upper PSF echo in python
-X1UP=164    #550 #478 #474 #Y position of the bottom PSF echo in python #485
-Y1UP=174    #1531 #1511 #X position of the bottom PSF echo in python
+X0UP=130    #490 #548 #544 #Y position of the upper PSF echo in python #553
+Y0UP=1493    #1494 #1511 #X position of the upper PSF echo in python
+X1UP=192    #550 #478 #474 #Y position of the bottom PSF echo in python #485
+Y1UP=1528    #1531 #1511 #X position of the bottom PSF echo in python
 
 #Do you want to center your image at each iteration. Set 1 for yes, 0 for no.
 centeringateachiter=0
@@ -250,6 +250,7 @@ if [ "$create_coro" -eq "1" ]; then
 	export gain
 	export SLOPE_INI
 	export rescaling
+	export ESTIM_ALGORITHM
 
 	#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 	echo "Launch python EFC code"

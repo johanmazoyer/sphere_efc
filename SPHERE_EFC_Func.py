@@ -367,9 +367,8 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
         image = high_pass_filter_gauss(image, 2)
 
     #We normalize the image with the max of the PSF
-    image = (image/expim)/(maxPSF*ND/exppsf)  
+    image = (image/expim)/(maxPSF*ND)  
     return image
-
 
 def find_hot_pix_in_dark(dark):
     """
@@ -386,25 +385,27 @@ def find_hot_pix_in_dark(dark):
 
     """
 
-    # We do a first pass just to remove very brigh pix in darks
+    # We do a first pass just to remove very brigh pix or negative bright in darks 
     threshold_sup_bad_pix = 100
     threshold_inf_bad_pix = -100
 
-    above_threshold_pix = dark*0
+    above_threshold_pix = np.zeros(dark.shape)
     above_threshold_pix[np.where(dark > threshold_sup_bad_pix)] = 1
 
-    under_threshold_pix = dark * 0
+    under_threshold_pix = np.zeros(dark.shape)
     under_threshold_pix[np.where(dark < threshold_inf_bad_pix)] = 1
 
-    dark[np.where(dark > threshold_sup_bad_pix)] = np.nan
-    dark[np.where(dark < threshold_inf_bad_pix)] = np.nan
+    copy_dark_nan_pix = np.copy(dark)
+    copy_dark_nan_pix[np.where(dark > threshold_sup_bad_pix)] = np.nan
+    copy_dark_nan_pix[np.where(dark < threshold_inf_bad_pix)] = np.nan
 
     # We do a second pass based on a 3 sigma filter globally
-    remaining_noisy_pix = dark*0
-    remaining_noisy_pix[np.where(dark - np.nanmean(dark)> 3* np.nanstd(dark))] = 1
+    remaining_noisy_pix = np.zeros(dark.shape)
+    remaining_noisy_pix[np.where(copy_dark_nan_pix - np.nanmean(copy_dark_nan_pix)> 3* np.nanstd(copy_dark_nan_pix))] = 1
 
     hotpixmap = np.clip(above_threshold_pix + under_threshold_pix + remaining_noisy_pix, 0,1 )
     return hotpixmap
+
 
 def high_pass_filter_gauss(image, sigma):
     """
@@ -625,7 +626,7 @@ def createdifference(param):
             j = j + 1
             
         elif estim_algorithm == 'BTW':
-            Probe_intens = fits.getdata(MatrixDirectory+lightsource_estim+'Intensity_probe'+str(posprobes[i])+'_'+str(size_probes)+'nm.fits')
+            Probe_intens = fits.getdata(MatrixDirectory+lightsource_estim+'Intensity_probe'+str(i)+'_'+str(size_probes)+'nm.fits')
             Ikplus = 2*Ikplus
             Ikmoins = 2*(imagecorrection + Probe_intens) #Missing model component
             Images_to_display.append(np.zeros((170-130,170-130)))
