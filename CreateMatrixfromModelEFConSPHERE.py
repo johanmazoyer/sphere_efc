@@ -32,13 +32,13 @@ MatrixDirectory = os.getcwd()+'/MatricesAndModel/'
 # directory where are all the different model planes (Apod, Lyot, etc..)
 ModelDirectory = os.getcwd()+'/Model/'
 
-#coro = 'APLC'
-coro = 'FQPM'
+coro = 'APLC'
+#coro = 'FQPM'
 dimimages = 200
 wave = 1.667e-6
 onsky = 0 #1 if on sky correction
 
-zone_to_correct = 'vertical' #vertical
+zone_to_correct = 'all' #vertical
 createPW = True
 
 createwhich = False
@@ -92,6 +92,8 @@ if createPW == True:
             posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
         elif zone_to_correct == 'horizontal':
             posprobes = [893 , 934]
+        elif zone_to_correct == 'all':
+            posprobes=[678 , 679, 720]
     
         
     elif coro == 'FQPM':
@@ -99,6 +101,8 @@ if createPW == True:
             posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
         elif zone_to_correct == 'horizontal':
             posprobes = [1089 , 1125] #FQPM
+        elif zone_to_correct == 'all':
+            raise ValueError('This setting is not available for FQPM yet')
         
     #Choose the truncation above where the pixels won't be taken into account for estimation (not used currently here)
     cutestimation = 0#0.3*squaremaxPSF*8/amplitudePW
@@ -116,8 +120,8 @@ if createPW == True:
     choosepixvisu = [-55,55,-55,55]
     maskvisu = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
 
-    plt.imshow(SVD[1]*maskvisu)
-    plt.show()
+    #plt.imshow(SVD[1]*maskvisu)
+    #plt.show()
     ##
     def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource+zone_to_correct+'CorrectedZone',replace=True)
     ##
