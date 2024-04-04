@@ -931,9 +931,9 @@ def FullIterEFC(param):
         ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
         display(PSF_to_display, ax1bis, 'PSF' , vmin = 1, vmax = np.amax(PSF_to_display), norm='log')
 
-        ax2 = fig2.subplots(2, 2, sharex=True, sharey=True)
+        ax2 = fig2.subplots(len(posprobes), 2, sharex=True, sharey=True)
         k=0
-        for j in np.arange(2):
+        for j in np.arange(len(posprobes)):
             display(Images_to_display[k], ax2.flat[k] , title='+ '+str(posprobes[j]), vmin=-1e-4, vmax=1e-4)
             k=k+1
             display(Images_to_display[k], ax2.flat[k] , title='- '+str(posprobes[j]), vmin=-1e-4, vmax=1e-4)

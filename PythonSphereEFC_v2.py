@@ -85,6 +85,8 @@ if coro == 'APLC':
         posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
     elif zone_to_correct == 'horizontal':
         posprobes = [893 , 934]
+    elif zone_to_correct == 'all':
+        posprobes = [678 , 679, 720]
 
     
 elif coro == 'FQPM':
@@ -92,6 +94,8 @@ elif coro == 'FQPM':
         posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
     elif zone_to_correct == 'horizontal':
         posprobes = [1089 , 1125] #FQPM
+    elif zone_to_correct == 'all':
+        raise ValueError('This setting is not available for FQPM yet')
 
 param['posprobes'] = posprobes
 

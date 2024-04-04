@@ -83,7 +83,7 @@ ESTIM_ALGORITHM='PWP'
 
 #Number of probing actuator
 #nbprobe=2
-zone_to_correct='horizontal' #vertical
+zone_to_correct='horizontal' #vertical #all
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
 size_probes=400
