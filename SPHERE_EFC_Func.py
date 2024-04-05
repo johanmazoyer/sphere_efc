@@ -758,11 +758,16 @@ def resultEFC(param):
     else:
         intensity_inco = imagecorrection - intensity_co
     
-    print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
-    solution1 = solutiontocorrect(maskDH, resultatestimation, invertGDH, WhichInPupil)
-    solution1 = solution1*amplitudeEFCMatrix/rad_632_to_nm_opt
-    solution1 = -gain*solution1
-    slopes = VoltToSlope(MatrixDirectory, solution1)
+    if gain!=0:
+        print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
+        solution1 = solutiontocorrect(maskDH, resultatestimation, invertGDH, WhichInPupil)
+        solution1 = solution1*amplitudeEFCMatrix/rad_632_to_nm_opt
+        solution1 = -gain*solution1
+        slopes = VoltToSlope(MatrixDirectory, solution1)
+    
+    else:
+        slopes = 0
+        
     return intensity_co, intensity_inco, imagecorrection, Images_to_display, slopes
         
 
@@ -842,6 +847,7 @@ def FullIterEFC(param):
     onsky = param["onsky"]
     slope_ini = param["slope_ini"]
     estim_algorithm = param['estim_algorithm']
+    gain = param['gain']
     #Check if the directory dir exists
     if os.path.isdir(dir) is False:
         #Create the directory
@@ -870,17 +876,18 @@ def FullIterEFC(param):
         #Estimation of the electric field using the pair-wise probing (return the electric field and the slopes)
         print('Estimating the electric field using the pair-wise probing:', flush=True)
         coherent_signal, incoherent_signal, imagecorrection, Images_to_display, pentespourcorrection  = resultEFC(param)
-        #Record the slopes to apply for correction at the next iteration
-        refslope = 'iter' + str(nbiter-2) + 'correction'
-        recordslopes(pentespourcorrection, dir2, refslope, 'iter'+str(nbiter-1)+'correction')
-        
+        #Record the slopes to apply for correction at the next iteration (only if not CDI i.e. gain!=0)
+        if gain!=0:
+            refslope = 'iter' + str(nbiter-2) + 'correction'
+            recordslopes(pentespourcorrection, dir2, refslope, 'iter'+str(nbiter-1)+'correction')
+            
         
         #Save data 
         fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits', coherent_signal, overwrite = True)
         fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal, overwrite = True)
         fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection, overwrite = True)
         
-        Contrast_tot=  str(format(extract_contrast_global([imagecorrection],maskDH)[0,0],'.2e'))
+        Contrast_tot = str(format(extract_contrast_global([imagecorrection],maskDH)[0,0],'.2e'))
         Contrast_cor = str(format(extract_contrast_global([coherent_signal],maskDH)[0,0],'.2e'))
         Contrast_inc = str(format(extract_contrast_global([incoherent_signal],maskDH)[0,0],'.2e'))
         
@@ -943,8 +950,12 @@ def FullIterEFC(param):
         display(coherent_signal_to_display, ax3.flat[0] , title='Coherent iter' + str(nbiter-2), vmin = vmin, vmax = vmax, norm = norm )
         display(incoherent_signal_to_display, ax3.flat[2] , title='Incoherent iter' + str(nbiter-2), vmin = vmin, vmax = vmax, norm = norm)
         
-        
-        slopes_to_display = pentespourcorrection + fits.getdata(dir2+refslope+'.fits')[0]
+        if os.path.isfile(dir2 + refslope + '.fits'):
+            #If EFC
+            slopes_to_display = pentespourcorrection + fits.getdata(dir2 + refslope + '.fits')[0]
+        else:
+            #If CDI only
+            slopes_to_display = pentespourcorrection + fits.getdata(dir2 + 'iter0correction' + '.fits')[0]
         display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[0], ax3.flat[1], title = 'Slopes SH in X to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
         display(SHslopes2map(param['MatrixDirectory'], slopes_to_display, visu=False)[1], ax3.flat[3], title = 'Slopes SH in Y to apply for iter'+str(nbiter-1), vmin =np.amin(slopes_to_display), vmax = np.amax(slopes_to_display) )
         
@@ -982,11 +993,14 @@ def FullIterEFC(param):
         print('Close each image to proceed', flush=True)
         plt.draw()
         plt.show()
-        
-    #Record the slopes to apply for probing at the next iteration
-    refslope = 'iter' + str(nbiter-1) + 'correction'
-    recordnewprobes(MatrixDirectory, size_probes, posprobes, dir2, refslope, nbiter, estim_algorithm)
-    print('Done with recording new slopes!', flush=True)
+        plt.pause(5)
+    
+    #Record new slope at first CDI iteration only (nbiter == 1) or at all EFC iteration (gain!=0)
+    if gain!=0 or nbiter == 1:    
+        #Record the slopes to apply for probing at the next iteration
+        refslope = 'iter' + str(nbiter-1) + 'correction'
+        recordnewprobes(MatrixDirectory, size_probes, posprobes, dir2, refslope, nbiter, estim_algorithm)
+        print('Done with recording new slopes!', flush=True)
         
     return 0
 

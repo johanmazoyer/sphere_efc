@@ -93,7 +93,7 @@ if createPW == True:
         elif zone_to_correct == 'horizontal':
             posprobes = [893 , 934]
         elif zone_to_correct == 'all':
-            posprobes=[678 , 679, 720]
+            posprobes = [678 , 679, 720]
     
         
     elif coro == 'FQPM':
