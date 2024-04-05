@@ -739,10 +739,8 @@ def resultEFC(param):
     rescaling = param['rescaling']
     
     vectoressai = fits.getdata(MatrixDirectory+lightsource_estim+'VecteurEstimation_'+zone_to_correct+str(size_probes)+'nm.fits')
-    WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
     maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
-    invertGDH = fits.getdata(MatrixDirectory+lightsource_corr+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
-
+    
     print('- Creating difference of images...', flush=True)
     Difference, imagecorrection, Images_to_display = createdifference(param)
     print('- Estimating the focal plane electric field...', flush=True)
@@ -760,6 +758,10 @@ def resultEFC(param):
     
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
+        WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
+        invertGDH = fits.getdata(MatrixDirectory+lightsource_corr+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
+
+        
         solution1 = solutiontocorrect(maskDH, resultatestimation, invertGDH, WhichInPupil)
         solution1 = solution1*amplitudeEFCMatrix/rad_632_to_nm_opt
         solution1 = -gain*solution1
