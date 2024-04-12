@@ -890,9 +890,9 @@ def FullIterEFC(param):
         #Estimation of the electric field using the pair-wise probing (return the electric field and the slopes)
         print('Estimating the electric field using the pair-wise probing:', flush=True)
         coherent_signal, incoherent_signal, imagecorrection, Images_to_display, pentespourcorrection  = resultEFC(param)
+        refslope = 'iter' + str(nbiter-2) + 'correction'
         #Record the slopes to apply for correction at the next iteration (only if not CDI i.e. gain!=0)
         if gain!=0:
-            refslope = 'iter' + str(nbiter-2) + 'correction'
             recordslopes(pentespourcorrection, dir2, refslope, 'iter'+str(nbiter-1)+'correction')
             
         
@@ -1006,9 +1006,11 @@ def FullIterEFC(param):
             ax4.legend()
         print('Close each image to proceed', flush=True)
         plt.draw()
-        plt.show()
-        plt.pause(5)
-        plt.close()
+        if nbiter == 2:
+            plt.show()
+        else:
+            plt.pause(3)
+            plt.close()
     
     #Record new slope at first CDI iteration only (nbiter == 1) or at all EFC iteration (gain!=0)
     if gain!=0 or nbiter == 1:    

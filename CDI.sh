@@ -51,7 +51,7 @@ DIT_cosinus=1
 NDIT_cosinus=2
 
 
-ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
+ONSKY=1 #Set 0 for internal pup ; 1 for an on sky correction
 Assuming_VLT_PUP_for_corr=0 
 #Work only if ONSKY=0. If  Assuming_VLT_PUP_for_corr=1 assume ONSKY=1 for EFC correction only
 
