@@ -7,10 +7,10 @@ import SPHERE_EFC_Func as func
 warnings.filterwarnings("ignore")
 
 # Retrieve the shell variables
-# RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
+RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
 # ImageDirectory = os.environ['WORK_PATH']#RootDirectory+'SlopesAndImages/'
 # MatrixDirectory = os.environ['MATRIX_PATH']#RootDirectory+'MatricesAndModel/'
-RootDirectory = '/vltuser/sphere/zwahhaj/efc/'
+#RootDirectory = '/vltuser/sphere/zwahhaj/efc/'
 ImageDirectory = RootDirectory+'SlopesAndImages/'
 MatrixDirectory = RootDirectory+'MatricesAndModel/'
 nbiter = int(os.environ['nbiter']) #nb of the iteration (first iteration is 1)
@@ -32,6 +32,7 @@ gain = float(os.environ['gain'])
 slope_ini = os.environ['SLOPE_INI']
 rescaling = int(os.environ['rescaling'])
 estim_algorithm = os.environ['ESTIM_ALGORITHM']
+probe_type = os.environ['PROBE_TYPE']
 
 print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name), flush=True)
 
@@ -59,7 +60,8 @@ param = {
   "gain": gain,
   "slope_ini": slope_ini,
   "rescaling": rescaling,
-  "estim_algorithm": estim_algorithm
+  "estim_algorithm": estim_algorithm,
+  "probe_type": probe_type,
 }
 
 
@@ -85,7 +87,7 @@ if coro == 'APLC':
         posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
     elif zone_to_correct == 'horizontal':
         posprobes = [893 , 934]
-    elif zone_to_correct == 'all':
+    elif zone_to_correct == 'FDH':
         posprobes = [678 , 679, 720]
 
     
@@ -94,7 +96,7 @@ elif coro == 'FQPM':
         posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
     elif zone_to_correct == 'horizontal':
         posprobes = [1089 , 1125] #FQPM
-    elif zone_to_correct == 'all':
+    elif zone_to_correct == 'FDH':
         raise ValueError('This setting is not available for FQPM yet')
 
 param['posprobes'] = posprobes

@@ -32,20 +32,21 @@ MatrixDirectory = os.getcwd()+'/MatricesAndModel/'
 # directory where are all the different model planes (Apod, Lyot, etc..)
 ModelDirectory = os.getcwd()+'/Model/'
 
-coro = 'APLC'
-#coro = 'FQPM'
+#coro = 'APLC'
+coro = 'FQPM'
 dimimages = 200
 wave = 1.667e-6
-onsky = 0 #1 if on sky correction
+onsky = 1 #1 if on sky correction
 
-zone_to_correct = 'all' #vertical
+zone_to_correct = 'horizontal' #vertical #horizontal #'FDH'
 createPW = True
+probe_type = 'individual_act' #'sinc' #'individual_act'
 
 createwhich = False
 createjacobian = False
 
 #name of the mask that can be saved with createmask and then used in createEFCmatrix
-namemask ='2'
+namemask ='1'
 maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,55], circ_side='Top', circ_offset=8)
 createmask = False
 
@@ -85,14 +86,14 @@ amplitudeEFCMatrix = 8
 
 if createPW == True:
     print('...Creating VectorProbes...')
-    pushact = amplitudePW * raw_pushact
+    print('Probe type: ' + probe_type)
     # Choose probes positions
     if coro == 'APLC':
         if zone_to_correct == 'vertical':
             posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
         elif zone_to_correct == 'horizontal':
             posprobes = [893 , 934]
-        elif zone_to_correct == 'all':
+        elif zone_to_correct == 'FDH':
             posprobes = [678 , 679, 720]
     
         
@@ -101,35 +102,38 @@ if createPW == True:
             posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
         elif zone_to_correct == 'horizontal':
             posprobes = [1089 , 1125] #FQPM
-        elif zone_to_correct == 'all':
+        elif zone_to_correct == 'FDH':
             raise ValueError('This setting is not available for FQPM yet')
         
     #Choose the truncation above where the pixels won't be taken into account for estimation (not used currently here)
-    cutestimation = 0#0.3*squaremaxPSF*8/amplitudePW
+    cutestimation = 1e20#0.3*squaremaxPSF*8/amplitudePW
 
-    vectoressai,SVD,int_probe1,int_probe2 = def_mat.createvectorprobes(input_wavefront,
+    vectoressai,SVD,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
                                                                          wave,
                                                                          Lyot384 ,
                                                                          ALC ,
                                                                          dimimages ,
-                                                                         pushact ,
+                                                                         raw_pushact ,
+                                                                         amplitudePW,
                                                                          posprobes ,
                                                                          cutestimation,
-                                                                         coro)
+                                                                         coro,
+                                                                         probe_type)
     ##
     choosepixvisu = [-55,55,-55,55]
     maskvisu = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
 
     #plt.imshow(SVD[1]*maskvisu)
     #plt.show()
+    filename = probe_type + '_' + zone_to_correct + '_' + str(int(amplitudePW*37)) + 'nm' + '_'
     ##
-    def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource+zone_to_correct+'CorrectedZone',replace=True)
+    def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource + filename + 'CorrectedZone',replace=True)
     ##
-    def_mat.SaveFits(vectoressai, ['',0], MatrixDirectory, lightsource+'VecteurEstimation_'+zone_to_correct+str(int(amplitudePW*37))+'nm', replace=True)
+    def_mat.SaveFits(vectoressai, ['',0], MatrixDirectory, lightsource + filename + 'VecteurEstimation', replace=True)
     ##
-    def_mat.SaveFits(int_probe1, ['',0], MatrixDirectory, lightsource+'Intensity_probe'+str(posprobes[0])+'_'+str(int(amplitudePW*37))+'nm', replace=True)
+    def_mat.SaveFits(int_probes, ['',0], MatrixDirectory, lightsource + filename +'Intensity_probe', replace=True)
     ##
-    def_mat.SaveFits(int_probe2, ['',0], MatrixDirectory, lightsource+'Intensity_probe'+str(posprobes[1])+'_'+str(int(amplitudePW*37))+'nm', replace=True)
+    def_mat.SaveFits(probevoltage, ['',0], MatrixDirectory, lightsource + filename +'Voltage_probe', replace=True)
 
 
 #### Pour correction 

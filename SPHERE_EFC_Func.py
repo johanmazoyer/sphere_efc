@@ -569,6 +569,8 @@ def createdifference(param):
     estim_algorithm = param['estim_algorithm']
     MatrixDirectory = param["MatrixDirectory"]
     size_probes = param["size_probes"]
+    probe_type = param["probe_type"]
+    zone_to_correct = param["zone_to_correct"]
     
 
     #PSF
@@ -626,7 +628,8 @@ def createdifference(param):
             j = j + 1
             
         elif estim_algorithm == 'BTW':
-            Probe_intens = fits.getdata(MatrixDirectory+lightsource_estim+'Intensity_probe'+str(i)+'_'+str(size_probes)+'nm.fits')
+            filename = probe_type + '_' + zone_to_correct + '_' + str(size_probes) + 'nm' + '_'
+            Probe_intens = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'Intensity_probe.fits')[k]
             Ikplus = 2*Ikplus
             Ikmoins = 2*(imagecorrection + Probe_intens) #Missing model component
             Images_to_display.append(np.zeros((170-130,170-130)))
@@ -737,8 +740,10 @@ def resultEFC(param):
     corr_mode = param['corr_mode']
     gain = param['gain']
     rescaling = param['rescaling']
+    probe_type = param['probe_type']
     
-    vectoressai = fits.getdata(MatrixDirectory+lightsource_estim+'VecteurEstimation_'+zone_to_correct+str(size_probes)+'nm.fits')
+    filename = probe_type + '_' + zone_to_correct + '_' + str(size_probes) + 'nm' + '_'
+    vectoressai = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'VecteurEstimation.fits')
     maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
     
     print('- Creating difference of images...', flush=True)
@@ -796,31 +801,38 @@ def recordslopes(slopes, dir, refslope, namerecord):
    
    
     
-def recordnewprobes(MatrixDirectory, amptopush, acttopush, dir, refslope, nbiter, estim_algorithm):
+def recordnewprobes(param, dir, refslope, nbiter):
     """ --------------------------------------------------
     Save new slopes to create PW probes on the DM
     
     Parameters:
     ----------
-    amptopush:
-    acttopush:
+    param:
     dir:
     refslope:
     nbiter:
 
     -------------------------------------------------- """
+    
+    MatrixDirectory = param["MatrixDirectory"]
+    nbiter = param['nbiter']
+    lightsource_estim = param["lightsource_estim"]
+    size_probes = param["size_probes"]
+    estim_algorithm = param['estim_algorithm']
+    probe_type = param['probe_type']
+    zone_to_correct = param["zone_to_correct"]
+    
+    filename = probe_type + '_' + zone_to_correct + '_' + str(size_probes) + 'nm' + '_'
+    tensionDM = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'Voltage_probe.fits')
+    tensionDM = tensionDM/rad_632_to_nm_opt
     k = 1
-    for j in acttopush:
-        tensionDM = np.zeros(1377)
-        tensionDM[j] = amptopush/37/rad_632_to_nm_opt
-        slopetopush = VoltToSlope(MatrixDirectory, tensionDM)
+    for j in np.arange(len(tensionDM)):
+        slopetopush = VoltToSlope(MatrixDirectory, tensionDM[j])
         recordslopes(slopetopush, dir, refslope, 'iter'+str(nbiter)+'probe'+str(k))
         k = k + 1
         
         if estim_algorithm == 'PWP':
-            tensionDM = np.zeros(1377)
-            tensionDM[j] = -amptopush/37/rad_632_to_nm_opt
-            slopetopush = VoltToSlope(MatrixDirectory, tensionDM)
+            slopetopush = VoltToSlope(MatrixDirectory, -tensionDM[j])
             recordslopes(slopetopush,dir,refslope,'iter'+str(nbiter)+'probe'+str(k))
             k = k + 1
     return 0
@@ -996,12 +1008,13 @@ def FullIterEFC(param):
         plt.draw()
         plt.show()
         plt.pause(5)
+        plt.close()
     
     #Record new slope at first CDI iteration only (nbiter == 1) or at all EFC iteration (gain!=0)
     if gain!=0 or nbiter == 1:    
         #Record the slopes to apply for probing at the next iteration
         refslope = 'iter' + str(nbiter-1) + 'correction'
-        recordnewprobes(MatrixDirectory, size_probes, posprobes, dir2, refslope, nbiter, estim_algorithm)
+        recordnewprobes(param, dir2, refslope, nbiter)
         print('Done with recording new slopes!', flush=True)
         
     return 0

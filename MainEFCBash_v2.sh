@@ -20,7 +20,7 @@ Preliminary steps to perfornm before running this script
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically created
-nbiter=2
+nbiter=1
 # First try with nbiter= 1 to see if initialization runs
 # then nbiter=2 to see at least 1 full loop 
 
@@ -82,8 +82,10 @@ gain=0.5
 ESTIM_ALGORITHM='PWP'
 
 #Number of probing actuator
-#nbprobe=2
-zone_to_correct='horizontal' #vertical #all
+zone_to_correct='horizontal' #vertical #FDH
+
+#Type of probes used for PWP
+PROBE_TYPE='individual_act' #'sinc' #'individual_act'
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
 size_probes=400
@@ -104,8 +106,8 @@ rescaling=0
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
 #WORK_PATH0=/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/
-WORK_PATH0=/vltuser/sphere/zwahhaj/efc
-#WORK_PATH0=~/Documents/Research/SPHERE/Git_Software/sphere_efc
+#WORK_PATH0=/vltuser/sphere/zwahhaj/efc
+WORK_PATH0=/Users/axel/Documents/Research/SPHERE/sphere_efc/
 #WORK_PATH0=~/Documents/Recherche/DonneesTHD/EFConSPHERE/sphere_efc
 
 SLOPE_INI='VisAcq.DET1.REFSLP'
@@ -251,6 +253,7 @@ if [ "$create_coro" -eq "1" ]; then
 	export SLOPE_INI
 	export rescaling
 	export ESTIM_ALGORITHM
+	export PROBE_TYPE
 
 	#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 	echo "Launch python EFC code"

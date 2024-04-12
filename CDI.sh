@@ -18,7 +18,7 @@ Preliminary steps to perform before running this script
 '
 
 #Total number of iterations to run in the loop
-tot_nbiter=2
+tot_nbiter=3
 
 
 #Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
@@ -57,8 +57,8 @@ Assuming_VLT_PUP_for_corr=0
 
 
 #Coronagraph that is used
-coro='APLC'
-#coro='FQPM'
+#coro='APLC'
+coro='FQPM'
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
 DHsize=1
@@ -74,7 +74,10 @@ gain=0
 ESTIM_ALGORITHM='PWP'
 
 #Number of probing actuator
-zone_to_correct='all' #vertical #horizontal
+zone_to_correct='horizontal' #vertical #horizontal #FDH
+
+#Type of probes used for PWP
+PROBE_TYPE='individual_act' #'sinc' #'individual_act'
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
 size_probes=400
@@ -95,8 +98,8 @@ rescaling=0
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
 #WORK_PATH0=/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/
-WORK_PATH0=/vltuser/sphere/zwahhaj/efc
-#WORK_PATH0=~/Documents/Research/SPHERE/Git_Software/sphere_efc
+#WORK_PATH0=/vltuser/sphere/zwahhaj/efc
+WORK_PATH0=/Users/axel/Documents/Research/SPHERE/sphere_efc/
 #WORK_PATH0=~/Documents/Recherche/DonneesTHD/EFConSPHERE/sphere_efc
 
 SLOPE_INI='VisAcq.DET1.REFSLP'
@@ -198,29 +201,32 @@ fi
 
 
 if [ "$create_coro" -eq "1" ]; then
+	#Find the name of the last experiment and change the name if nbiter==1
+	#Check if at least one experiment was launched
+	if [ -f "$WORK_PATH/Experiment0000_iter0correction.fits" ]
+	then
+		#tmpplus is used to increment the rootname if nbiter == 1
+		nbiter=1
+		if (($nbiter > 1))
+		then
+		tmpplus=1
+		else
+		tmpplus=0
+		fi
+		#Find the last file starting by Experiment in WORK_PATH
+		TMP=$(ls ${WORK_PATH}/Experiment*iter0correction.fits|wc -l)
+		let TMP=$TMP-$tmpplus
+		#This number is the number of the next experiment
+		EXP_NAME=Experiment$(printf "%04d" $TMP)'_'
+	else
+		# First Experiment
+		EXP_NAME='Experiment0000_'
+	fi 
+	
+	
     #Loop over tot_nbiter
 	for nbiter in $(seq 1 $tot_nbiter)
 	do
-		#Find the name of the last experiment and change the name if nbiter==1
-		#Check if at least one experiment was launched
-		if [ -f "$WORK_PATH/Experiment0000_iter0correction.fits" ]
-		then
-			#tmpplus is used to increment the rootname if nbiter == 1
-			if (($nbiter > 1))
-			then
-			tmpplus=1
-			else
-			tmpplus=0
-			fi
-			#Find the last file starting by Experiment in WORK_PATH
-			TMP=$(ls ${WORK_PATH}/Experiment*iter0correction.fits|wc -l)
-			let TMP=$TMP-$tmpplus
-			#This number is the number of the next experiment
-			EXP_NAME=Experiment$(printf "%04d" $TMP)'_'
-		else
-			# First Experiment
-			EXP_NAME='Experiment0000_'
-		fi 
 
 		#Export the variables so that they can be retrieved from python
 		export WORK_PATH0
@@ -245,6 +251,7 @@ if [ "$create_coro" -eq "1" ]; then
 		export SLOPE_INI
 		export rescaling
 		export ESTIM_ALGORITHM
+		export PROBE_TYPE
 
 		#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 		echo "Launch python EFC code"

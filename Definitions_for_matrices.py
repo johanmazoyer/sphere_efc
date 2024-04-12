@@ -330,7 +330,7 @@ def invertDSCC(interact, cut ,goal='e', regul="truncation", visu=False):
     return [np.diag(InvS),pseudoinverse]
 
 
-def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, posprobes , cutsvd, coro):
+def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, amplitudePW, posprobes , cutsvd, coro, probe_type):
     """
     Create PW matrix
 
@@ -368,28 +368,43 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
     numprobe = len(posprobes)
     deltapsik = np.zeros((numprobe , isz_foc , isz_foc),dtype=complex)
     probephase = np.zeros((numprobe , pupsize , pupsize))
-    matrix = np.zeros((numprobe,2))
-    Vecteurenvoi = np.zeros((isz_foc**2,2,numprobe))
+    probevoltage = np.zeros((numprobe , len(pushact)))
+    matrix = np.zeros((numprobe, 2))
+    Vecteurenvoi = np.zeros((isz_foc**2, 2, numprobe))
     SVD = np.zeros((2,isz_foc,isz_foc))
     
     
     [isz_pup,ld_mas] = definition_isz(pupsize, wave)
     # Create off-axis PSF
     maskoffaxis = cropimage(translationFFT(isz_pup,30,30), int(isz_pup/2), int(isz_pup)/2, pupsize)
-    OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc,coro)
+    OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, coro)
     squaremaxPSF = np.amax(np.abs(OffAxisPSF))
 
     # Regularization
-    cutsvd = 0.3*squaremaxPSF*8/(400/37)
+    cutsvd = 1e20 #0.3*squaremaxPSF*8/(400/37)
     
     # Get constant E-field in the detector with corono
-    pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc,coro)
+    pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc, coro)
 
     k=0
+    
     for i in posprobes:
-        print(i)
+        print('Probe ' + str(k+1))
         # Poke one actuator and compute complex entrance pupil
-        probephase[k] = pushact[i]
+        if probe_type == 'individual_act':
+            #Create set of poke functions
+            probephase[k], probevoltage[k] =  create_poke_probe(pushact, i, amplitudePW)
+            
+        elif probe_type == 'sinc':
+            #Can be changed in the future
+            IWA = 0
+            OWA = 20
+            
+            #Create set of orthogonal sinc functions
+            probephase[k], probevoltage[k] = create_sinc_probe(k, posprobes[0], pushact, IWA, OWA, amplitudePW)
+            
+            
+        #Convert nm to radians    
         probephase[k] = 2*np.pi*(probephase[k])*1e-9/wave
         #entrance pupil plane field (can be real, or complex with amplitude and phase)
         input_wavefront_k = input_wavefront*(1+1j*probephase[k])
@@ -397,6 +412,7 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
         deltapsikbis = pupiltodetector(input_wavefront_k, wave,lyot_mask,Name_ALC,isz_foc,coro)
         deltapsik[k] = (deltapsikbis-pupilnoabb)/squaremaxPSF
         k=k+1
+    
 
     # invert matrix
     l=0
@@ -412,8 +428,135 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
                 SVD[:,i,j] = np.zeros(2)
                 Vecteurenvoi[l] = np.zeros((2,numprobe))
             l = l+1  
-    return [Vecteurenvoi,SVD,abs(deltapsik[0])**2,abs(deltapsik[1])**2]
+    return [Vecteurenvoi,SVD,abs(deltapsik)**2,probevoltage]
+
+
+def create_poke_probe(act_matrix, act_index, amplitudePW):
+    '''
     
+
+    Parameters
+    ----------
+    act_matrix : 3D array
+        Cube of actuator influence functions.
+    act_index : integer
+        Actuator index to poke.
+    amplitudePW : float
+        Max amplitude of the poke.
+
+    Returns
+    -------
+    applied_poke : 2D array
+        Probe shape.
+    voltage_poke : 1D array
+        Voltage being applied to the DM to create the probe.
+
+    '''
+    applied_poke = act_matrix[act_index] * amplitudePW
+    voltage_poke = np.zeros(len(act_matrix))
+    voltage_poke[act_index] = amplitudePW
+    return applied_poke, voltage_poke
+    
+
+def create_sinc_probe(probe_index, central_act, act_matrix, IWA, OWA, amplitudePW):
+    '''
+    Create an orthoganal set of sinc functions
+
+    Parameters
+    ----------
+    pupsize : integer
+        Size of the pupil in pixel.
+    probe_index : integer
+        Probe index.
+    central_act : integer
+        Max of the sinc function corresponds to the position of central_act index actuator
+    act_matrix : 3D array
+        Cube of actuator influence functions.
+    IWA : float
+        Inner working angle. (Should be 0, did not try with >0)
+    OWA : float
+        Outer working angle. Should not be higher than nb of actuators across the pupil divided by 2
+    amplitudePW : float
+        Max amplitude of the theoretical sinc function / 37
+
+    Returns
+    -------
+    applied_sinc : 2D array
+        Probe shape.
+    voltage_sinc : 1D array
+        Voltage being applied to the DM to create the probe.
+
+    '''
+    pupsize = act_matrix.shape[-1]
+    
+    nb1 = OWA - IWA
+    nb2 = OWA * 2
+    delta_xy = (OWA + IWA) /2
+    coord = np.linspace(-0.5, 0.5, pupsize)
+    xx, yy = np.meshgrid(coord, coord)
+    
+    #Find actuator position that will correspond to sinc max
+    on_act = np.argwhere( np.abs(act_matrix[central_act] ) == np.amax( np.abs(act_matrix[central_act]) ))[0]
+    
+    #Definition for the three sinc functions
+    if probe_index == 0:
+        theoretical_sinc = np.sinc(nb1 * xx) * np.sinc(nb2 * yy) * np.cos(2 * delta_xy * np.pi * xx + 2 * np.pi * (probe_index+1)/4)
+    elif probe_index == 1:
+        theoretical_sinc = np.sinc(nb2 * xx) * np.sinc(nb2 * yy)
+    elif probe_index == 2:
+        theoretical_sinc = np.sinc(nb2 * xx) * np.sinc(nb1 * yy) * np.cos(2 * delta_xy * np.pi * yy + 2 * np.pi * (probe_index+1)/4)
+        
+        
+    #Set amplitude of the sinc in nm
+    theoretical_sinc = theoretical_sinc * amplitudePW * 37
+    
+    #Move sinc to on_act position
+    theoretical_sinc = np.roll(theoretical_sinc, int(on_act[0] - pupsize/2), axis = 0)
+    theoretical_sinc = np.roll(theoretical_sinc, int(on_act[1] - pupsize/2)+1, axis = 1)
+    
+    #Project the sinc function on the DM act basis (1e2 is the regularisation term. 1e3 is too tight, 1e1 does not do anything)
+    applied_sinc, voltage_sinc = fit_DM_surf(act_matrix, theoretical_sinc, 1e2)
+    
+    return applied_sinc, voltage_sinc
+
+
+def fit_DM_surf(act_matrix, DM_surface, alpha):
+    """
+    Fit a 2D surface with the DM basis
+
+    Parameters
+    ----------
+    act_matrix : 3D array
+        Cube of actuator influence functions.
+    DM_surface : 2D array
+        2D map to fit with the DM basis.
+    alpha : float
+        Lagrange multiplier.
+
+    Returns
+    -------
+    Phase_solution : 2D array
+        2D map fitted with the DM basis.
+    Voltage_solution : 1D array
+        DM actuator voltages
+
+    """
+    #Flatten the matrix of actuators
+    flat_act_matrix = act_matrix.reshape(len(act_matrix), act_matrix.shape[1]*act_matrix.shape[2])
+    
+    #Matrix inversion with ridge regression
+    U, s, V = np.linalg.svd(flat_act_matrix, full_matrices=False)
+    InvS = np.diag(s / (s**2 + alpha**2))
+    pseudoinverse = np.dot(np.dot(np.transpose(V),InvS),np.transpose(U))
+    
+    #DM voltage solution
+    Voltage_solution = np.dot(DM_surface.flatten(), pseudoinverse)
+    
+    #Map reconstruction
+    Phase_solution = (np.dot(Voltage_solution, flat_act_matrix)).reshape(act_matrix.shape[1],act_matrix.shape[2])
+    
+    return Phase_solution, Voltage_solution
+
 
 def creatingWhichinPupil(pupil, pushact, cutinpupil):
     """
