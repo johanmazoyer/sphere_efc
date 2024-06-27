@@ -74,11 +74,14 @@ def simple_pca(science_im, cube_ref, numbasis=None, zone=None):
 # you can DL this beta pic data to test
 # https://www.dropbox.com/scl/fi/jwxxleuaoy1pxdt7ar09l/datacube_SPHERE_binned_centered.fits?rlkey=l8p39jqje7zinswqpkdwj1zdn&dl=0
 
+# you can DL parangs
+# https://www.dropbox.com/scl/fi/ach6l0vh9xiuh4aghe4qz/parangs_binned.fits?rlkey=0behz4wvyahz3is2o19rlqkly&dl=0
+
 dir_data = "/Users/jmazoyer/Desktop/test_pca_fold/"
 cube_data = fits.getdata(dir_data + "datacube_SPHERE_binned_centered.fits")
 
 # cut data for the test
-cube_data = cube_data[0:60]
+# cube_data = cube_data[0:30]
 
 radmin = 15
 radmax = 70
@@ -102,9 +105,9 @@ _, _, pca_basis = simple_pca(np.zeros((cube_data.shape[1], cube_data.shape[2])),
                              zone=zone_eval)
 fits.writeto(dir_data + "pca_basis_all.fits", pca_basis, overwrite=True)
 
-# to do a full pca of a data set
-# you can DL parangs
-# https://www.dropbox.com/scl/fi/ach6l0vh9xiuh4aghe4qz/parangs_binned.fits?rlkey=0behz4wvyahz3is2o19rlqkly&dl=0
+
+# to do a full pca of a data set (indiv pca on each image + derotation + mean) for each
+# number of PCA modes
 
 # number of modes
 number_pca_modes = len(pca_modes)
