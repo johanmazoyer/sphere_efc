@@ -11,7 +11,7 @@ from astropy.io import fits
 
 
 
-# Fonction de pyklip ecrite par J Wang. Je la colle ici pour que vous pusiseiz vraiment bouger des
+# Fonction de pyklip ecrite par J Wang. Je la colle ici pour que vous puissiez vraiment bouger des
 # petits paramètres si vous pensez que c'est necessaire. C'est mieux que pas mal de truc qu'on peut trouver car
 # - on peut faire de manière très rapide un pca subtraction abec plein de modes PCA différents
 # - on peut avoir des nans dans l'image si on veut cahcher des pixesl mort
