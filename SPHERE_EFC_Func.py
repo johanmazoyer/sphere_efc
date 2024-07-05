@@ -401,7 +401,7 @@ def find_hot_pix_in_dark(dark):
 
     # We do a second pass based on a 3 sigma filter globally
     remaining_noisy_pix = np.zeros(dark.shape)
-    remaining_noisy_pix[np.where(copy_dark_nan_pix - np.nanmean(copy_dark_nan_pix)> 3* np.nanstd(copy_dark_nan_pix))] = 1
+    remaining_noisy_pix[np.where(copy_dark_nan_pix - np.nanmean(copy_dark_nan_pix)> 30* np.nanstd(copy_dark_nan_pix))] = 1 # WAS 3!!
 
     hotpixmap = np.clip(above_threshold_pix + under_threshold_pix + remaining_noisy_pix, 0,1 )
     return hotpixmap
@@ -1009,7 +1009,7 @@ def FullIterEFC(param):
         if nbiter == 2:
             plt.show()
         else:
-            plt.pause(3)
+            plt.pause(1)
             plt.close()
     
     #Record new slope at first CDI iteration only (nbiter == 1) or at all EFC iteration (gain!=0)
