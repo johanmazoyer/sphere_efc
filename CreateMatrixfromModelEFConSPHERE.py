@@ -32,13 +32,13 @@ MatrixDirectory = os.getcwd()+'/MatricesAndModel/'
 # directory where are all the different model planes (Apod, Lyot, etc..)
 ModelDirectory = os.getcwd()+'/Model/'
 
-#coro = 'APLC'
-coro = 'FQPM'
+coro = 'APLC'
+#coro = 'FQPM'
 dimimages = 200
 wave = 1.667e-6
 onsky = 1 #1 if on sky correction
 
-zone_to_correct = 'horizontal' #vertical #horizontal #'FDH'
+zone_to_correct = 'FDH' #vertical #horizontal #'FDH'
 createPW = True
 probe_type = 'individual_act' #'sinc' #'individual_act'
 
