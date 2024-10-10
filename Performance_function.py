@@ -510,7 +510,7 @@ def reduction_ADI(u, s, vh, vector_regul, angles):
         cube_filtered = cube_svd_filtering(u, s, vh, i)
         rotated_cube = rotate_cube(cube_filtered, angles)
         #ADI_result.append(np.quantile(rotated_cube,0.3,axis = 0,method='lower'))#mean?
-        ADI_result.append(np.median(rotated_cube,axis = 0))#mean?
+        ADI_result.append(np.mean(rotated_cube,axis = 0))#mean?
     
     ADI_result = np.array(ADI_result)
     
