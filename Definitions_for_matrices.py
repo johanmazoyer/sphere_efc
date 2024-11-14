@@ -312,7 +312,7 @@ def invertDSCC(interact, cut ,goal='e', regul="truncation", visu=False):
 
         
     if goal == 'e':
-        InvS[np.where(InvS>cut)]=0
+        if np.sum(np.where(InvS>cut))>0 : InvS = 0
     
     
     if goal == "c":
@@ -354,6 +354,8 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
         DESCRIPTION.
     coro : TYPE
         DESCRIPTION.
+    probe_type : TYPE
+        DESCRIPTION.
 
     Returns
     -------
@@ -381,7 +383,7 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
     squaremaxPSF = np.amax(np.abs(OffAxisPSF))
 
     # Regularization
-    cutsvd = 1e20 #0.3*squaremaxPSF*8/(400/37)
+    #cutsvd = 1e20 #0.3*squaremaxPSF*8/(400/37)
     
     # Get constant E-field in the detector with corono
     pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc, coro)
