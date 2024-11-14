@@ -389,7 +389,34 @@ Rotated_stacked_hpfiltered_mfiltered_inc = np.array(Rotated_stacked_hpfiltered_m
 fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_mfiltered_inc.fits', Rotated_stacked_hpfiltered_mfiltered_inc, overwrite=True)
 
 
+#%% Test least-mean-squared Khi2# for PCA parameters -----------------------------------------------
 
+mask = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[45, 75], circ_side="Full", circ_offset=0, circ_angle=0)
+
+filt = 1
+princ_comp_filtered = princ_comp[:filt].reshape(filt, 200 * 200).T
+
+Y=[]
+for k in np.arange(len(cube_tot_removed)):
+    B = cube_tot_removed[k].flatten()
+    #B -= np.mean(B) 
+    Bmasked = B * mask.flatten()
+    Amasked = princ_comp_filtered * mask.flatten()[:, None]
+    X,res,rank,sprime = np.linalg.lstsq(Amasked, Bmasked, rcond=5)
+    print(X)
+    #X[1:]=0
+    #plt.imshow(cube_tot_filtered[0])
+    solut = (B-princ_comp_filtered@X).reshape(200,200)
+    Y.append(solut)
+
+Y = np.array(Y)
+cube_rotated = perf.rotate_cube(np.array(Y), - newPA)
+
+
+
+
+fits.writeto(processed_directory +'khisquare_cubeinco_rotated.fits', cube_rotated, overwrite=True)
+    
 
 
 
