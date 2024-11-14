@@ -1,3 +1,4 @@
+#%% Extracting the data
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -59,7 +60,7 @@ rescaling=0
 #'CPD-366759' - Experiment 06 - cdi 2
 # 'HD169142' - Experiment 10 - cdi 3
 #'HD163264' - Experiment 11 - cdi 4 - minus sign for ADI!
-target_name = 'HR4796A'
+target_name = 'CPD-366759'
 if target_name == 'HR4796A':
     nb_experiment = '05'
     fold = 'cdi/'
@@ -69,7 +70,7 @@ elif target_name == 'CPD-366759':
     nb_experiment = '06'
     fold = 'cdi 2/'
     rotation_sign = 1
-    remove = []
+    remove = [8,6,4,3,2]
 elif target_name == 'HD169142':
     nb_experiment = '10'
     fold = 'cdi 3/'
@@ -83,10 +84,10 @@ elif target_name == 'HD163264':
     
 
 # Path 
-WORK_PATH0='/Users/axel/Documents/Research/SPHERE/sphere_efc/'
-WORK_PATH0='/home/apotier/Documents/Recherche/DonneesTHD/EFConSPHERE/sphere_efc/'
-MatrixDirectory=WORK_PATH0+'MatricesAndModel/'
-ImageDirectory=WORK_PATH0+'SlopesAndImages/cdi-jun04-2024/' + fold
+WORK_PATH0='/Users/apoitier/Documents/Research/CDI/SPHERE/cdi-jun04-2024/'
+WORK_PATH1='/Users/apoitier/Documents/Research/Softwares/sphere_efc/'
+MatrixDirectory=WORK_PATH1+'MatricesAndModel/'
+ImageDirectory=WORK_PATH0 + fold #+'SlopesAndImages/cdi-jun04-2024/' + fold
 
 exp_name = 'Experiment00' + nb_experiment + '_'
 
@@ -172,108 +173,111 @@ cube_inco = np.array(cube_inco)
 cube_tot = np.array(cube_tot)
 PA = rotation_sign * np.array(PA)
     
-fits.writeto(processed_directory+'coherent_signal.fits',cube_co,overwrite=True)
-fits.writeto(processed_directory+'incoherent_signal.fits',cube_inco,overwrite=True)
-fits.writeto(processed_directory+'raw_images.fits',cube_tot,overwrite=True)
+fits.writeto(processed_directory+'signal_coh.fits',cube_co,overwrite=True)
+fits.writeto(processed_directory+'signal_inc.fits',cube_inco,overwrite=True)
+fits.writeto(processed_directory+'signal_tot.fits',cube_tot,overwrite=True)
 fits.writeto(processed_directory+'PA.fits',-PA,overwrite=True)
 
-    
+#%% Normal ADI ---------------------------------------
 
-#%% Test CDI + rotation + stack + high pass filter
 import Performance_function as perf
 
 #Filter unwanted images from the cube; remove corresponds to their index
 #remove = []#np.append(np.arange(3,len(cube_co))[::-1],1)
 
-#Create a mask to apply to each CDI and total intensity image. Can adjust the parameters. Was 10,65
+#Create a mask to apply to each CDI and total intensity images. Can adjust the parameters. Was 10,65
+mask = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[0, 65], circ_side="Full", circ_offset=0, circ_angle=0)
+
+print('Total intensity')
+cube_tot_removed = cube_tot.copy() * mask
+newPA = PA.copy()
+for i in remove:
+    cube_tot_removed = np.delete(cube_tot_removed, i, axis = 0)
+    newPA = np.delete(newPA, i, axis = 0)
+print(len(cube_tot_removed))
+
+total_rotated_removed = perf.rotate_cube(cube_tot_removed, - newPA)
+fits.writeto(processed_directory +'Rotated_tot.fits', total_rotated_removed, overwrite=True)
+
+
+# ADI of cube tot
+u,s,vh = perf.get_cube_svd(cube_tot_removed)
+vector = np.arange(len(cube_tot_removed))
+ADI_tot_result = perf.reduction_ADI(u, s, vh, vector, - newPA)
+
+ADI_tot_filtered = []
+for high_pass_filter_cut in np.arange(1,11):
+    ADI_tot_filtered.append(perf.high_pass_filter(ADI_tot_result[0], high_pass_filter_cut))
+ADI_tot_filtered = np.array(ADI_tot_filtered)
+fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_tot.fits', ADI_tot_filtered, overwrite=True)
+
+fits.writeto(processed_directory+'ADI_tot.fits', ADI_tot_result, overwrite=True)
+
+    
+
+#%% Test CDI + rotation + stack + high pass filter -------------------------------------
+import Performance_function as perf
+
+#Filter unwanted images from the cube; remove corresponds to their index
+#remove = []#np.append(np.arange(3,len(cube_co))[::-1],1)
+
+#Create a mask to apply to each CDI and total intensity images. Can adjust the parameters. Was 10,65
 mask = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[0, 65], circ_side="Full", circ_offset=0, circ_angle=0)
 
 print('INCOHERENT COMPONENT')
-cube_inco_filtered = cube_inco.copy()* mask
-
+cube_inco_removed = cube_inco.copy()* mask
 
 #Filter pixel with bad estimation. Can adjust the parameter
-cube_inco_filtered[np.where(np.abs(cube_inco_filtered)>1e-2)]=0
+cube_inco_removed[np.where(np.abs(cube_inco_removed)>1e-2)]=0
 
-#Filtering the cube
+#Removing worse images from the cube
 newPA = PA.copy()
-#for i in [14,12,1]: #HR 4796A
 for i in remove:
-#for i in [12]: #HD163296
-    cube_inco_filtered = np.delete(cube_inco_filtered, i, axis = 0)
+    cube_inco_removed = np.delete(cube_inco_removed, i, axis = 0)
     newPA = np.delete(newPA, i, axis = 0)
 
-# ADI of cube cube
-u,s,vh = perf.get_cube_svd(cube_inco_filtered)
-vector = np.arange(len(cube_inco_filtered))
-ADI_result = perf.reduction_ADI(u, s, vh, vector, - newPA)
-cube_rotated = perf.rotate_cube(cube_inco_filtered, - newPA)
+# ADI of cube inco
+u,s,vh = perf.get_cube_svd(cube_inco_removed)
+vector = np.arange(len(cube_inco_removed))
+ADI_inco_result = perf.reduction_ADI(u, s, vh, vector, - newPA)
+cube_inco_rotated = perf.rotate_cube(cube_inco_removed, - newPA)
 
 #ADI_hide = remove_center_cube(ADI_result, 30)
 
 # High-pass filtering of ADI[0] (where the cube has simply been rotated and stacked)
-ADI_filtered = []
+ADI_inco_filtered = []
 for high_pass_filter_cut in np.arange(1,11):
-    ADI_filtered.append(perf.high_pass_filter(ADI_result[0], high_pass_filter_cut))
-ADI_filtered = np.array(ADI_filtered)
-fits.writeto(processed_directory +'CDI_rotated_filtered.fits', ADI_filtered, overwrite=True)
+    ADI_inco_filtered.append(perf.high_pass_filter(ADI_inco_result[0], high_pass_filter_cut))
+ADI_inco_filtered = np.array(ADI_inco_filtered)
+fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_inc.fits', ADI_inco_filtered, overwrite=True)
 
 #ADI_hide_and_filtered = remove_center_cube(ADI_filtered, 30)
 
-fits.writeto(processed_directory +'CDI_ADI.fits', ADI_result, overwrite=True)
-fits.writeto(processed_directory +'incoherent_signal_rotated.fits', cube_rotated, overwrite=True)
-
-print('TOTAL INTENSITY')
-
-#Same process for total intensity
-cube_tot_filtered = cube_tot.copy() * mask
-newPA = PA.copy()
-#for i in [14,12,1]: #HR 4796A
-for i in remove:
-#for i in [12]: #HD163296
-    cube_tot_filtered = np.delete(cube_tot_filtered, i, axis = 0)
-    newPA = np.delete(newPA, i, axis = 0)
-#cube_inco_filtered[np.where(np.abs(cube_inco_filtered)>1)]=0
-print(len(cube_tot_filtered))
-
-total_rotated_removed = perf.rotate_cube(cube_tot_filtered, - newPA)
-fits.writeto(processed_directory +'total_rotated_removed.fits', total_rotated_removed, overwrite=True)
-
-u,s,vh = perf.get_cube_svd(cube_tot_filtered)
-vector = np.arange(len(cube_tot_filtered))
-ADI_result = perf.reduction_ADI(u, s, vh, vector, - newPA)
-
-ADI_filtered = []
-for high_pass_filter_cut in np.arange(1,11):
-    ADI_filtered.append(perf.high_pass_filter(ADI_result[0], high_pass_filter_cut))
-ADI_filtered = np.array(ADI_filtered)
-fits.writeto(processed_directory +'total_rotated_filtered.fits', ADI_filtered, overwrite=True)
-
-fits.writeto(processed_directory+'ADI.fits', ADI_result, overwrite=True)
+fits.writeto(processed_directory +'ADI_inc.fits', ADI_inco_result, overwrite=True)
+fits.writeto(processed_directory +'Rotated_inc.fits', cube_inco_rotated, overwrite=True)
 
 
-
-#%% Test PCA CDI
-mask = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[10, 60], circ_side="Full", circ_offset=0, circ_angle=0)
+#%% Test PCA CDI --------------------------------------------
+mask = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[12, 65], circ_side="Full", circ_offset=0, circ_angle=0)
 newPA = PA.copy()
 
-cube_co_test = cube_co * mask
-for i in remove: #HD163296
-    cube_co_test = np.delete(cube_co_test, i, axis = 0)
+#Remove unwanted data in cube_co and rotate
+cube_co_removed = cube_co.copy() * mask
+for i in remove: 
+    cube_co_removed = np.delete(cube_co_removed, i, axis = 0)
     newPA = np.delete(newPA, i, axis = 0)
-    
-fits.writeto(processed_directory+'cube_co_test.fits', cube_co_test, overwrite=True)
+cube_co_rotated = perf.rotate_cube(np.array(cube_co_removed), - newPA)    
+fits.writeto(processed_directory+'Rotated_coh.fits', cube_co_rotated, overwrite=True)
 
-
-u,s,vh = perf.get_cube_svd(cube_co_test)
+#Calculating the principle components of cube_co
+u,s,vh = perf.get_cube_svd(cube_co_removed)
 print(s.shape)
-princ_comp = vh.reshape((len(vh), 200, 200))
-fits.writeto(processed_directory+'CDI_PC.fits', princ_comp, overwrite=True)
+princ_comp = (s[:, np.newaxis]*vh).reshape((len(vh), 200, 200))
 
-cube_tot_filtered = cube_tot.copy() * mask
-for i in remove: #HD163296
-    cube_tot_filtered = np.delete(cube_tot_filtered, i, axis = 0)
+for i in np.arange(len(princ_comp)):
+    princ_comp[i] = princ_comp[i]/np.sign(np.sum(princ_comp[i]))
 
+fits.writeto(processed_directory+'signal_coh_principle_components.fits', princ_comp, overwrite=True)
 
 
 def extract_modal_coefficients(OPDs, basis, pix_in_aperture):
@@ -344,102 +348,55 @@ def reconstruct_OPD_from_coeff(basis, coeff, OPD_nb):
 # reco = np.array(reco)#cube_tot_filtered - np.array(reco)    
 # fits.writeto(processed_directory+'projection.fits', reco, overwrite=True)
 
-
-vector = [0]#np.arange(len(cube_co_test))
-CDI_PCA_result = []
-for i in vector:
+# Filter the highest principal components in cube_co and subtract cube_co from cube_tot
+scan_modes = np.arange(len(cube_co_test))
+cube_inco_mfiltered_rotated = []
+cube_inco_mfiltered_save = []
+for i in scan_modes:
     print(i)
     nb_images,isz,isz = vh.shape[0], int(np.sqrt(vh.shape[1])), int(np.sqrt(vh.shape[1])) 
     filtered = s.copy()
     filtered[i:]=0
     #filtered[20-nb_modes_filtered:]=0
-    new_cube = (u * filtered @ vh).reshape(nb_images,isz,isz)
-    new_cube = cube_tot_filtered - new_cube
-    #result = cube_filtered
-    #CDI_PCA_result.append()
+    cube_co_mfiltered = (u * filtered @ vh).reshape(nb_images,isz,isz)
+    cube_inco_mfiltered = cube_tot_removed - cube_co_mfiltered
+    cube_inco_mfiltered_save.append(cube_inco_mfiltered)
+    cube_inco_mfiltered_rotated.append(perf.rotate_cube(np.array(cube_inco_mfiltered), - newPA))
 
-fits.writeto(processed_directory +'test_CDI_PCA.fits', np.array(new_cube), overwrite=True)
+cube_inco_mfiltered_rotated = np.array(cube_inco_mfiltered_rotated)
+cube_inco_mfiltered_save = np.array(cube_inco_mfiltered_save)
 
-cube_rotated = perf.rotate_cube(np.array(new_cube), - newPA)
-
-fits.writeto(processed_directory +'Incoherent_PCA_rotated.fits', cube_rotated, overwrite=True)
-
+fits.writeto(processed_directory +'Rotated_mfiltered_inc.fits', cube_inco_mfiltered_rotated, overwrite=True)
 
 
 # ADI of cube cube
-u,s,vh = perf.get_cube_svd(new_cube)
-vector = np.arange(len(new_cube))
-ADI_result = perf.reduction_ADI(u, s, vh, vector, - newPA)
+Rotated_stacked_hpfiltered_mfiltered_inc = []
+for i in scan_modes:
+    u,s,vh = perf.get_cube_svd(cube_inco_mfiltered_save[i])
+    #vector = np.arange(len(new_cube))
+    ADI_result = perf.reduction_ADI(u, s, vh, [0], - newPA) #0 instead of vector
 
-#ADI_hide = remove_center_cube(ADI_result, 30)
+    #ADI_hide = remove_center_cube(ADI_result, 30)
 
-# High-pass filtering of ADI[0] (where the cube has simply been rotated and stacked)
-ADI_filtered = []
-for high_pass_filter_cut in np.arange(1,11):
-    ADI_filtered.append(perf.high_pass_filter(ADI_result[0], high_pass_filter_cut))
-ADI_filtered = np.array(ADI_filtered)
-fits.writeto(processed_directory +'PCA_CDI_rotated_filtered.fits', ADI_filtered, overwrite=True)
+    # High-pass filtering of ADI[0] (where the cube has simply been rotated and stacked)
+    hp_filtered = []
+    for high_pass_filter_cut in np.arange(1,11):
+        hp_filtered.append(perf.high_pass_filter(ADI_result[0], high_pass_filter_cut))
+    hp_filtered = np.array(hp_filtered)
+    Rotated_stacked_hpfiltered_mfiltered_inc.append(hp_filtered)
 
-
-
-
-
-
-
+Rotated_stacked_hpfiltered_mfiltered_inc = np.array(Rotated_stacked_hpfiltered_mfiltered_inc)
+fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_mfiltered_inc.fits', Rotated_stacked_hpfiltered_mfiltered_inc, overwrite=True)
 
 
 
-#%% Test ADI
-high_pass_filter_cut = 3
-
-cube_inco_filtered = cube_inco.copy() #* matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[8, 65], circ_side="Full", circ_offset=0, circ_angle=0)
-newPA = PA.copy()
-#for i in [14,12,1]: #HR 4796A
-for i in [12]: #HD163296
-    cube_inco_filtered = np.delete(cube_inco_filtered, i, axis = 0)
-    newPA = np.delete(newPA, i, axis = 0)
-cube_inco_filtered[np.where(np.abs(cube_inco_filtered)>1)]=0
 
 
-import Performance_function as perf
-#cube = np.array(cube_CDI)[:4]#cube_tot_unfiltered#cube_tot
-
-u,s,vh = perf.get_cube_svd(cube_inco_filtered)
-vector = np.arange(len(cube_inco_filtered))
-ADI_result = perf.reduction_ADI(u, s, vh, vector, -newPA)
-cube_rotated = perf.rotate_cube(cube_inco_filtered, -newPA)
-
-#ADI_hide = remove_center_cube(ADI_result, 30)
-ADI_filtered = []
-for i in np.arange(len(ADI_result)):
-    ADI_filtered.append(perf.high_pass_filter(ADI_result[i], high_pass_filter_cut))
-ADI_filtered = np.array(ADI_filtered)
-fits.writeto(processed_directory +'CDI_ADI_filtered.fits', ADI_filtered, overwrite=True)
-
-#ADI_hide_and_filtered = remove_center_cube(ADI_filtered, 30)
-
-fits.writeto(processed_directory +'CDI_ADI_reduced_nohidecenter.fits', ADI_result, overwrite=True)
-fits.writeto(processed_directory +'incoherent_signal_rotated.fits', cube_rotated, overwrite=True)
 
 
-#%%
-import Performance_function as perf
-cube_rotated = perf.rotate_cube(cube_inco_filtered, -PA)
-#cube_rotated[np.where(np.abs(cube_rotated)>1)]=0
-reshape_cube_rotated = cube_rotated.reshape(len(cube_rotated),200**2)
-u, s, vh = np.linalg.svd(reshape_cube_rotated,full_matrices=False)
-print(np.allclose(reshape_cube_rotated, u * s @ vh))
-#%%
-u,s,vh = perf.get_cube_svd(cube_rotated)
-vector = np.arange(len(cube_inco)+1)
-ADI_result = []
-for i in vector:
-    print(i)
-    cube_filtered =  (perf.cube_svd_filtering(u, s, vh, i))
-    result = cube_filtered
-    ADI_result.append(np.mean(result,axis = 0))
 
-fits.writeto(processed_directory +'test_CDI_PCA.fits', np.array(ADI_result), overwrite=True)
+
+
 #fits.writeto(processed_directory +'test_svd.fits', ((u * s @ vh).reshape(vh.shape[0], int(np.sqrt(vh.shape[1])), int(np.sqrt(vh.shape[1])) )[0]), overwrite=True)
 
 #%%
