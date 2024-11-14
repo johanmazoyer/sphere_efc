@@ -106,7 +106,7 @@ if createPW == True:
             raise ValueError('This setting is not available for FQPM yet')
         
     #Choose the truncation above where the pixels won't be taken into account for estimation (not used currently here)
-    cutestimation = 1e20#0.3*squaremaxPSF*8/amplitudePW
+    cutestimation = 5000#0.3*squaremaxPSF*8/amplitudePW  #1e20
 
     vectoressai,SVD,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
                                                                          wave,
