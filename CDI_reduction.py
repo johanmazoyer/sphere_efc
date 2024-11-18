@@ -393,36 +393,54 @@ fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_mfiltered_inc.fits
 
 mask = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[45, 75], circ_side="Full", circ_offset=0, circ_angle=0)
 
-filt = 1
-princ_comp_filtered = princ_comp[:filt].reshape(filt, 200 * 200).T
+scan_modes = np.arange(len(princ_comp))
+cube_inco_khisquare_rotated = []
+cube_inco_khisquare_save = []
 
-Y=[]
-for k in np.arange(len(cube_tot_removed)):
-    B = cube_tot_removed[k].flatten()
-    #B -= np.mean(B) 
-    Bmasked = B * mask.flatten()
-    Amasked = princ_comp_filtered * mask.flatten()[:, None]
-    X,res,rank,sprime = np.linalg.lstsq(Amasked, Bmasked, rcond=5)
-    print(X)
-    #X[1:]=0
-    #plt.imshow(cube_tot_filtered[0])
-    solut = (B-princ_comp_filtered@X).reshape(200,200)
-    Y.append(solut)
+for filt in scan_modes:
+#filt = 5
+    princ_comp_filtered = princ_comp[:filt].reshape(filt, 200 * 200).T
 
-Y = np.array(Y)
-cube_rotated = perf.rotate_cube(np.array(Y), - newPA)
+    Y=[]
+    for k in np.arange(len(cube_tot_removed)):
+        B = cube_tot_removed[k].flatten()
+        #B -= np.mean(B) 
+        Bmasked = B * mask.flatten()
+        Amasked = princ_comp_filtered * mask.flatten()[:, None]
+        X,res,rank,sprime = np.linalg.lstsq(Amasked, Bmasked, rcond=5)
+        print(X)
+        X[1:]=0
+        #plt.imshow(cube_tot_filtered[0])
+        solut = (B-princ_comp_filtered@X).reshape(200,200)
+        Y.append(solut)
 
-
-
-
-fits.writeto(processed_directory +'khisquare_cubeinco_rotated.fits', cube_rotated, overwrite=True)
-    
-
+    cube_inco_khisquare_save.append(Y)
+    cube_inco_khisquare_rotated.append(perf.rotate_cube(np.array(Y), - newPA))
 
 
+cube_inco_khisquare_rotated = np.array(cube_inco_khisquare_rotated)
+cube_inco_khisquare_save = np.array(cube_inco_khisquare_save)
 
+fits.writeto(processed_directory +'Rotated_khisquare_inc.fits', cube_inco_khisquare_rotated, overwrite=True)    
 
+# ADI of cube cube
+Rotated_stacked_hpfiltered_khisquare_inc = []
+for i in scan_modes:
+    u,s,vh = perf.get_cube_svd(cube_inco_khisquare_save[i])
+    #vector = np.arange(len(new_cube))
+    ADI_result = perf.reduction_ADI(u, s, vh, [0], - newPA) #0 instead of vector
 
+    #ADI_hide = remove_center_cube(ADI_result, 30)
+
+    # High-pass filtering of ADI[0] (where the cube has simply been rotated and stacked)
+    hp_filtered = []
+    for high_pass_filter_cut in np.arange(1,11):
+        hp_filtered.append(perf.high_pass_filter(ADI_result[0], high_pass_filter_cut))
+    hp_filtered = np.array(hp_filtered)
+    Rotated_stacked_hpfiltered_khisquare_inc.append(hp_filtered)
+
+Rotated_stacked_hpfiltered_khisquare_inc = np.array(Rotated_stacked_hpfiltered_khisquare_inc)
+fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_khisquare_inc.fits', Rotated_stacked_hpfiltered_khisquare_inc, overwrite=True)
 
 #fits.writeto(processed_directory +'test_svd.fits', ((u * s @ vh).reshape(vh.shape[0], int(np.sqrt(vh.shape[1])), int(np.sqrt(vh.shape[1])) )[0]), overwrite=True)
 
@@ -449,7 +467,7 @@ fits.writeto(processed_directory +'khisquare_cubeinco_rotated.fits', cube_rotate
 
 
 
-u,s,vh = perf.get_cube_svd(cube_tot)
+""" u,s,vh = perf.get_cube_svd(cube_tot)
 vector = np.arange(len(cube_tot))
 ADI_result = perf.reduction_ADI(u, s, vh, vector, -PA)
 
@@ -463,7 +481,7 @@ fits.writeto(processed_directory+'ADI_reduced_nohidecenter.fits', ADI_result, ov
 
 
 
-
+ """
 
 
 
