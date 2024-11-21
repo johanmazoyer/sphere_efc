@@ -60,7 +60,7 @@ rescaling=0
 #'CPD-366759' - Experiment 06 - cdi 2
 # 'HD169142' - Experiment 10 - cdi 3
 #'HD163264' - Experiment 11 - cdi 4 - minus sign for ADI!
-target_name = 'HD163264'
+target_name = 'HR4796A'
 if target_name == 'HR4796A':
     nb_experiment = '05'
     fold = 'cdi/'
@@ -149,7 +149,7 @@ elif coro == 'FQPM':
 
 param['posprobes'] = posprobes
 
-processed_directory = ImageDirectory + 'processed_data_test/'
+processed_directory = ImageDirectory + 'processed_data/'
 if not os.path.exists(processed_directory):
         os.makedirs(processed_directory)
 
@@ -455,7 +455,92 @@ fits.writeto(processed_directory +'Rotated_stacked_khisquare_inc.fits', Rotated_
 
 #fits.writeto(processed_directory +'test_svd.fits', ((u * s @ vh).reshape(vh.shape[0], int(np.sqrt(vh.shape[1])), int(np.sqrt(vh.shape[1])) )[0]), overwrite=True)
 
-#%%
+
+
+
+
+
+
+#%% Test performance CDI-PCA vs nb_iter
+mask = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[12, 65], circ_side="Full", circ_offset=0, circ_angle=0)
+
+
+processed_directory = ImageDirectory + 'processed_data_testiter/'
+if not os.path.exists(processed_directory):
+        os.makedirs(processed_directory)
+
+cube_tot_removed_ini = cube_tot.copy() #* mask
+cube_co_removed_ini = cube_co.copy() #* mask
+newPA_ini = PA.copy()
+for i in remove:
+        cube_tot_removed_ini = np.delete(cube_tot_removed_ini, i, axis = 0)
+        cube_co_removed_ini = np.delete(cube_co_removed_ini, i, axis = 0)
+        newPA_ini = np.delete(newPA_ini, i, axis = 0)
+
+ADI_tot_save = []
+ADI_tot_filtered_save = []
+ADI_inco_save = []
+ADI_inco_filtered_save = []
+
+for nb_iter in np.arange(len(cube_tot_removed_ini)):
+    scan_iter = np.arange(1,len(cube_tot_removed_ini)-1-nb_iter)[::-1]
+
+    cube_tot_removed = cube_tot_removed_ini.copy() #* mask
+    cube_co_removed = cube_co_removed_ini.copy() * mask
+
+    newPA = newPA_ini.copy()
+    for i in scan_iter:
+        cube_tot_removed = np.delete(cube_tot_removed, i, axis = 0)
+        cube_co_removed = np.delete(cube_co_removed, i, axis = 0)
+        newPA = np.delete(newPA, i, axis = 0)
+
+    # ADI of cube tot
+    u,s,vh = perf.get_cube_svd(cube_tot_removed)
+    ADI_tot_result = perf.reduction_ADI(u, s, vh, [0], - newPA)[0]
+    ADI_tot_save.append(ADI_tot_result*mask)
+
+    #Filtering cube_co to its first component
+    u,s,vh = perf.get_cube_svd(cube_co_removed)
+    nb_images,isz,isz = vh.shape[0], int(np.sqrt(vh.shape[1])), int(np.sqrt(vh.shape[1])) 
+    filtered = s.copy()
+    filtered[1:]=0
+    cube_co_mfiltered = (u * filtered @ vh).reshape(nb_images,isz,isz)
+    cube_inco_mfiltered = cube_tot_removed - cube_co_mfiltered
+
+    # ADI of cube inco mfiltered
+    u,s,vh = perf.get_cube_svd(cube_inco_mfiltered)
+    ADI_inco_result = perf.reduction_ADI(u, s, vh, [0], - newPA)[0] #[0] instead of vector
+    ADI_inco_save.append(ADI_inco_result*mask)
+
+    # High-pass filtering of ADI[0] (where the cube has simply been rotated and stacked)
+    
+    ADI_tot_filtered = []
+    ADI_inco_filtered = []
+    for high_pass_filter_cut in np.arange(1,11):
+        ADI_tot_filtered.append(perf.high_pass_filter(ADI_tot_result, high_pass_filter_cut)*mask)
+        ADI_inco_filtered.append(perf.high_pass_filter(ADI_inco_result, high_pass_filter_cut)*mask)
+    ADI_tot_filtered_save.append(ADI_tot_filtered)
+    ADI_inco_filtered_save.append(ADI_inco_filtered)
+
+
+ADI_tot_save = np.array(ADI_tot_save)
+ADI_tot_filtered_save = np.array(ADI_tot_filtered_save)
+ADI_inco_save = np.array(ADI_inco_save)
+ADI_inco_filtered_save = np.array(ADI_inco_filtered_save)
+
+
+
+fits.writeto(processed_directory +'Rotated_stacked_tot_vs_iter.fits', ADI_tot_save, overwrite=True)
+fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_tot_vs_iter.fits', np.swapaxes(ADI_tot_filtered_save,0,1), overwrite=True)
+fits.writeto(processed_directory +'Rotated_stacked_mfiltered_inco_vs_iter.fits', ADI_inco_save, overwrite=True)
+fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_mfiltered_inco_vs_iter.fits', np.swapaxes(ADI_inco_filtered_save,0,1), overwrite=True)
+
+
+
+
+
+
+
 # cube = np.array(unfilt_cube_CDI)#cube_tot_unfiltered#cube_tot
 # u,s,vh = get_cube_svd(cube)
 # vector = np.arange(len(cube))
