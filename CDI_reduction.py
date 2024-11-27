@@ -27,7 +27,9 @@ from natsort import natsorted
 from astropy.time import Time
 import astropy.units as u
 
+import importlib
 
+importlib.reload(SPHERE)
 
 
 onsky=1 #Set 0 for internal pup ; 1 for an on sky correction
@@ -60,7 +62,7 @@ rescaling=0
 #'CPD-366759' - Experiment 06 - cdi 2
 # 'HD169142' - Experiment 10 - cdi 3
 #'HD163264' - Experiment 11 - cdi 4 - minus sign for ADI!
-target_name = 'HR4796A'
+target_name = 'HD163264'
 if target_name == 'HR4796A':
     nb_experiment = '05'
     fold = 'cdi/'
@@ -120,6 +122,12 @@ param = {
   "probe_type": probe_type,
 }
 
+param['coro'] = coro
+param["live_matrix_measurement"] = False
+param["wave"] = 1.667e-6
+ModelDirectory = WORK_PATH1 + 'Model/'
+param["ModelDirectory"] = ModelDirectory
+
 if onsky == 0:
     lightsource_estim = 'InternalPupil_'
 else:
@@ -149,7 +157,7 @@ elif coro == 'FQPM':
 
 param['posprobes'] = posprobes
 
-processed_directory = ImageDirectory + 'processed_data/'
+processed_directory = ImageDirectory + 'processed_data_BTW/'
 if not os.path.exists(processed_directory):
         os.makedirs(processed_directory)
 
@@ -160,6 +168,106 @@ PA = []
 
 #last = len(glob.glob(ImageDirectory+exp_name+'*coro_image*.fits'))+2
 #estimated_onsky_PA_of_the_planet = 0##210.532
+
+def reduce_images(docs_dir, param):
+    ''' --------------------------------------------------
+    Load all the fits image in a directory
+    
+    Parameters:
+    ----------
+    doc_dir: Input directory
+    
+    Return:
+    ------
+    image_array: numpy array
+    -------------------------------------------------- '''
+    if param["which_nd"] == 'ND_3.5':
+        ND = 1/0.00105
+    elif param["which_nd"] == 'ND_2.0':
+        ND = 1/0.0179
+    else:
+        ND = 1.
+
+    
+    lightsource_estim = param['lightsource_estim']
+    dimimages = param['dimimages']
+    centeringateachiter = param['centeringateachiter']
+    ImageDirectory = param["ImageDirectory"]
+    directory = ImageDirectory + param["exp_name"]
+    centerx = param['centerx']
+    centery = param['centery']
+    posprobes = param['posprobes']
+    estim_algorithm = param['estim_algorithm']
+    MatrixDirectory = param["MatrixDirectory"]
+    size_probes = param["size_probes"]
+    probe_type = param["probe_type"]
+    zone_to_correct = param["zone_to_correct"]
+
+    coro = param["coro"]
+    live_matrix_measurement = param["live_matrix_measurement"]
+    onsky = param["onsky"]
+    amplitudePW = size_probes/37
+    wave = param["wave"]
+    ModelDirectory = param["ModelDirectory"]
+    PSF,smoothPSF,maxPSF,exppsf = SPHERE.process_PSF(ImageDirectory,lightsource_estim,centerx,centery,dimimages)
+
+    image_list = []
+    best_params = [centerx-int(centerx), centery-int(centery)]
+    for filename in natsorted(glob.glob(docs_dir+'*.fits')):
+        print(filename)
+        image=SPHERE.reduceimageSPHERE(filename, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+        image = SPHERE.fancy_xy_trans_slice(image, best_params)
+        image_list.append(image)
+    image_array = np.array(image_list)
+    return image_array
+
+I1plus = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0001', param),axis=0)
+I1moins = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0002', param),axis=0)
+I2plus = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0003', param),axis=0)
+I2moins = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0004', param),axis=0)
+I3plus = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0005', param),axis=0)
+I3moins = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0006', param),axis=0)
+image_coro = np.median(reduce_images(ImageDirectory+'*iter*_coro_image*', param),axis=0)
+
+probe_amplitude = np.zeros((3,200,200)) 
+probe_amplitude[0] = np.sqrt(np.abs((I1plus + I1moins)/2 - image_coro))
+probe_amplitude[1] = np.sqrt(np.abs((I2plus + I2moins)/2 - image_coro))
+probe_amplitude[2] = np.sqrt(np.abs((I3plus + I3moins)/2 - image_coro))
+
+cutestimation = 5000#0.3*squaremaxPSF*8/amplitudePW  #1e20
+raw_pushact = fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
+import Definitions_for_matrices as def_mat
+mask384, Pup384, ALC, Lyot384 = def_mat.Upload_CoroConfig(ModelDirectory, coro, param["wave"])
+if onsky==0:
+    input_wavefront = mask384
+    lightsource = 'InternalPupil_'
+else:
+    input_wavefront = mask384*Pup384
+    lightsource = 'VLTPupil_'
+
+lightsource = lightsource + coro + '_'
+
+
+vectoressai,SVD,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
+                                                                param["wave"],
+                                                                Lyot384 ,
+                                                                ALC ,
+                                                                200 ,
+                                                                raw_pushact ,
+                                                                size_probes/37,
+                                                                posprobes ,
+                                                                cutestimation,
+                                                                coro,
+                                                                probe_type,
+                                                                probe_amplitude=probe_amplitude)
+filename = probe_type + '_' + zone_to_correct + '_' + str(int(size_probes/37*37)) + 'nm' + '_'
+
+def_mat.SaveFits(vectoressai, ['',0], MatrixDirectory, lightsource + filename + 'VecteurEstimation', replace=True)
+#
+def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource + filename + 'CorrectedZone',replace=True)
+#
+def_mat.SaveFits((probe_amplitude)**2, ['',0], MatrixDirectory, lightsource + filename + 'Intensity_probe_empirical',replace=True)
+
 
 nbiter = 2
 for file_raw in natsorted(glob.glob(ImageDirectory+exp_name+'*Probe_0001*.fits')):
@@ -410,7 +518,7 @@ for filt in scan_modes:
     princ_comp_filtered = princ_comp[:filt].reshape(filt, 200 * 200).T
 
     Y=[]
-    for k in np.arange(len(cube_tot_removed)+1):
+    for k in np.arange(len(cube_tot_removed)):
         B = cube_tot_removed[k].flatten()
         #B -= np.mean(B) 
         Bmasked = B * mask_khi.flatten()

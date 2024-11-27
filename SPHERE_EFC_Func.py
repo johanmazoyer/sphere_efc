@@ -15,6 +15,11 @@ from scipy import ndimage
 import glob
 import os
 
+import Definitions_for_matrices as def_mat
+import importlib
+
+importlib.reload(def_mat)
+
 #Unit conversion and normalisation
 #influence matrix normalization = defoc meca en rad @ 632 nm
 rad_632_to_nm_opt = 632/2/np.pi
@@ -571,7 +576,13 @@ def createdifference(param):
     size_probes = param["size_probes"]
     probe_type = param["probe_type"]
     zone_to_correct = param["zone_to_correct"]
-    
+
+    coro = param["coro"]
+    live_matrix_measurement = param["live_matrix_measurement"]
+    onsky = param["onsky"]
+    amplitudePW = size_probes/37
+    wave = param["wave"]
+    ModelDirectory = param["ModelDirectory"]
 
     #PSF
     PSF,smoothPSF,maxPSF,exppsf = process_PSF(ImageDirectory,lightsource_estim,centerx,centery,dimimages)
@@ -607,7 +618,8 @@ def createdifference(param):
     
     #Probes
     numprobes = len(posprobes)
-    Difference = np.zeros((numprobes,dimimages,dimimages))  
+    Difference = np.zeros((numprobes,dimimages,dimimages)) 
+    probe_amplitude = np.zeros((numprobes,dimimages,dimimages)) 
     Images_to_display=[]
     k = 0
     j = 1
@@ -630,6 +642,9 @@ def createdifference(param):
         elif estim_algorithm == 'BTW':
             filename = probe_type + '_' + zone_to_correct + '_' + str(size_probes) + 'nm' + '_'
             Probe_intens = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'Intensity_probe.fits')[k]
+
+            #j = j + 1 TO DO :if len(last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits'))>3, then 
+
             Ikplus = 2*Ikplus
             Ikmoins = 2*(imagecorrection + Probe_intens) #Missing model component
             Images_to_display.append(np.zeros((170-130,170-130)))
@@ -639,7 +654,50 @@ def createdifference(param):
             break
             
         Difference[k] = (Ikplus-Ikmoins)
+        
+
+        if live_matrix_measurement:
+            probe_amplitude[k] = np.sqrt(np.abs((Ikplus + Ikmoins)/2 - imagecorrection))
+        
         k = k + 1
+
+    # if live_matrix_measurement:
+    #     mask384, Pup384, ALC, Lyot384 = def_mat.Upload_CoroConfig(ModelDirectory, coro, wave)
+
+    #     cutestimation = 5000#0.3*squaremaxPSF*8/amplitudePW  #1e20
+    #     raw_pushact = fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
+    #     if onsky==0:
+    #         input_wavefront = mask384
+    #         lightsource = 'InternalPupil_'
+    #     else:
+    #         input_wavefront = mask384*Pup384
+    #         lightsource = 'VLTPupil_'
+        
+    #     lightsource = lightsource + coro + '_'
+
+    #     vectoressai,SVD,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
+    #                                                                     wave,
+    #                                                                     Lyot384 ,
+    #                                                                     ALC ,
+    #                                                                     dimimages ,
+    #                                                                     raw_pushact ,
+    #                                                                     amplitudePW,
+    #                                                                     posprobes ,
+    #                                                                     cutestimation,
+    #                                                                     coro,
+    #                                                                     probe_type,
+    #                                                                     probe_amplitude=probe_amplitude)
+    #     filename = probe_type + '_' + zone_to_correct + '_' + str(int(amplitudePW*37)) + 'nm' + '_'
+
+    #     def_mat.SaveFits(vectoressai, ['',0], MatrixDirectory, lightsource + filename + 'VecteurEstimation', replace=True)
+    #     ##
+    #     def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource + filename + 'CorrectedZone',replace=True)
+    #     ##
+    #     def_mat.SaveFits((probe_amplitude), ['',0], MatrixDirectory, lightsource + filename + 'Intensity_probe_empirical',replace=True)
+    
+
+
+        
 
     return Difference, imagecorrection, Images_to_display
 
@@ -743,12 +801,12 @@ def resultEFC(param):
     probe_type = param['probe_type']
     
     filename = probe_type + '_' + zone_to_correct + '_' + str(size_probes) + 'nm' + '_'
-    vectoressai = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'VecteurEstimation.fits')
     maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
     
     print('- Creating difference of images...', flush=True)
     Difference, imagecorrection, Images_to_display = createdifference(param)
     print('- Estimating the focal plane electric field...', flush=True)
+    vectoressai = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'VecteurEstimation.fits')
     resultatestimation = estimateEab(Difference, vectoressai)
     intensity_co = np.abs(resultatestimation)**2
     

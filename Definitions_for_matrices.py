@@ -330,7 +330,7 @@ def invertDSCC(interact, cut ,goal='e', regul="truncation", visu=False):
     return [np.diag(InvS),pseudoinverse]
 
 
-def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, amplitudePW, posprobes , cutsvd, coro, probe_type):
+def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, amplitudePW, posprobes , cutsvd, coro, probe_type, probe_amplitude = None):
     """
     Create PW matrix
 
@@ -412,7 +412,14 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
         input_wavefront_k = input_wavefront*(1+1j*probephase[k])
         # Propagate input through the coronagraph, remove constant E-field and normalize with PSF
         deltapsikbis = pupiltodetector(input_wavefront_k, wave,lyot_mask,Name_ALC,isz_foc,coro)
-        deltapsik[k] = (deltapsikbis-pupilnoabb)/squaremaxPSF
+        if probe_amplitude is not None:
+            angle = np.angle((deltapsikbis-pupilnoabb)/squaremaxPSF)
+            deltapsik[k] = probe_amplitude[k]*np.exp(1j*angle)
+            print('cest bieng')
+        else :
+            deltapsik[k] = (deltapsikbis-pupilnoabb)/squaremaxPSF
+            print('raté')
+            
         k=k+1
     
 
@@ -426,7 +433,7 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
                 SVD[:,i,j] = invertDSCC(matrix,cutsvd,visu=False)[0]
                 Vecteurenvoi[l] = invertDSCC(matrix,cutsvd,visu=False)[1]
             except:
-                print('Careful: Error! for l='+str(l))
+                #print('Careful: Error! for l='+str(l))
                 SVD[:,i,j] = np.zeros(2)
                 Vecteurenvoi[l] = np.zeros((2,numprobe))
             l = l+1  
