@@ -101,6 +101,33 @@ exp_name = 'Experiment00' + nb_experiment + '_'
 centerx, centery = fits.getdata(ImageDirectory + exp_name + 'centerxy.fits')
 which_nd = 'ND_2.0'
 
+ModelDirectory = WORK_PATH1 + 'Model/'
+
+if onsky == 0:
+    lightsource_estim = 'InternalPupil_'
+else:
+    lightsource_estim = 'VLTPupil_'
+
+lightsource_estim = lightsource_estim + coro + '_'
+
+
+if coro == 'APLC':
+    if zone_to_correct == 'vertical':
+        posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
+    elif zone_to_correct == 'horizontal':
+        posprobes = [893 , 934]
+    elif zone_to_correct == 'FDH':
+        posprobes = [678 , 679, 720]
+
+    
+elif coro == 'FQPM':
+    if zone_to_correct == 'vertical':
+        posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
+    elif zone_to_correct == 'horizontal':
+        posprobes = [1089 , 1125] #FQPM
+    elif zone_to_correct == 'FDH':
+        raise ValueError('This setting is not available for FQPM yet')
+
 param = {
   "ImageDirectory": ImageDirectory,
   "MatrixDirectory": MatrixDirectory,
@@ -120,44 +147,19 @@ param = {
   "rescaling": rescaling,
   "estim_algorithm": estim_algorithm,
   "probe_type": probe_type,
+
+  "coro": coro,
+  "live_matrix_measurement": False,
+  "wave": 1.667e-6,
+  "ModelDirectory": ModelDirectory,
+  "lightsource_estim": lightsource_estim,
+  "lightsource_corr": lightsource_estim, #required for the code to run but useless
+  "posprobes": posprobes
+
 }
 
-param['coro'] = coro
-param["live_matrix_measurement"] = False
-param["wave"] = 1.667e-6
-ModelDirectory = WORK_PATH1 + 'Model/'
-param["ModelDirectory"] = ModelDirectory
 
-if onsky == 0:
-    lightsource_estim = 'InternalPupil_'
-else:
-    lightsource_estim = 'VLTPupil_'
-
-lightsource_estim = lightsource_estim + coro + '_'
-
-param['lightsource_estim'] = lightsource_estim
-param['lightsource_corr'] = lightsource_estim #required for the code to run but useless
-
-if coro == 'APLC':
-    if zone_to_correct == 'vertical':
-        posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
-    elif zone_to_correct == 'horizontal':
-        posprobes = [893 , 934]
-    elif zone_to_correct == 'FDH':
-        posprobes = [678 , 679, 720]
-
-    
-elif coro == 'FQPM':
-    if zone_to_correct == 'vertical':
-        posprobes = [678 , 679]#0.3cutestimation*squaremaxPSF*8/amplitude pour internal pup    #0.2*squaremaxPSF*8/amplitude pour on sky
-    elif zone_to_correct == 'horizontal':
-        posprobes = [1089 , 1125] #FQPM
-    elif zone_to_correct == 'FDH':
-        raise ValueError('This setting is not available for FQPM yet')
-
-param['posprobes'] = posprobes
-
-processed_directory = ImageDirectory + 'processed_data_BTW/'
+processed_directory = ImageDirectory + 'processed_data/PCA_on_diff/'
 if not os.path.exists(processed_directory):
         os.makedirs(processed_directory)
 
