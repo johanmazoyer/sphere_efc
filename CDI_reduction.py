@@ -168,108 +168,6 @@ cube_inco = []
 cube_tot = []
 PA = []
 
-#last = len(glob.glob(ImageDirectory+exp_name+'*coro_image*.fits'))+2
-#estimated_onsky_PA_of_the_planet = 0##210.532
-
-def reduce_images(docs_dir, param):
-    ''' --------------------------------------------------
-    Load all the fits image in a directory
-    
-    Parameters:
-    ----------
-    doc_dir: Input directory
-    
-    Return:
-    ------
-    image_array: numpy array
-    -------------------------------------------------- '''
-    if param["which_nd"] == 'ND_3.5':
-        ND = 1/0.00105
-    elif param["which_nd"] == 'ND_2.0':
-        ND = 1/0.0179
-    else:
-        ND = 1.
-
-    
-    lightsource_estim = param['lightsource_estim']
-    dimimages = param['dimimages']
-    centeringateachiter = param['centeringateachiter']
-    ImageDirectory = param["ImageDirectory"]
-    directory = ImageDirectory + param["exp_name"]
-    centerx = param['centerx']
-    centery = param['centery']
-    posprobes = param['posprobes']
-    estim_algorithm = param['estim_algorithm']
-    MatrixDirectory = param["MatrixDirectory"]
-    size_probes = param["size_probes"]
-    probe_type = param["probe_type"]
-    zone_to_correct = param["zone_to_correct"]
-
-    coro = param["coro"]
-    live_matrix_measurement = param["live_matrix_measurement"]
-    onsky = param["onsky"]
-    amplitudePW = size_probes/37
-    wave = param["wave"]
-    ModelDirectory = param["ModelDirectory"]
-    PSF,smoothPSF,maxPSF,exppsf = SPHERE.process_PSF(ImageDirectory,lightsource_estim,centerx,centery,dimimages)
-
-    image_list = []
-    best_params = [centerx-int(centerx), centery-int(centery)]
-    for filename in natsorted(glob.glob(docs_dir+'*.fits')):
-        print(filename)
-        image=SPHERE.reduceimageSPHERE(filename, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
-        image = SPHERE.fancy_xy_trans_slice(image, best_params)
-        image_list.append(image)
-    image_array = np.array(image_list)
-    return image_array
-
-I1plus = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0001', param),axis=0)
-I1moins = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0002', param),axis=0)
-I2plus = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0003', param),axis=0)
-I2moins = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0004', param),axis=0)
-I3plus = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0005', param),axis=0)
-I3moins = np.median(reduce_images(ImageDirectory+'*iter*_Probe_0006', param),axis=0)
-image_coro = np.median(reduce_images(ImageDirectory+'*iter*_coro_image*', param),axis=0)
-
-probe_amplitude = np.zeros((3,200,200)) 
-probe_amplitude[0] = np.sqrt(np.abs((I1plus + I1moins)/2 - image_coro))
-probe_amplitude[1] = np.sqrt(np.abs((I2plus + I2moins)/2 - image_coro))
-probe_amplitude[2] = np.sqrt(np.abs((I3plus + I3moins)/2 - image_coro))
-
-cutestimation = 5000#0.3*squaremaxPSF*8/amplitudePW  #1e20
-raw_pushact = fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
-import Definitions_for_matrices as def_mat
-mask384, Pup384, ALC, Lyot384 = def_mat.Upload_CoroConfig(ModelDirectory, coro, param["wave"])
-if onsky==0:
-    input_wavefront = mask384
-    lightsource = 'InternalPupil_'
-else:
-    input_wavefront = mask384*Pup384
-    lightsource = 'VLTPupil_'
-
-lightsource = lightsource + coro + '_'
-
-
-vectoressai,SVD,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
-                                                                param["wave"],
-                                                                Lyot384 ,
-                                                                ALC ,
-                                                                200 ,
-                                                                raw_pushact ,
-                                                                size_probes/37,
-                                                                posprobes ,
-                                                                cutestimation,
-                                                                coro,
-                                                                probe_type,
-                                                                probe_amplitude=probe_amplitude)
-filename = probe_type + '_' + zone_to_correct + '_' + str(int(size_probes/37*37)) + 'nm' + '_'
-
-def_mat.SaveFits(vectoressai, ['',0], MatrixDirectory, lightsource + filename + 'VecteurEstimation', replace=True)
-#
-def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource + filename + 'CorrectedZone',replace=True)
-#
-def_mat.SaveFits((probe_amplitude)**2, ['',0], MatrixDirectory, lightsource + filename + 'Intensity_probe_empirical',replace=True)
-
 
 nbiter = 2
 for file_raw in natsorted(glob.glob(ImageDirectory+exp_name+'*Probe_0001*.fits')):
@@ -291,6 +189,8 @@ fits.writeto(processed_directory+'signal_coh.fits',cube_co,overwrite=True)
 fits.writeto(processed_directory+'signal_inc.fits',cube_inco,overwrite=True)
 fits.writeto(processed_directory+'signal_tot.fits',cube_tot,overwrite=True)
 fits.writeto(processed_directory+'PA.fits',-PA,overwrite=True)
+
+
 
 #%% Normal ADI ---------------------------------------
 
@@ -646,6 +546,122 @@ fits.writeto(processed_directory +'Rotated_stacked_mfiltered_inco_vs_iter.fits',
 fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_mfiltered_inco_vs_iter.fits', np.swapaxes(ADI_inco_filtered_save,0,1), overwrite=True)
 
 
+
+#%% Test PCA on probe images for super coherent intensity
+importlib.reload(SPHERE)
+mask = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[12, 65], circ_side="Full", circ_offset=0, circ_angle=0)
+
+#Create cubes of probe difference images
+cube_I1plus = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0001', param)
+cube_I1moins = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0002', param)
+diff1 = cube_I1plus - cube_I1moins
+cube_I2plus = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0003', param)
+cube_I2moins = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0004', param)
+diff2 = cube_I2plus - cube_I2moins
+cube_I3plus = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0005', param)
+cube_I3moins = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0006', param)
+diff3 = cube_I3plus - cube_I3moins
+cube_image_coro = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_coro_image*', param)
+
+#Remove unwanted data in cube diff and image time series
+diff1_removed = diff1.copy() * mask
+diff2_removed = diff2.copy() * mask
+diff3_removed = diff3.copy() * mask
+cube_image_coro_removed = cube_image_coro.copy()
+newPA = PA.copy()
+
+for i in remove: 
+    diff1_removed = np.delete(diff1_removed, i, axis = 0)
+    diff2_removed = np.delete(diff2_removed, i, axis = 0)
+    diff3_removed = np.delete(diff3_removed, i, axis = 0)
+    cube_image_coro_removed = np.delete(cube_image_coro_removed, i, axis = 0)
+
+    newPA = np.delete(newPA, i, axis = 0)
+
+fits.writeto(processed_directory+'cube_diff1.fits', diff1, overwrite=True)
+fits.writeto(processed_directory+'cube_diff2.fits', diff2, overwrite=True)
+fits.writeto(processed_directory+'cube_diff3.fits', diff3, overwrite=True)
+
+# Compute the PCA and filter modes in 
+scan_modes = np.arange(1,len(diff1_removed)+10)
+filtered_diff = []
+j = 0
+for cube_diff in [diff1_removed, diff2_removed, diff3_removed]:
+
+    filtered_diff_i = []
+    filtered_diff_cube = []
+
+    u,s,vh = perf.get_cube_svd(cube_diff)
+    princ_comp = (s[:, np.newaxis]*vh).reshape((len(vh), 200, 200))
+
+    
+    fits.writeto(processed_directory+'diff'+str(j)+'_principle_components.fits', princ_comp, overwrite=True)
+
+    for i in scan_modes:
+        print(i)
+        nb_images,isz,isz = vh.shape[0], int(np.sqrt(vh.shape[1])), int(np.sqrt(vh.shape[1])) 
+        filtered = s.copy()
+        filtered[i:]=0
+        a = (u * filtered @ vh).reshape(nb_images,isz,isz)
+        #Save the filtered diff cube
+        filtered_diff_cube.append(a)
+        #Save the mean of filtered diff cube along the various iterations
+        filtered_diff_i.append( np.mean(a, axis=0 )) #mean
+    
+    filtered_diff.append(filtered_diff_i)
+    j=j+1
+
+#Saved the three filtered mean cube_diff
+filtered_diff = np.array(filtered_diff)
+#Currently, save only filtered cube diff_3
+filtered_diff_cube = np.array(filtered_diff_cube)
+
+fits.writeto(processed_directory+'filtered_diff.fits', filtered_diff, overwrite=True)
+fits.writeto(processed_directory+'filtered_diff_cube.fits', filtered_diff_cube, overwrite=True)
+
+# The CDI part now starts here
+#filename = probe_type + '_' + zone_to_correct + '_' + str(int(size_probes/37*37)) + 'nm' + '_'
+filename = MatrixDirectory + lightsource_estim + filename + 'VecteurEstimation' + '.fits'
+vectoressai = fits.getdata(filename)
+print(filtered_diff.shape)
+intensity_co = []
+# For each filtered mode in diff1, diff2 and diff3, compute 1 super coherent intensity
+for i in scan_modes:
+    diff = filtered_diff[:,i-1]
+    resultatestimation = SPHERE.estimateEab(diff, vectoressai)
+    intensity_co.append(np.abs(resultatestimation)**2)
+
+
+intensity_co = np.array(intensity_co)
+
+fits.writeto(processed_directory+'super_intensity_co.fits', intensity_co, overwrite=True)
+
+Rotated_stacked_mfiltered_inc = []
+Rotated_stacked_hpfiltered_mfiltered_inc=[]
+Cube_mfiltered_inc=[]
+
+for i in scan_modes:
+    Cube_mfiltered_inc.append(cube_image_coro_removed - intensity_co[i-1])
+    u,s,vh = perf.get_cube_svd(cube_image_coro_removed - intensity_co[i-1])
+    ADI_result = perf.reduction_ADI(u, s, vh, [0], - newPA) #[0] instead of vector
+    Rotated_stacked_mfiltered_inc.append(ADI_result)
+    #ADI_hide = remove_center_cube(ADI_result, 30)
+
+    # High-pass filtering of ADI[0] (where the cube has simply been rotated and stacked)
+    hp_filtered = []
+    for high_pass_filter_cut in np.arange(1,11):
+        hp_filtered.append(perf.high_pass_filter(ADI_result[0], high_pass_filter_cut))
+    hp_filtered = np.array(hp_filtered)
+    Rotated_stacked_hpfiltered_mfiltered_inc.append(hp_filtered)
+
+Rotated_stacked_mfiltered_inc = np.array(Rotated_stacked_mfiltered_inc) * mask
+Rotated_stacked_hpfiltered_mfiltered_inc = np.array(Rotated_stacked_hpfiltered_mfiltered_inc) * mask
+Cube_mfiltered_inc = np.array(Cube_mfiltered_inc) * mask
+
+
+fits.writeto(processed_directory+'Rotated_stacked_mfiltered_inc.fits', Rotated_stacked_mfiltered_inc, overwrite=True)
+fits.writeto(processed_directory+'Rotated_stacked_hpfiltered_mfiltered_inc.fits', Rotated_stacked_hpfiltered_mfiltered_inc, overwrite=True)
+fits.writeto(processed_directory+'Cube_mfiltered_inc.fits', Cube_mfiltered_inc, overwrite=True)
 
 
 

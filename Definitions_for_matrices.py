@@ -415,10 +415,8 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
         if probe_amplitude is not None:
             angle = np.angle((deltapsikbis-pupilnoabb)/squaremaxPSF)
             deltapsik[k] = probe_amplitude[k]*np.exp(1j*angle)
-            print('cest bieng')
         else :
             deltapsik[k] = (deltapsikbis-pupilnoabb)/squaremaxPSF
-            print('raté')
             
         k=k+1
     

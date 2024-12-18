@@ -18,6 +18,8 @@ import os
 import Definitions_for_matrices as def_mat
 import importlib
 
+from natsort import natsorted
+
 importlib.reload(def_mat)
 
 #Unit conversion and normalisation
@@ -179,7 +181,7 @@ def last(files):
     extract : last file in stack
 
     """
-    extract = sorted(glob.glob(files))[-1]
+    extract = natsorted(glob.glob(files))[-1]
     return extract
 
 
@@ -1320,3 +1322,45 @@ def sigma_filter(image, box_width, n_sigma=3, ignore_edges=False, monitor=False)
         mean[wh_nan] = image[wh_nan]
 
     return mean
+
+
+
+
+def reduce_cube_image(docs_dir, param):
+    ''' --------------------------------------------------
+    Load all the fits image in a directory
+    
+    Parameters:
+    ----------
+    doc_dir: Input directory
+    
+    Return:
+    ------
+    image_array: numpy array
+    -------------------------------------------------- '''
+    if param["which_nd"] == 'ND_3.5':
+        ND = 1/0.00105
+    elif param["which_nd"] == 'ND_2.0':
+        ND = 1/0.0179
+    else:
+        ND = 1.
+
+    
+    lightsource_estim = param['lightsource_estim']
+    dimimages = param['dimimages']
+    centeringateachiter = param['centeringateachiter']
+    ImageDirectory = param["ImageDirectory"]
+    centerx = param['centerx']
+    centery = param['centery']
+
+    PSF,smoothPSF,maxPSF,exppsf = process_PSF(ImageDirectory,lightsource_estim,centerx,centery,dimimages)
+
+    image_list = []
+    best_params = [centerx-int(centerx), centery-int(centery)]
+    for filename in natsorted(glob.glob(docs_dir+'*.fits')):
+        print(filename)
+        image=reduceimageSPHERE(filename, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+        image = fancy_xy_trans_slice(image, best_params)
+        image_list.append(image)
+    image_array = np.array(image_list)
+    return image_array
