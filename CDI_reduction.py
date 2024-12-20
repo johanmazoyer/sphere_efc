@@ -86,7 +86,7 @@ elif target_name == 'HD163264':
     fold = 'cdi 4/'
     rotation_sign = -1
     estimated_onsky_PA_of_the_planet = 0
-    remove = [12]
+    remove = [12, 3] #added 3
     
 
 # Path 
@@ -583,8 +583,9 @@ fits.writeto(processed_directory+'cube_diff2.fits', diff2, overwrite=True)
 fits.writeto(processed_directory+'cube_diff3.fits', diff3, overwrite=True)
 
 # Compute the PCA and filter modes in 
-scan_modes = np.arange(1,len(diff1_removed)+10)
+scan_modes = np.arange(1,len(diff1_removed)+1)
 filtered_diff = []
+filtered_diff_cube_all = []
 j = 0
 for cube_diff in [diff1_removed, diff2_removed, diff3_removed]:
 
@@ -609,18 +610,19 @@ for cube_diff in [diff1_removed, diff2_removed, diff3_removed]:
         filtered_diff_i.append( np.mean(a, axis=0 )) #mean
     
     filtered_diff.append(filtered_diff_i)
+    filtered_diff_cube_all.append(filtered_diff_cube)
     j=j+1
 
 #Saved the three filtered mean cube_diff
 filtered_diff = np.array(filtered_diff)
-#Currently, save only filtered cube diff_3
-filtered_diff_cube = np.array(filtered_diff_cube)
+#Save the three filtered cube_diff for various scanned modes
+filtered_diff_cube_all = np.array(filtered_diff_cube_all)
 
 fits.writeto(processed_directory+'filtered_diff.fits', filtered_diff, overwrite=True)
-fits.writeto(processed_directory+'filtered_diff_cube.fits', filtered_diff_cube, overwrite=True)
+fits.writeto(processed_directory+'filtered_diff_cube_all.fits', filtered_diff_cube_all, overwrite=True)
 
 # The CDI part now starts here
-#filename = probe_type + '_' + zone_to_correct + '_' + str(int(size_probes/37*37)) + 'nm' + '_'
+filename = probe_type + '_' + zone_to_correct + '_' + str(int(size_probes/37*37)) + 'nm' + '_'
 filename = MatrixDirectory + lightsource_estim + filename + 'VecteurEstimation' + '.fits'
 vectoressai = fits.getdata(filename)
 print(filtered_diff.shape)
@@ -662,6 +664,49 @@ Cube_mfiltered_inc = np.array(Cube_mfiltered_inc) * mask
 fits.writeto(processed_directory+'Rotated_stacked_mfiltered_inc.fits', Rotated_stacked_mfiltered_inc, overwrite=True)
 fits.writeto(processed_directory+'Rotated_stacked_hpfiltered_mfiltered_inc.fits', Rotated_stacked_hpfiltered_mfiltered_inc, overwrite=True)
 fits.writeto(processed_directory+'Cube_mfiltered_inc.fits', Cube_mfiltered_inc, overwrite=True)
+
+#%% Other possibility with PCA on diff
+intensity_co_iter = []
+for j in scan_modes: # Loop over the iterations
+    intensity_co_modes = []
+    for i in scan_modes: #Loop over the filtered modes
+        diff = filtered_diff_cube_all[:, i-1, j-1]
+        resultatestimation = SPHERE.estimateEab(diff, vectoressai)
+        intensity_co_modes.append(np.abs(resultatestimation)**2)
+
+    intensity_co_iter.append(intensity_co_modes)
+intensity_co_iter = np.array(intensity_co_iter)
+fits.writeto(processed_directory+'intensity_co_iter.fits', intensity_co_iter, overwrite=True)
+
+
+Rotated_stacked_mfiltered_inc = []
+Rotated_stacked_hpfiltered_mfiltered_inc=[]
+Cube_mfiltered_inc=[]
+for i in scan_modes:
+    Cube_mfiltered_inc.append(cube_image_coro_removed - intensity_co_iter[:,i-1])
+    u,s,vh = perf.get_cube_svd(cube_image_coro_removed - intensity_co_iter[:,i-1])
+    ADI_result = perf.reduction_ADI(u, s, vh, [0], - newPA) #[0] instead of vector
+    Rotated_stacked_mfiltered_inc.append(ADI_result)
+    #ADI_hide = remove_center_cube(ADI_result, 30)
+
+    # High-pass filtering of ADI[0] (where the cube has simply been rotated and stacked)
+    hp_filtered = []
+    for high_pass_filter_cut in np.arange(1,11):
+        hp_filtered.append(perf.high_pass_filter(ADI_result[0], high_pass_filter_cut))
+    hp_filtered = np.array(hp_filtered)
+    Rotated_stacked_hpfiltered_mfiltered_inc.append(hp_filtered)
+
+Rotated_stacked_mfiltered_inc = np.array(Rotated_stacked_mfiltered_inc) * mask
+Rotated_stacked_hpfiltered_mfiltered_inc = np.array(Rotated_stacked_hpfiltered_mfiltered_inc) * mask
+Cube_mfiltered_inc = np.array(Cube_mfiltered_inc) * mask
+
+
+fits.writeto(processed_directory+'Rotated_stacked_mfiltered_inc.fits', Rotated_stacked_mfiltered_inc, overwrite=True)
+fits.writeto(processed_directory+'Rotated_stacked_hpfiltered_mfiltered_inc.fits', Rotated_stacked_hpfiltered_mfiltered_inc, overwrite=True)
+fits.writeto(processed_directory+'Cube_mfiltered_inc.fits', Cube_mfiltered_inc, overwrite=True)
+
+
+
 
 
 
