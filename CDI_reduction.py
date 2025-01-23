@@ -62,7 +62,7 @@ rescaling=0
 #'CPD-366759' - Experiment 06 - cdi 2
 # 'HD169142' - Experiment 10 - cdi 3
 #'HD163264' - Experiment 11 - cdi 4 - minus sign for ADI!
-target_name = 'HD163264'
+target_name = 'CPD-366759'
 if target_name == 'HR4796A':
     nb_experiment = '05'
     fold = 'cdi/'
@@ -159,7 +159,7 @@ param = {
 }
 
 
-processed_directory = ImageDirectory + 'processed_data/PCA_on_diff/'
+processed_directory = ImageDirectory + 'processed_data/Probe_intensity_extraction/'
 if not os.path.exists(processed_directory):
         os.makedirs(processed_directory)
 
@@ -705,6 +705,164 @@ fits.writeto(processed_directory+'Rotated_stacked_mfiltered_inc.fits', Rotated_s
 fits.writeto(processed_directory+'Rotated_stacked_hpfiltered_mfiltered_inc.fits', Rotated_stacked_hpfiltered_mfiltered_inc, overwrite=True)
 fits.writeto(processed_directory+'Cube_mfiltered_inc.fits', Cube_mfiltered_inc, overwrite=True)
 
+
+#%% Test extraction du signal dans les images probes
+mask = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[12, 65], circ_side="Full", circ_offset=0, circ_angle=0)
+
+#Create cubes of probe difference images
+cube_I1plus = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0001', param)
+cube_I1moins = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0002', param)
+diff1 = cube_I1plus - cube_I1moins
+cube_I2plus = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0003', param)
+cube_I2moins = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0004', param)
+diff2 = cube_I2plus - cube_I2moins
+cube_I3plus = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0005', param)
+cube_I3moins = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_Probe_0006', param)
+diff3 = cube_I3plus - cube_I3moins
+cube_image_coro = SPHERE.reduce_cube_image(ImageDirectory+'*iter*_coro_image*', param)
+
+#Remove unwanted data in cube diff and image time series
+diff1_removed = diff1.copy() * mask
+diff2_removed = diff2.copy() * mask
+diff3_removed = diff3.copy() * mask
+
+cube_I1plus_removed = cube_I1plus.copy() 
+cube_I2plus_removed = cube_I2plus.copy() 
+cube_I3plus_removed = cube_I3plus.copy() 
+cube_I1moins_removed = cube_I1moins.copy() 
+cube_I2moins_removed = cube_I2moins.copy() 
+cube_I3moins_removed = cube_I3moins.copy() 
+
+cube_image_coro_removed = cube_image_coro.copy()
+newPA = PA.copy()
+
+for i in remove: 
+    diff1_removed = np.delete(diff1_removed, i, axis = 0)
+    diff2_removed = np.delete(diff2_removed, i, axis = 0)
+    diff3_removed = np.delete(diff3_removed, i, axis = 0)
+
+    cube_I1plus_removed = np.delete(cube_I1plus_removed, i, axis = 0)
+    cube_I2plus_removed = np.delete(cube_I2plus_removed, i, axis = 0)
+    cube_I3plus_removed = np.delete(cube_I3plus_removed, i, axis = 0)
+    cube_I1moins_removed = np.delete(cube_I1moins_removed, i, axis = 0)
+    cube_I2moins_removed = np.delete(cube_I2moins_removed, i, axis = 0)
+    cube_I3moins_removed = np.delete(cube_I3moins_removed, i, axis = 0)
+
+    cube_image_coro_removed = np.delete(cube_image_coro_removed, i, axis = 0)
+
+    newPA = np.delete(newPA, i, axis = 0)
+
+# Compute the PCA and filter modes in 
+filtered_mean_diff = []
+for cube_diff in [diff1_removed, diff2_removed, diff3_removed]:
+
+    u,s,vh = perf.get_cube_svd(cube_diff)
+    nb_images,isz,isz = vh.shape[0], int(np.sqrt(vh.shape[1])), int(np.sqrt(vh.shape[1])) 
+    filtered = s.copy()
+    filtered[1:]=0
+    a = (u * filtered @ vh).reshape(nb_images,isz,isz)
+    #Save the mean of filtered diff cube along the various iterations
+    filtered_mean_diff.append( np.mean(a, axis=0 )) #mean
+
+#Saved the three filtered mean cube_diff
+filtered_mean_diff = np.array(filtered_mean_diff)
+
+fits.writeto(processed_directory+'filtered_mean_diff.fits', filtered_mean_diff, overwrite=True)
+
+# The CDI part now starts here
+filename = probe_type + '_' + zone_to_correct + '_' + str(int(size_probes/37*37)) + 'nm' + '_'
+filename = MatrixDirectory + lightsource_estim + filename + 'VecteurEstimation' + '.fits'
+vectoressai = fits.getdata(filename)
+
+
+resultatestimation = SPHERE.estimateEab(filtered_mean_diff, vectoressai)
+
+filename = probe_type + '_' + zone_to_correct + '_' + str(int(size_probes/37*37)) + 'nm' + '_'
+filename = MatrixDirectory + lightsource_estim + filename + 'EF_probe_Real' + '.fits'
+real_probe = fits.getdata(filename)
+filename = probe_type + '_' + zone_to_correct + '_' + str(int(size_probes/37*37)) + 'nm' + '_'
+filename = MatrixDirectory + lightsource_estim + filename + 'EF_probe_Imag' + '.fits'
+imag_probe = fits.getdata(filename)
+
+EF_probes = real_probe + 1j*imag_probe
+
+Iprobes_co_plus = np.abs(resultatestimation + EF_probes)**2
+Iprobes_co_moins = np.abs(resultatestimation - EF_probes)**2
+
+
+cube_inco_I1plus = cube_I1plus_removed - Iprobes_co_plus[0]
+cube_inco_I2plus = cube_I2plus_removed - Iprobes_co_plus[1]
+cube_inco_I3plus = cube_I3plus_removed - Iprobes_co_plus[2]
+cube_inco_I1moins = cube_I1moins_removed - Iprobes_co_moins[0]
+cube_inco_I2moins = cube_I2moins_removed - Iprobes_co_moins[1]
+cube_inco_I3moins = cube_I3moins_removed - Iprobes_co_moins[2]
+cube_inco_probes= np.array([cube_inco_I1plus, cube_inco_I2plus, cube_inco_I3plus,cube_inco_I1moins,cube_inco_I2moins,cube_inco_I3moins])
+
+fits.writeto(processed_directory+'cube_inco_probes.fits', cube_inco_probes, overwrite=True)
+
+
+#Get individual incoherent intensity for each probe
+Rotated_stacked_mfiltered_inc = []
+Rotated_stacked_hpfiltered_mfiltered_inc=[]
+for i in range(len(cube_inco_probes)): #Loop over the probes
+    u,s,vh = perf.get_cube_svd(cube_inco_probes[i])
+    ADI_result = perf.reduction_ADI(u, s, vh, [0], - newPA) #[0] instead of vector
+    Rotated_stacked_mfiltered_inc.append(ADI_result)
+    #ADI_hide = remove_center_cube(ADI_result, 30)
+
+    # High-pass filtering of ADI[0] (where the cube has simply been rotated and stacked)
+    hp_filtered = []
+    for high_pass_filter_cut in np.arange(1,11):
+        hp_filtered.append(perf.high_pass_filter(ADI_result[0], high_pass_filter_cut))
+    hp_filtered = np.array(hp_filtered)
+    Rotated_stacked_hpfiltered_mfiltered_inc.append(hp_filtered)
+
+Rotated_stacked_mfiltered_inc = np.array(Rotated_stacked_mfiltered_inc)
+Rotated_stacked_hpfiltered_mfiltered_inc = np.array(Rotated_stacked_hpfiltered_mfiltered_inc) * mask
+
+
+fits.writeto(processed_directory+'Rotated_stacked_mfiltered_inc_probe.fits', Rotated_stacked_mfiltered_inc, overwrite=True)
+fits.writeto(processed_directory+'Rotated_stacked_hpfiltered_mfiltered_inc_probe.fits', Rotated_stacked_hpfiltered_mfiltered_inc, overwrite=True)
+
+#Get mean incoherent intensity over the probes and high pass filter
+Rotated_stacked_hpfiltered_mfiltered_inc=[]
+mean_result = np.mean(Rotated_stacked_mfiltered_inc,axis=0)
+
+hp_filtered = []
+for high_pass_filter_cut in np.arange(1,11):
+    hp_filtered.append(perf.high_pass_filter(mean_result[0], high_pass_filter_cut))
+Rotated_stacked_hpfiltered_mean_inc = np.array(hp_filtered) * mask
+
+fits.writeto(processed_directory+'Rotated_stacked_hpfiltered_mean_inc_probe.fits', Rotated_stacked_hpfiltered_mean_inc, overwrite=True)
+
+
+#Get the normal CDI and high pass filter
+coro_inco = cube_image_coro_removed - np.abs(resultatestimation)**2
+
+u,s,vh = perf.get_cube_svd(coro_inco)
+ADI_result = perf.reduction_ADI(u, s, vh, [0], - newPA) #[0] instead of vector
+Rotated_stacked_hpfiltered_normalinc = []
+hp_filtered = []
+for high_pass_filter_cut in np.arange(1,11):
+    hp_filtered.append(perf.high_pass_filter(ADI_result[0], high_pass_filter_cut))
+hp_filtered = np.array(hp_filtered)
+Rotated_stacked_hpfiltered_normalinc.append(hp_filtered)
+
+Rotated_stacked_hpfiltered_normalinc = np.array(Rotated_stacked_hpfiltered_normalinc) * mask
+fits.writeto(processed_directory+'Rotated_stacked_hpfiltered_normalinc.fits', Rotated_stacked_hpfiltered_normalinc, overwrite=True)
+
+
+#Get the mean of probe inco and coro inco and high pass filter
+total_intensity_inco = (mean_result[0] + ADI_result[0])/2 #Could you weight for each
+Rotated_stacked_hpfiltered_totalinc = []
+hp_filtered = []
+for high_pass_filter_cut in np.arange(1,11):
+    hp_filtered.append(perf.high_pass_filter(total_intensity_inco, high_pass_filter_cut))
+hp_filtered = np.array(hp_filtered)
+Rotated_stacked_hpfiltered_totalinc.append(hp_filtered)
+
+Rotated_stacked_hpfiltered_totalinc = np.array(Rotated_stacked_hpfiltered_totalinc) * mask
+fits.writeto(processed_directory+'Rotated_stacked_hpfiltered_totalinc.fits', Rotated_stacked_hpfiltered_totalinc, overwrite=True)
 
 
 

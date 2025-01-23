@@ -108,7 +108,7 @@ if createPW == True:
     #Choose the truncation above where the pixels won't be taken into account for estimation (not used currently here)
     cutestimation = 5000#0.3*squaremaxPSF*8/amplitudePW  #1e20
 
-    vectoressai,SVD,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
+    vectoressai,SVD,EF_probes,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
                                                                          wave,
                                                                          Lyot384 ,
                                                                          ALC ,
@@ -130,6 +130,10 @@ if createPW == True:
     def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource + filename + 'CorrectedZone',replace=True)
     ##
     def_mat.SaveFits(vectoressai, ['',0], MatrixDirectory, lightsource + filename + 'VecteurEstimation', replace=True)
+    ##
+    def_mat.SaveFits(np.real(EF_probes), ['',0], MatrixDirectory, lightsource + filename +'EF_probe_Real', replace=True)
+    ##
+    def_mat.SaveFits(np.imag(EF_probes), ['',0], MatrixDirectory, lightsource + filename +'EF_probe_Imag', replace=True)
     ##
     def_mat.SaveFits(int_probes, ['',0], MatrixDirectory, lightsource + filename +'Intensity_probe', replace=True)
     ##

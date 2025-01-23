@@ -435,7 +435,7 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
                 SVD[:,i,j] = np.zeros(2)
                 Vecteurenvoi[l] = np.zeros((2,numprobe))
             l = l+1  
-    return [Vecteurenvoi,SVD,abs(deltapsik)**2,probevoltage]
+    return [Vecteurenvoi, SVD, deltapsik, abs(deltapsik)**2, probevoltage]
 
 
 def create_poke_probe(act_matrix, act_index, amplitudePW):
