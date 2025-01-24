@@ -62,7 +62,7 @@ rescaling=0
 #'CPD-366759' - Experiment 06 - cdi 2
 # 'HD169142' - Experiment 10 - cdi 3
 #'HD163264' - Experiment 11 - cdi 4 - minus sign for ADI!
-target_name = 'CPD-366759'
+target_name = 'HD169142'
 if target_name == 'HR4796A':
     nb_experiment = '05'
     fold = 'cdi/'
@@ -159,7 +159,7 @@ param = {
 }
 
 
-processed_directory = ImageDirectory + 'processed_data/Probe_intensity_extraction/'
+processed_directory = ImageDirectory + 'processed_data/algo5/'
 if not os.path.exists(processed_directory):
         os.makedirs(processed_directory)
 
@@ -706,7 +706,7 @@ fits.writeto(processed_directory+'Rotated_stacked_hpfiltered_mfiltered_inc.fits'
 fits.writeto(processed_directory+'Cube_mfiltered_inc.fits', Cube_mfiltered_inc, overwrite=True)
 
 
-#%% Test extraction du signal dans les images probes
+#%% Test extracting signal in the probe images
 mask = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[12, 65], circ_side="Full", circ_offset=0, circ_angle=0)
 
 #Create cubes of probe difference images
@@ -774,7 +774,7 @@ filename = probe_type + '_' + zone_to_correct + '_' + str(int(size_probes/37*37)
 filename = MatrixDirectory + lightsource_estim + filename + 'VecteurEstimation' + '.fits'
 vectoressai = fits.getdata(filename)
 
-
+# Get super EF estimate
 resultatestimation = SPHERE.estimateEab(filtered_mean_diff, vectoressai)
 
 filename = probe_type + '_' + zone_to_correct + '_' + str(int(size_probes/37*37)) + 'nm' + '_'
@@ -786,10 +786,12 @@ imag_probe = fits.getdata(filename)
 
 EF_probes = real_probe + 1j*imag_probe
 
+
+#Compute I+ and I-
 Iprobes_co_plus = np.abs(resultatestimation + EF_probes)**2
 Iprobes_co_moins = np.abs(resultatestimation - EF_probes)**2
 
-
+#Remove I+ and I- from the cube of probe images
 cube_inco_I1plus = cube_I1plus_removed - Iprobes_co_plus[0]
 cube_inco_I2plus = cube_I2plus_removed - Iprobes_co_plus[1]
 cube_inco_I3plus = cube_I3plus_removed - Iprobes_co_plus[2]
