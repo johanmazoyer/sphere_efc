@@ -96,10 +96,7 @@ rescaling=0
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
-#WORK_PATH0=/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/
 WORK_PATH0=/vltuser/sphere/zwahhaj/efc
-#WORK_PATH0=/Users/axel/Documents/Research/SPHERE/sphere_efc/
-#WORK_PATH0=~/Documents/Recherche/DonneesTHD/EFConSPHERE/sphere_efc
 
 SLOPE_INI='VisAcq.DET1.REFSLP'
 
