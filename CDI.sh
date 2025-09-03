@@ -4,7 +4,7 @@
 
 : '
 This script should be run on the sparta gateway.
-It will launch the EFC python code and record IRDIS data
+It will run the CDI python code and record IRDIS data
 
 Preliminary steps to perform before running this script
 
@@ -14,7 +14,8 @@ Preliminary steps to perform before running this script
 2/ In the folder called MatricesAndModel in WORK_PATH0:
    Save the interaction matrix (CLMatrixOptimiser.HO_IM.fit) from the CDMS browser
 
-3/ Adjust the user parameters below to nbiter=1 at start (then increment), adjust (maybe) the path.
+3/ Adjust the user parameters below to the requested
+ tot_nbiter, adjust (maybe) the path.
 '
 
 #Total number of iterations to run in the loop
@@ -46,10 +47,6 @@ WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
 DIT_bkgrd=1
 NDIT_bkgrd=2
 
-#Other images
-DIT_cosinus=1
-NDIT_cosinus=2
-
 
 ONSKY=1 #Set 0 for internal pup ; 1 for an on sky correction
 Assuming_VLT_PUP_for_corr=0 
@@ -68,6 +65,8 @@ DHsize=1
 # corr_mode=1: less stable correction but better contrast
 # corr_mode=2: more aggressive correction (may be unstable)
 corr_mode=1
+
+#DO NOT MODIFY THE GAIN IF CDI
 gain=0
 
 #Algorithm for estimation. Should be either PWP or BTW
@@ -201,7 +200,7 @@ fi
 
 
 if [ "$create_coro" -eq "1" ]; then
-	#Find the name of the last experiment and change the name if nbiter==1
+	#Increment the experiment name
 	#Check if at least one experiment was launched
 	if [ -f "$WORK_PATH/Experiment0000_iter0correction.fits" ]
 	then
@@ -295,7 +294,7 @@ if [ "$create_coro" -eq "1" ]; then
 
 				echo "Acquire Cosinus"
 				echo ' * acquiring image'
-				msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_cosinus} OCS1.DET1.NDIT ${NDIT_cosinus} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosinusForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
+				msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosinusForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
 				msgSend -n wsre sroControl START "-detId IRDIS"
 				msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
