@@ -31,6 +31,10 @@ import importlib
 
 importlib.reload(SPHERE)
 
+import matplotlib as mpl
+
+mpl.rcParams['image.origin'] = 'lower'
+
 
 onsky=1 #Set 0 for internal pup ; 1 for an on sky correction
 #Coronagraph that is used
@@ -62,7 +66,7 @@ rescaling=0
 #'CPD-366759' - Experiment 06 - cdi 2
 # 'HD169142' - Experiment 10 - cdi 3
 #'HD163264' - Experiment 11 - cdi 4 - minus sign for ADI!
-target_name = 'HR4796A'
+target_name = 'HD163296'
 if target_name == 'HR4796A':
     nb_experiment = '05'
     fold = 'cdi/'
@@ -81,10 +85,10 @@ elif target_name == 'HD169142':
     rotation_sign = 1
     remove = [4, 3, 2, 1, 0]
     estimated_onsky_PA_of_the_planet = 0
-elif target_name == 'HD163264':
+elif target_name == 'HD163296':
     nb_experiment = '11'
     fold = 'cdi 4/'
-    rotation_sign = -1
+    rotation_sign = 1
     estimated_onsky_PA_of_the_planet = 0
     remove = [12, 3] #added 3
     
@@ -192,6 +196,33 @@ fits.writeto(processed_directory+'PA.fits',-PA,overwrite=True)
 
 
 
+which = 0
+img1 = cube_tot[which]
+img2 = cube_co[which]
+img3 = cube_inco[which]
+vmin = -0.5e-5
+vmax = 1.5e-4
+cmaps = 'Blues_r'
+
+# Plotting the images side by side
+fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+
+axs[0].imshow(img1, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[0].axis('off')  # Hide axes
+#axs[0].set_title('Image 1')
+
+axs[1].imshow(img2, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[1].axis('off')
+#axs[1].set_title('Image 2')
+
+axs[2].imshow(img3, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[2].axis('off')
+#axs[2].set_title('Image 3')
+
+plt.tight_layout()
+plt.savefig(processed_directory + '1iter_example.pdf')
+plt.show()
+
 #%% Normal ADI ---------------------------------------
 
 import Performance_function as perf
@@ -208,6 +239,7 @@ newPA = PA.copy()
 for i in remove:
     cube_tot_removed = np.delete(cube_tot_removed, i, axis = 0)
     newPA = np.delete(newPA, i, axis = 0)
+print('Delta PA = ',np.amax(newPA)-np.amin(newPA), ' degrees')
 print(len(cube_tot_removed))
 
 total_rotated_removed = perf.rotate_cube(cube_tot_removed, - newPA)
@@ -228,7 +260,35 @@ fits.writeto(processed_directory +'Rotated_stacked_tot.fits', ADI_tot_result, ov
 
 fits.writeto(processed_directory+'ADI_tot.fits', ADI_tot_result, overwrite=True)
 
-    
+#%% ADI with VIP
+from hciplot import plot_frames, plot_cubes  # plotting routines
+from multiprocessing import cpu_count
+from packaging import version
+
+import vip_hci as vip
+vvip = vip.__version__
+print("VIP version: ", vvip)
+if version.parse(vvip) < version.parse("1.0.3"):
+    msg = "Please upgrade your version of VIP"
+    msg+= "It should be 1.0.3 or above to run this notebook."
+    raise ValueError(msg)
+
+from vip_hci.psfsub import pca
+from vip_hci.psfsub import median_sub
+
+print('Total intensity')
+cube_tot_removed = cube_tot.copy() #* mask
+newPA = PA.copy()
+for i in remove:
+    cube_tot_removed = np.delete(cube_tot_removed, i, axis = 0)
+    newPA = np.delete(newPA, i, axis = 0)
+
+scan_modes = np.arange(len(cube_tot_removed))
+ADI_tot_result = []
+for ncomp_ADI in scan_modes:
+    ADI_tot_result.append(pca(cube_tot_removed, -newPA, ncomp=ncomp_ADI))
+ADI_tot_result = np.array(ADI_tot_result)
+fits.writeto(processed_directory+'ADI_tot_VIP.fits', ADI_tot_result, overwrite=True)
 
 #%% Test CDI + rotation + stack + high pass filter -------------------------------------
 import Performance_function as perf
@@ -405,6 +465,50 @@ Rotated_stacked_mfiltered_inc = np.array(Rotated_stacked_mfiltered_inc) * mask
 Rotated_stacked_hpfiltered_mfiltered_inc = np.array(Rotated_stacked_hpfiltered_mfiltered_inc) * mask
 fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_mfiltered_inc.fits', Rotated_stacked_hpfiltered_mfiltered_inc, overwrite=True)
 fits.writeto(processed_directory +'Rotated_stacked_mfiltered_inc.fits', Rotated_stacked_mfiltered_inc, overwrite=True)
+#%% Plotting principle components
+size = 65
+img1 = princ_comp[0,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img2 = princ_comp[1,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img3 = princ_comp[2,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img4 = princ_comp[4,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img5 = princ_comp[9,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img6 = princ_comp[13,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+vmin = -1e-5
+vmax = 5e-5
+cmaps = 'Blues_r'
+
+# Plotting the images side by side
+fig, axs = plt.subplots(2, 3, figsize=(15, 10))
+axs = axs.flatten()
+
+
+axs[0].imshow(img1, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[0].axis('off')  # Hide axes
+#axs[0].set_title('Image 1')
+
+axs[1].imshow(img2, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[1].axis('off')
+#axs[1].set_title('Image 2')
+
+axs[2].imshow(img3, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[2].axis('off')
+#axs[2].set_title('Image 3')
+
+axs[3].imshow(img4, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[3].axis('off')
+
+axs[4].imshow(img5, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[4].axis('off')
+
+axs[5].imshow(img6, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[5].axis('off')
+
+
+plt.tight_layout()
+plt.savefig(processed_directory + 'principle_components.pdf')
+plt.show()
+
+
 
 
 #%% Test least-mean-squared Khi2# for PCA parameters -----------------------------------------------
@@ -464,9 +568,428 @@ fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_khisquare_inc.fits
 fits.writeto(processed_directory +'Rotated_stacked_khisquare_inc.fits', Rotated_stacked_khisquare_inc, overwrite=True)
 
 #fits.writeto(processed_directory +'test_svd.fits', ((u * s @ vh).reshape(vh.shape[0], int(np.sqrt(vh.shape[1])), int(np.sqrt(vh.shape[1])) )[0]), overwrite=True)
+#%% Khi squared with VIP
+mask_khi = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[circ_rad_inn, 70], circ_side=circ_side, circ_offset=10, circ_angle=0)
+
+#mask_khi = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[45, 75], circ_side="Full", circ_offset=0, circ_angle=0)
+mask_khi = matrices.creatingMaskDH(200,'square',choosepixDH=[-30, 30, 40, 70], circ_rad=[circ_rad_inn, 70], circ_side=circ_side, circ_offset=10, circ_angle=0)
+
+scan_modes = np.arange(len(princ_comp))
+cube_inco_khisquare_rotated = []
+Rotated_stacked_hpfiltered_khisquare_inc_vip = []
+
+for filt in scan_modes:
+    hp_filtered = []
+    for high_pass_filter_cut in np.arange(1,11):
+        img = pca(cube_tot_removed, -newPA, ncomp=filt, cube_ref=cube_co_removed,mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut)
+        hp_filtered.append(img)
+    hp_filtered = np.array(hp_filtered)
+    Rotated_stacked_hpfiltered_khisquare_inc_vip.append(hp_filtered)
+
+Rotated_stacked_hpfiltered_khisquare_inc_vip = np.array(Rotated_stacked_hpfiltered_khisquare_inc_vip) * mask
+fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_khisquare_inc_VIP.fits', Rotated_stacked_hpfiltered_khisquare_inc_vip, overwrite=True)
+
+
+#%% Plot all images in cube
+cube_image = Rotated_stacked_hpfiltered_khisquare_inc
+n_rows, n_cols, height, width = cube_image.shape
+
+# Select every 2nd row and column
+row_indices = range(0, n_rows, 2)
+col_indices = range(0, n_cols, 2)
+print(row_indices, n_rows)
+
+# Shared vmin and vmax for consistent color scaling
+vmin = -1.5e-6
+vmax = 1e-5
+cmaps = 'Blues_r'
+
+# Grid dimensions
+num_plot_rows = len(row_indices)
+num_plot_cols = len(col_indices)
+
+
+fig, axs = plt.subplots(num_plot_rows, num_plot_cols, figsize=(4 * num_plot_cols, 4 * num_plot_rows))
+
+# Plot the selected images
+for i_idx, i in enumerate(row_indices):
+    for j_idx, j in enumerate(col_indices):
+        if i_idx == 0:
+            axs[0, j_idx].set_title(r'$\sigma_{hp} = $' + str(j+1), fontsize=20)
+        ax = axs[i_idx, j_idx]
+        im = ax.imshow(cube_image[i, j,isz//2-size:isz//2+size,isz//2-size:isz//2+size], vmin=vmin, vmax=vmax, cmap=cmaps)
+        ax.set_xticks([])
+        ax.set_yticks([])
+    axs[i_idx, 0].set_ylabel(r', $K_{Klip} = $' + str(i), fontsize=20, labelpad=10, va='center')
+
+
+# Add a single shared colorbar
+#cbar = fig.colorbar(im, ax=axs, orientation='vertical', fraction=0.02, pad=0.04)
+#cbar.set_label("Pixel Value")
+
+plt.tight_layout()
+plt.savefig(processed_directory + "4d_cube_grid" + target_name + ".png", dpi=300, bbox_inches='tight')
+plt.show()
+
+#%% Plot all disk results
+import skimage.transform as st
+
+import numpy as np
+
+def spiral_mask(
+    shape=(200, 200),
+    spiral_func=None,
+    thickness=1,
+    theta_min = np.pi,
+    delta_theta=10 * np.pi,
+    theta_step=0.01
+):
+    """
+    Generates a boolean mask with a spiral pattern.
+
+    Parameters:
+        shape (tuple): (height, width) of the output array.
+        spiral_func (function): r = f(theta), defines spiral geometry.
+        thickness (int): Thickness (radius) of the spiral path in pixels.
+        theta_max (float): Maximum angle to spiral through (in radians).
+        theta_step (float): Angle step size for sampling the spiral.
+
+    Returns:
+        np.ndarray: 2D binary array (dtype=uint8) with spiral mask (1s and 0s).
+    """
+    height, width = shape
+    center = (width // 2, height // 2)
+    mask = np.zeros(shape, dtype=np.uint8)
+
+    if spiral_func is None:
+        # Default to Archimedean spiral: r = a + bθ
+        spiral_func = lambda theta: 5 + 2 * theta
+    theta_max = theta_min + delta_theta
+    theta_vals = np.arange(theta_min, theta_max, theta_step)
+
+    for theta in theta_vals:
+        r = spiral_func(theta)
+        x = int(center[0] + r * np.cos(theta))
+        y = int(center[1] + r * np.sin(theta))
+
+        for dx in range(-thickness, thickness + 1):
+            for dy in range(-thickness, thickness + 1):
+                xx = x + dx
+                yy = y + dy
+                if 0 <= xx < width and 0 <= yy < height:
+                    mask[yy, xx] = 1
+
+    return mask
+
+
+def mask_ellispe(dim,semimajor_axis,semiminor_axis,orientation,width,center=[0,0],full=False): 
+    # Create an elliptic binary mask
+    # dim = linear size of the output in pixels
+    # semimajor_axis = semi-major axis in pixels
+    # semiminor_axis = semi-minor axis in pixels
+    # orientation = angle from the vertical to the semi-major axis in direct direction in degrees
+    # width = width of the ellipse in pixels (ignored if full=False)
+    # center = center of the ellispe with respect to the (dim/2,dim/2) position in pixels
+    # full = fill the ellipse with 1 (if True) or return an ellipse of width pixels (if False, default)
+
+    mask2d = np.zeros((dim,dim))
+    x0 = np.linspace(-dim/2,dim/2-1,dim)
+    y,x = np.meshgrid(x0,x0)
+
+    wh_mask = np.where(((x-center[0])/semimajor_axis)**2 + ((y-center[1])/semiminor_axis)**2 <= (1+width/np.sqrt(semimajor_axis**2 +semiminor_axis**2)))
+    mask2d[wh_mask] = 1
+
+    if full == False:
+        wh_mask = np.where(((x-center[0])/semimajor_axis)**2 + ((y-center[1])/semiminor_axis)**2 < (1-width/np.sqrt(semimajor_axis**2 +semiminor_axis**2)))
+        mask2d[wh_mask] = 0
+    mask2d = st.rotate(mask2d,orientation,order=0)
+    
+    return mask2d
+
+def array_angle(dim,center=[0,0]):
+    # Create a dim,dim array giving the PA of each pixel in degrees
+    x0 = np.linspace(-dim/2,dim/2-1,dim)
+    y,x = np.meshgrid(x0,x0)
+    ang_arr = np.arctan2(y,-x)* 180/np.pi + 180
+
+    return ang_arr
+
+#
+img = fits.getdata(processed_directory +'ADI_tot.fits')[0]
+isz = img.shape[-1]
+img = img[isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+
+#Define the center of the disk
+center0=[-.5,-.5]
+
+#Create an array with the PA of each pixel in degrees
+ang_arr=array_angle(img.shape[1],center=center0)
+
+#Create a mask to remove the pixels outside the influence fonction of the DM
+mask2= mask_ellispe(img.shape[1],50,50,0,3,center=center0,full=True)
+
+
+fig, axs = plt.subplots(4, 2, figsize=(4 * 2 + 1, 4 * 4))
+# Shared vmin and vmax for consistent color scaling
+vmin = -1.5e-6
+vmax = 0.5e-5
+
+vmin_ADI = -1e-5
+vmax_ADI = 0.5e-4
+
+vmins = [-3e-6, -3e-6, -1.5e-6, -1.5e-6]
+vmaxs = [1.2e-5, 5e-5, 1e-5, 2e-5]
+
+cmaps = 'Blues_r'
+sigma_filts = [3, 3, 5, 5]#[1, 2, 5, 4]
+PCA_filts = [4, 4, 4, 4]
+
+folds = ['cdi/', 'cdi 2/', 'cdi 3/', 'cdi 4/']
+disks = ['HR 4796A', 'CPD-36 6759', 'HD 169142', 'HD 163296']
+
+# Set x and y ticks at regular pixel intervals
+interv = 600
+x_pixels = np.linspace(size*12.25-interv, size*12.25 + interv, 5, endpoint=True) /12.25
+y_pixels = x_pixels
+
+# Convert ticks to physical units (e.g., microns)
+x_labels = [f'{(x-size)  * 12.25:.0f}' for x in x_pixels]
+y_labels = [f'{(y-size)  * 12.25:.0f}' for y in y_pixels]
+
+
+ang_wh = []
+im_wh = []
+for i,fold in enumerate(folds):
+
+    #Create the ellipse in which the disk is included
+    if i == 0:
+        mask_throughput_calculation = mask_ellispe(img.shape[1],90,20,-27.5,30,center=center0)
+    elif i == 1:
+        #mask_throughput_calculation = mask_ellispe(img.shape[1],25,30,0,15,center=center0)
+        #m = matrices.creatingMaskDH(img.shape[1],'square',choosepixDH=[-70, 0, -70, 70], circ_rad=[circ_rad_inn, 70], circ_side=circ_side, circ_offset=10, circ_angle=0)
+        mask_throughput_calculation = spiral_mask(img.shape, spiral_func=lambda theta: 24 + 5 * theta,thickness=4,theta_min=0 , delta_theta = np.pi+ np.pi/16,theta_step=0.005)
+        mask_throughput_calculation = mask_throughput_calculation + spiral_mask(img.shape, spiral_func=lambda theta: 8 + 5 * theta,thickness=4,theta_min=np.pi , delta_theta = np.pi - np.pi/6,theta_step=0.005)
+        mask_throughput_calculation = mask_throughput_calculation.T
+
+    elif i == 2:
+        mask_throughput_calculation = mask_ellispe(img.shape[1],42,42,0,20,center=center0)
+        mask_throughput_calculation = spiral_mask(img.shape, spiral_func=lambda theta: 27 + 3.5 * theta,thickness=5,theta_min=5*np.pi/6 , delta_theta = 3*2*np.pi/4,theta_step=0.005)
+
+    elif i == 3:
+        mask_throughput_calculation = mask_ellispe(img.shape[1],50,27,47,20,center=center0)
+
+    mask_throughput_calculation = mask_throughput_calculation * mask2
+
+    for j in np.arange(2):
+        ax = axs[i,j]
+        vmin = vmins[i]
+        vmax = vmaxs[i]
+        ImageDirectory = WORK_PATH0 + fold
+        processed_directory = ImageDirectory + 'processed_data/vip/'
+        # Apply ticks and labels
+        ax.set_xticks(x_pixels)
+        ax.set_yticks(y_pixels)
+        if j == 0:
+            cube = fits.getdata(processed_directory +'ADI_tot_VIP.fits')
+            img = (cube*mask)[int(len(cube)/2),isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+            im = ax.imshow(img, vmin=vmin, vmax=vmax, cmap=cmaps)
+            ax.set_ylabel('DEC [mas]')
+            ax.set_yticklabels(y_labels)
+        else:
+            # if i == 2 or i ==3:
+            #     cube = fits.getdata(processed_directory +'Rotated_stacked_hpfiltered_mfiltered_inc.fits')
+            # elif i == 3:
+            #     cube = fits.getdata(processed_directory +'Rotated_stacked_hpfiltered_khisquare_inc.fits')
+            if i == 3:
+                cube = fits.getdata(processed_directory +'Rotated_stacked_hpfiltered_khisquare_inc.fits')
+            else:
+                cube = fits.getdata(processed_directory +'Rotated_stacked_hpfiltered_mfiltered_inc.fits')
+            sigma_filt = sigma_filts[i]
+            PCA_filt = PCA_filts[i]
+            img = cube[PCA_filt, sigma_filt,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+            im = ax.imshow(img, vmin=vmin, vmax=vmax, cmap=cmaps)
+            ax.set_yticklabels([]) 
+        
+        ax.set_xticklabels([])
+
+
+        ax.text(0.98, 0.95, disks[i], horizontalalignment='right', verticalalignment='center', transform=ax.transAxes, color = 'white', bbox=dict(facecolor='none', edgecolor='white', boxstyle='round,pad=0.2'))
+
+        
+        ax.contour(mask_throughput_calculation, alpha = 0.4)
+
+        # Where the pixel of the mask are
+        wh_mask = np.where(mask_throughput_calculation ==1)
+
+        # For each image, extract the pixels that are behind the mask
+        im_wh.append(img[wh_mask])
+
+        # Extract the PA of the pixels that are behind the mask
+        ang_wh.append(ang_arr[wh_mask])
+
+    #axs[i, 0].set_ylabel(disks[i], fontsize=16, labelpad=10, va='center')
+axs[0, 0].set_title('ADI', fontsize=16)
+axs[0, 1].set_title('CDI', fontsize=16)
+
+# Label axes
+axs[3, 0].set_xlabel('RA [mas]')
+axs[3, 1].set_xlabel('RA [mas]')
+axs[3, 0].set_xticklabels(x_labels)
+axs[3, 1].set_xticklabels(x_labels)
+
+plt.tight_layout()
+plt.savefig(WORK_PATH0 + "comparison_ADI_CDI.pdf", dpi=300, bbox_inches='tight')
+plt.show()
+
+#%%
+from matplotlib.ticker import ScalarFormatter
+# Set scientific notation for y-axis
+formatter = ScalarFormatter()
+formatter.set_scientific(True)
+formatter.set_powerlimits((-3, 3))
+    
+fig, axs = plt.subplots(4, 1, figsize=(4, 16), sharex = True)
+axs = axs.flatten()
+n = 0
+
+axs[0].plot(ang_wh[n+1],im_wh[n+1],'+',label='CDI')
+axs[0].plot(ang_wh[n],im_wh[n],'+',label='ADI')
+axs[0].text(0.98, 0.95, 'HR 4796A', horizontalalignment='right', verticalalignment='center', transform=axs[0].transAxes, bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.2'))
+
+n=2
+axs[1].plot(ang_wh[n+1],im_wh[n+1],'+',label='CDI')
+axs[1].plot(ang_wh[n],im_wh[n],'+',label='ADI')
+axs[1].text(0.98, 0.95, 'CPD-36 6759 spirals', horizontalalignment='right', verticalalignment='center', transform=axs[1].transAxes, bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.2'))
+axs[1].yaxis.set_major_formatter(formatter)
+
+n=4
+axs[2].plot(ang_wh[n+1],im_wh[n+1],'+',label='CDI')
+axs[2].plot(ang_wh[n],im_wh[n],'+',label='ADI')
+axs[2].text(0.98, 0.95, 'HD 169142 - outer disk', horizontalalignment='right', verticalalignment='center', transform=axs[2].transAxes, bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.2'))
+
+
+n=6
+axs[3].plot(ang_wh[n+1],im_wh[n+1],'+',label='CDI')
+axs[3].plot(ang_wh[n],im_wh[n],'+',label='ADI')
+axs[3].text(0.98, 0.95, 'HD 163296', horizontalalignment='right', verticalalignment='center', transform=axs[3].transAxes, bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.2'))
+
+
+axs[0].set_ylim(0,4e-5)
+axs[1].set_ylim(0,1.5e-4)
+axs[2].set_ylim(0,1e-5)
+axs[3].set_ylim(0,4e-5)
+axs[0].legend(loc='best',fontsize=12)
+
+axs[3].set_xlabel('PA (degrees)')
+
+axs[0].set_ylabel('Normalized intensity of the disk')
+axs[1].set_ylabel('Normalized intensity of the disk')
+axs[2].set_ylabel('Normalized intensity of the disk')
+axs[3].set_ylabel('Normalized intensity of the disk')
+plt.savefig(WORK_PATH0 + "throughput_ADI_CDI.pdf", dpi=300, bbox_inches='tight')
+plt.show()
+
+#%%
+from matplotlib.ticker import ScalarFormatter
+    
+fig, axs = plt.subplots(4, 1, figsize=(4, 16), sharex = True)
+axs = axs.flatten()
+n = 0
+ratio = im_wh[n+1]/im_wh[n]
+axs[0].plot(ang_wh[n],ratio,'+',label='Ratio')
+axs[0].text(0.98, 0.95, 'HR 4796A', horizontalalignment='right', verticalalignment='center', transform=axs[0].transAxes, bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.2'))
+print('mean: ',np.mean(ratio[np.where(ratio>0)]))
+print('max: ',np.amax(ratio[np.where(ratio>0)]))
+
+n=2
+ratio = im_wh[n+1]/im_wh[n]
+axs[1].plot(ang_wh[n],ratio,'+',label='Ratio')
+axs[1].text(0.98, 0.95, 'CPD-36 6759 spirals', horizontalalignment='right', verticalalignment='center', transform=axs[1].transAxes, bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.2'))
+print('mean: ',np.mean(ratio[np.where(ratio>0)]))
+print('max: ',np.amax(ratio[np.where(ratio>0)]))
+
+
+n=4
+ratio = im_wh[n+1]/im_wh[n]
+axs[2].plot(ang_wh[n],ratio,'+',label='Ratio')
+axs[2].text(0.98, 0.95, 'HD 169142 - outer disk', horizontalalignment='right', verticalalignment='center', transform=axs[2].transAxes, bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.2'))
+print('mean: ',np.mean(ratio[np.where(ratio>0)]))
+print('max: ',np.amax(ratio[np.where(ratio>0)]))
+
+
+n=6
+ratio = im_wh[n+1]/im_wh[n]
+axs[3].plot(ang_wh[n],ratio,'+',label='Ratio')
+axs[3].text(0.98, 0.95, 'HD 163296', horizontalalignment='right', verticalalignment='center', transform=axs[3].transAxes, bbox=dict(facecolor='none', edgecolor='black', boxstyle='round,pad=0.2'))
+print('mean: ',np.mean(ratio[np.where(ratio>0)]))
+print('max: ',np.amax(ratio[np.where(ratio>0)]))
+
+
+'''
+axs[0].set_yscale('log')
+axs[1].set_yscale('log')
+axs[2].set_yscale('log')
+axs[3].set_yscale('log')
+'''
+
+axs[0].set_ylim(1,1200)
+axs[1].set_ylim(1,1000)
+axs[2].set_ylim(1,1000)
+axs[3].set_ylim(1,1000)
+axs[0].legend(loc='best',fontsize=12)
+
+axs[3].set_xlabel('PA (degrees)')
+
+axs[0].set_ylabel('Normalized intensity of the disk')
+axs[1].set_ylabel('Normalized intensity of the disk')
+axs[2].set_ylabel('Normalized intensity of the disk')
+axs[3].set_ylabel('Normalized intensity of the disk')
+plt.savefig(WORK_PATH0 + "throughput_ADI_CDI.pdf", dpi=300, bbox_inches='tight')
+plt.show()
 
 
 
+#%% Plotting resulting image for 1 disk through various techniques
+which = 0
+size = 65
+sigma_hp = 3
+img1 = Rotated_stacked_hpfiltered_khisquare_inc[0,sigma_hp,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img2 = Rotated_stacked_hpfiltered_khisquare_inc[-1,sigma_hp,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img3 = Rotated_stacked_hpfiltered_mfiltered_inc[1,sigma_hp,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img4 = Rotated_stacked_hpfiltered_khisquare_inc[1,sigma_hp,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+vmin = -1.5e-6
+vmax = 1e-5
+cmaps = 'Blues_r'
+
+# Plotting the images side by side
+fig, axs = plt.subplots(2, 2, figsize=(8, 9.4))
+axs = axs.flatten()
+
+axs[0].imshow(img1, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[0].axis('off')  # Hide axes
+#axs[0].set_title('Image 1')
+
+axs[1].imshow(img2, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[1].axis('off')
+#axs[1].set_title('Image 2')
+
+axs[2].imshow(img3, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[2].axis('off')
+
+im = axs[3].imshow(img4, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[3].axis('off')
+
+plt.tight_layout()
+fig.subplots_adjust(bottom=0.115)
+cbar_ax = fig.add_axes([0.04, 0.11, 0.92, 0.02])
+cbar = fig.colorbar(im, cax=cbar_ax , orientation='horizontal')
+cbar.ax.tick_params(labelsize=20)
+cbar.ax.xaxis.get_offset_text().set(size=20)
+#fig.colorbar(im, ax=axs.ravel().tolist(), fraction=0.1, pad=0.05)
+
+
+plt.savefig(processed_directory + 'Comparison_algorithms.pdf')
+plt.show()
 
 
 
@@ -491,9 +1014,10 @@ ADI_tot_save = []
 ADI_tot_filtered_save = []
 ADI_inco_save = []
 ADI_inco_filtered_save = []
+ADI_inco_firstcosubtracted_filtered_save = []
 
 for nb_iter in np.arange(len(cube_tot_removed_ini)):
-    scan_iter = np.arange(1,len(cube_tot_removed_ini)-1-nb_iter)[::-1]
+    scan_iter = np.arange(1,len(cube_tot_removed_ini)-nb_iter)[::-1]
 
     cube_tot_removed = cube_tot_removed_ini.copy() #* mask
     cube_co_removed = cube_co_removed_ini.copy() * mask
@@ -503,6 +1027,8 @@ for nb_iter in np.arange(len(cube_tot_removed_ini)):
         cube_tot_removed = np.delete(cube_tot_removed, i, axis = 0)
         cube_co_removed = np.delete(cube_co_removed, i, axis = 0)
         newPA = np.delete(newPA, i, axis = 0)
+
+    print(len(cube_tot_removed))
 
     # ADI of cube tot
     u,s,vh = perf.get_cube_svd(cube_tot_removed)
@@ -522,21 +1048,31 @@ for nb_iter in np.arange(len(cube_tot_removed_ini)):
     ADI_inco_result = perf.reduction_ADI(u, s, vh, [0], - newPA)[0] #[0] instead of vector
     ADI_inco_save.append(ADI_inco_result*mask)
 
+    #Subtracting 1st coherent component to all iterations
+    u,s,vh = perf.get_cube_svd(cube_tot_removed - cube_co_removed[0])
+    ADI_inco_firstcosubtracted = perf.reduction_ADI(u, s, vh, [0], - newPA)[0] #[0] instead of vector
+    
     # High-pass filtering of ADI[0] (where the cube has simply been rotated and stacked)
     
     ADI_tot_filtered = []
     ADI_inco_filtered = []
+    ADI_inco_firstcosubtracted_filtered = []
     for high_pass_filter_cut in np.arange(1,11):
         ADI_tot_filtered.append(perf.high_pass_filter(ADI_tot_result, high_pass_filter_cut)*mask)
         ADI_inco_filtered.append(perf.high_pass_filter(ADI_inco_result, high_pass_filter_cut)*mask)
+        ADI_inco_firstcosubtracted_filtered.append(perf.high_pass_filter(ADI_inco_firstcosubtracted, high_pass_filter_cut)*mask)
+
     ADI_tot_filtered_save.append(ADI_tot_filtered)
     ADI_inco_filtered_save.append(ADI_inco_filtered)
+    ADI_inco_firstcosubtracted_filtered_save.append(ADI_inco_firstcosubtracted_filtered)
+
 
 
 ADI_tot_save = np.array(ADI_tot_save)
 ADI_tot_filtered_save = np.array(ADI_tot_filtered_save)
 ADI_inco_save = np.array(ADI_inco_save)
 ADI_inco_filtered_save = np.array(ADI_inco_filtered_save)
+ADI_inco_firstcosubtracted_filtered_save = np.array(ADI_inco_firstcosubtracted_filtered_save)
 
 
 
@@ -544,7 +1080,99 @@ fits.writeto(processed_directory +'Rotated_stacked_tot_vs_iter.fits', ADI_tot_sa
 fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_tot_vs_iter.fits', np.swapaxes(ADI_tot_filtered_save,0,1), overwrite=True)
 fits.writeto(processed_directory +'Rotated_stacked_mfiltered_inco_vs_iter.fits', ADI_inco_save, overwrite=True)
 fits.writeto(processed_directory +'Rotated_stacked_hpfiltered_mfiltered_inco_vs_iter.fits', np.swapaxes(ADI_inco_filtered_save,0,1), overwrite=True)
+#%%
+swap_tot = np.swapaxes(ADI_tot_filtered_save,0,1)
+swap_inco = np.swapaxes(ADI_inco_filtered_save,0,1)
+swap_firstiter = np.swapaxes(ADI_inco_firstcosubtracted_filtered_save,0,1)
 
+size = 65
+sigma_hp = 2
+img1 = swap_tot[sigma_hp,0,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img2 = swap_tot[sigma_hp,2,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img3 = swap_tot[sigma_hp,5,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img4 = swap_tot[sigma_hp,8,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img5 = swap_inco[sigma_hp,0,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img6 = swap_inco[sigma_hp,2,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img7 = swap_inco[sigma_hp,5,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img8 = swap_inco[sigma_hp,8,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img9 = swap_firstiter[sigma_hp,0,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img10 = swap_firstiter[sigma_hp,2,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img11 = swap_firstiter[sigma_hp,5,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img12 = swap_firstiter[sigma_hp,8,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+
+vmin = -1.5e-6
+vmax = 1e-5
+cmaps = 'Blues_r'
+
+# Plotting the images side by side
+fig, axs = plt.subplots(3, 4, figsize=(20, 15))
+axs = axs.flatten()
+
+axs[0].set_title(r'$N = 1$', fontsize=20)
+axs[1].set_title(r'$N = 3$', fontsize=20)
+axs[2].set_title(r'$N = 6$', fontsize=20)
+axs[3].set_title(r'$N = 9$', fontsize=20)
+
+axs[0].set_ylabel('NoADI', fontsize=25, labelpad=15, va='center')
+axs[4].set_ylabel('CDI', fontsize=25, labelpad=15, va='center')
+axs[8].set_ylabel('Single-PWP scheme CDI', fontsize=25, labelpad=15, va='center')
+
+
+
+axs[0].imshow(img1, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[0].set_xticks([])
+axs[0].set_yticks([])
+
+axs[1].imshow(img2, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[1].set_xticks([])
+axs[1].set_yticks([])
+#axs[1].set_title('Image 2')
+
+axs[2].imshow(img3, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[2].set_xticks([])
+axs[2].set_yticks([])
+#axs[2].set_title('Image 3')
+
+axs[3].imshow(img4, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[3].set_xticks([])
+axs[3].set_yticks([])
+
+axs[4].imshow(img5, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[4].set_xticks([])
+axs[4].set_yticks([])
+
+axs[5].imshow(img6, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[5].set_xticks([])
+axs[5].set_yticks([])
+
+axs[6].imshow(img7, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[6].set_xticks([])
+axs[6].set_yticks([])
+
+axs[7].imshow(img8, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[7].set_xticks([])
+axs[7].set_yticks([])
+
+axs[8].imshow(img9, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[8].set_xticks([])
+axs[8].set_yticks([])
+
+axs[9].imshow(img10, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[9].set_xticks([])
+axs[9].set_yticks([])
+
+axs[10].imshow(img11, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[10].set_xticks([])
+axs[10].set_yticks([])
+
+axs[11].imshow(img12, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[11].set_xticks([])
+axs[11].set_yticks([])
+
+
+plt.tight_layout()
+plt.savefig(processed_directory + 'Image_vs_frame.pdf')
+plt.show()
 
 
 #%% Test PCA on probe images for super coherent intensity
@@ -865,6 +1493,42 @@ Rotated_stacked_hpfiltered_totalinc.append(hp_filtered)
 
 Rotated_stacked_hpfiltered_totalinc = np.array(Rotated_stacked_hpfiltered_totalinc) * mask
 fits.writeto(processed_directory+'Rotated_stacked_hpfiltered_totalinc.fits', Rotated_stacked_hpfiltered_totalinc, overwrite=True)
+#%% Comparison signal extracted from probe/unprobed image
+
+image_probe = fits.getdata(processed_directory+'Rotated_stacked_hpfiltered_mean_inc_probe.fits')
+image_tot = fits.getdata(processed_directory+'Rotated_stacked_hpfiltered_mfiltered_inc.fits')
+#image_ref = fits.getdata(processed_directory+'Rotated_stacked_hpfiltered_mfiltered_inc.fits')
+
+size = 65
+which = 3
+img1 = image_tot[0,which,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img2 = image_tot[2,which,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img3 = image_probe[which,isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+
+vmin = -5e-6
+vmax = 2e-5
+cmaps = 'Blues_r'
+
+# Plotting the images side by side
+fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+axs = axs.flatten()
+
+
+axs[0].imshow(img1, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[0].axis('off')  # Hide axes
+#axs[0].set_title('Image 1')
+
+axs[1].imshow(img2, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[1].axis('off')
+#axs[1].set_title('Image 2')
+axs[2].imshow(img3, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[2].axis('off')
+
+
+plt.tight_layout()
+plt.savefig(processed_directory + 'Self_calibration.pdf')
+plt.show()
+
 
 #%% Test VIP PCA
 from hciplot import plot_frames, plot_cubes  # plotting routines
@@ -981,6 +1645,7 @@ plt.show()
 from vip_hci.fm import ScatteredLightDisk
 from vip_hci.fm import cube_inject_fakedisk
 
+
 pixel_scale=0.01225 # pixel scale in arcsec/px
 dstar= 72.8 # distance to the star in pc
 nx = 200 # number of pixels of your image in X
@@ -1018,15 +1683,82 @@ cube_fake_disk3_convolved = cube_inject_fakedisk(fake_disk1_map, -newPA,
 
 cube_im_minus_disk = cube_tot_removed - cube_fake_disk3_convolved
 
-plot_frames(fake_disk1_map, grid=False, size_factor=6)
-fits.writeto(processed_directory+'tot_minus_disk.fits',cube_im_minus_disk,overwrite=True)
+lim_iter = 9
+cube_im_minus_disk = cube_im_minus_disk[:lim_iter]
+cube_co_removed_test = cube_co_removed[:lim_iter]
+cube_tot_removed_test = cube_tot_removed[:lim_iter]
+PA_test = newPA[:lim_iter]
 
-ncomponent = 0
-high_pass_filter_cut = 3
-pca_cdi_fr = pca(cube_im_minus_disk, -newPA, ncomp=ncomponent, cube_ref=cube_co_removed,mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut)
-fits.writeto(processed_directory+'im.fits',pca_cdi_fr,overwrite=True)
+circ_side = 'Left'
+circ_rad_inn = 50
+#mask_khi = matrices.creatingMaskDH(200,'circle',choosepixDH=[-70, 70, 5, 70], circ_rad=[45, 75], circ_side="Full", circ_offset=0, circ_angle=0)
+mask_khi = matrices.creatingMaskDH(200,'square',choosepixDH=[-30, 30, 40, 70], circ_rad=[circ_rad_inn, 70], circ_side=circ_side, circ_offset=10, circ_angle=0)
 
-#%% Contrast curves after forward modeling
+#plot_frames(fake_disk1_map, grid=False, size_factor=6)
+#fits.writeto(processed_directory+'tot_minus_disk.fits',cube_im_minus_disk,overwrite=True)
+
+high_pass_filter_cut = 5
+#pca_cdi_fr = pca(cube_im_minus_disk, -newPA, ncomp=ncomponent, cube_ref=cube_co_removed,mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut)
+#fits.writeto(processed_directory+'im.fits',pca_cdi_fr,overwrite=True)
+ncomp_ADI = int(lim_iter/2)
+ncomp_CDI = np.amax([1,int(lim_iter/2)])
+
+pca_nocdi_nodisk = pca(cube_im_minus_disk, -PA_test, ncomp=0, cube_ref=cube_co_removed_test,mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut)
+pca_cdi_nodisk = pca(cube_im_minus_disk, -PA_test, ncomp=ncomp_CDI, cube_ref=cube_co_removed_test,mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut)
+pca_nocdi_disk = pca(cube_tot_removed_test, -PA_test, ncomp=0, cube_ref=cube_co_removed_test,mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut)
+pca_cdi_disk = pca(cube_tot_removed_test, -PA_test, ncomp=ncomp_CDI, cube_ref=cube_co_removed_test,mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut)
+pca_adi_disk = pca(cube_tot_removed_test, -PA_test, ncomp=ncomp_ADI)
+pca_adi_nodisk = pca(cube_im_minus_disk, -PA_test, ncomp=ncomp_ADI)
+
+
+size = 65
+img1 = pca_nocdi_nodisk[isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img2 = pca_cdi_nodisk[isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img4 = pca_nocdi_disk[isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img5 = pca_cdi_disk[isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img3 = pca_adi_nodisk[isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+img6 = pca_adi_disk[isz//2-size:isz//2+size,isz//2-size:isz//2+size]
+
+fits.writeto(processed_directory+'im_test_comp.fits',np.array([img4,img5,img6]),overwrite=True)
+
+
+vmax = 1e-5
+cmaps = 'Blues_r'
+
+# Plotting the images side by side
+fig, axs = plt.subplots(2, 3, figsize=(15, 10))
+axs = axs.flatten()
+
+axs[0].imshow(img1, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[0].axis('off')  # Hide axes
+#axs[0].set_title('Image 1')
+axs[4].contour(mask_khi[isz//2-size:isz//2+size,isz//2-size:isz//2+size])
+
+axs[1].imshow(img2, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[1].axis('off')
+#axs[1].set_title('Image 2')
+
+axs[2].imshow(img3, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[2].axis('off')
+#axs[2].set_title('Image 3')
+
+axs[3].imshow(img4, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[3].axis('off')
+
+axs[4].imshow(img5, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[4].axis('off')
+
+axs[5].imshow(img6, vmin=vmin, vmax=vmax, cmap=cmaps)
+axs[5].axis('off')
+
+#%%
+plt.tight_layout()
+plt.savefig(processed_directory + 'FM_HR4796.pdf')
+plt.show()
+
+fits.writeto(processed_directory+'im_test_'+ str(circ_rad_inn) +'.fits',img2,overwrite=True)
+
+#% Contrast curves after forward modeling
 from vip_hci.fm import normalize_psf
 from vip_hci.metrics import contrast_curve
 from vip_hci.config import VLT_SPHERE_IRDIS
@@ -1037,29 +1769,147 @@ PSF,smoothPSF,maxPSF,exppsf = SPHERE.process_PSF(ImageDirectory,lightsource_esti
 psfn, flux, fwhm_sphere = normalize_psf(PSF, size=19, debug=True, full_output=True)
 print(flux, maxPSF)
 
-high_pass_filter_cut = 3
+plt.close()
+# Plotting the images side by side
+fig, axs = plt.subplots(1, 3, figsize=(15, 5))# , sharex=True,  gridspec_kw={'height_ratios': [3, 1]})
+axs = axs.flatten()
 
-cc_nocdi_1 = contrast_curve(cube_im_minus_disk * maxPSF, -newPA, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
-                        sigma=5, nbranch=3, algo=pca, ncomp=0, cube_ref=cube_co_removed, mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut)
-cc_cdi_1 = contrast_curve(cube_im_minus_disk * maxPSF, -newPA, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
-                        sigma=5, nbranch=3, algo=pca, ncomp=1, cube_ref=cube_co_removed, mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut)
+for high_pass_filter_cut in [None, 5][::-1]:
 
+    cc = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp = ncomp_CDI, cube_ref=cube_co_removed_test, mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut, plot = False)
+    if high_pass_filter_cut == None:
+        lab = 'CDI - No high-pass filter'
+        alph =1 
+        color = 'black'
+        lin = '-'
+    else:
+        lab = 'CDI - $\sigma_{hp}$ = ' + str(high_pass_filter_cut) + 'pixels'
+        alph = 1
+        color = 'red'
+        lin = '-'
+    axs[0].plot(cc['distance_arcsec'], 
+            -2.5*np.log10(cc['sensitivity_student']), 
+         color=color,  alpha = alph, linestyle= lin)
+    axs[1].plot(cc['distance_arcsec'], 
+            (cc['throughput']), 
+         color=color,  alpha = alph, linestyle= lin)
+    axs[2].plot(cc['distance_arcsec'], 
+            (cc['throughput'])/cc['sensitivity_student'], 
+         color=color,  alpha = alph, linestyle= lin, label= lab)
+    
 
-#%
-plt.figure(figsize=(8,5))
-plt.plot(cc_nocdi_1['distance']*pxscale_naco, 
-         -2.5*np.log10(cc_nocdi_1['sensitivity_student']), 
-         'b--', label='5-sigma contrast (no CDI)', alpha=0.5)
-plt.plot(cc_cdi_1['distance']*pxscale_naco, 
-         -2.5*np.log10(cc_cdi_1['sensitivity_student']), 
-         'r--', label='5-sigma contrast (CDI)', alpha=0.5)
+cc = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp=ncomp_ADI, plot = False)
+axs[0].plot(cc['distance_arcsec'], 
+            -2.5*np.log10(cc['sensitivity_student']), 
+         color='green',  alpha = alph, linestyle= lin)
+axs[1].plot(cc['distance_arcsec'], 
+            (cc['throughput']), 
+         color='green',  alpha = alph, linestyle= lin)
+axs[2].plot(cc['distance_arcsec'], 
+            (cc['throughput'])/cc['sensitivity_student'], 
+         color='green',  alpha = alph, linestyle= lin, label= 'ADI')
 
+for ax in axs:
+    ax.tick_params(axis="x", labelsize=14)
+    ax.tick_params(axis="y", labelsize=14)
+    ax.set_xlabel('Separation (arcsec)',fontsize=15)
+    ax.set_xlim(0, 0.8)
+axs[0].invert_yaxis()
+axs[2].set_yscale("log")
+axs[0].set_ylim(14,6)
+axs[1].set_ylim(0,1.1)
+axs[2].set_ylim(1,1e5)
+axs[0].set_ylabel('Contrast (mag)',fontsize=15)
+axs[1].set_ylabel('Throughput',fontsize=15)
+axs[2].set_ylabel('SNR',fontsize=15)
+axs[2].legend(loc='best',fontsize=12)
 
-plt.gca().invert_yaxis()
-plt.ylabel('Contrast (mag)')
-plt.xlabel('Separation (arcsec)')
-_ = plt.legend(loc='best')
+plt.savefig(processed_directory + 'Forward_modeling_'+str(lim_iter)+'iters.pdf')
+plt.tight_layout()
 plt.show()
+
+""" 
+cc_nocdi_ = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp=0,  sigma_hp = high_pass_filter_cut, plot = False)
+cc_cdi_1 = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp=ncomp_CDI, cube_ref=cube_co_removed_test, mask_rdi = mask_khi, sigma_hp = 1, plot=False)
+
+
+high_pass_filter_cut = 1
+
+cc_nocdi_1 = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp=0,  sigma_hp = high_pass_filter_cut, plot = False)
+cc_cdi_1 = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp=ncomp_CDI, cube_ref=cube_co_removed_test, mask_rdi = mask_khi, sigma_hp = 1, plot=False)
+
+high_pass_filter_cut = 3
+cc_nocdi_3 = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp=0,  sigma_hp = high_pass_filter_cut, plot = False)
+cc_cdi_3 = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp=ncomp_CDI, cube_ref=cube_co_removed_test, mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut, plot=False)
+high_pass_filter_cut = 5
+cc_nocdi_5 = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp=0,  sigma_hp = high_pass_filter_cut, plot = False)
+cc_cdi_5 = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp=ncomp_CDI, cube_ref=cube_co_removed_test, mask_rdi = mask_khi, sigma_hp = high_pass_filter_cut, plot=False)
+
+cc_ADI = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp = ncomp_ADI,  plot = False)
+ 
+
+# Plotting the images side by side
+fig, axs = plt.subplots(2, 1, figsize=(7, 8) , sharex=True,  gridspec_kw={'height_ratios': [3, 1]})
+axs = axs.flatten()
+
+axs[0].plot(cc_nocdi_1['distance']*pxscale_naco, 
+         -2.5*np.log10(cc_nocdi_1['sensitivity_student']), 
+         'b--', label='5-sigma contrast (noADI)', alpha=1)
+axs[0].plot(cc_cdi_1['distance']*pxscale_naco, 
+         -2.5*np.log10(cc_cdi_1['sensitivity_student']), 
+         'r--', label='5-sigma contrast (CDI)', alpha=1)
+axs[0].plot(cc_nocdi_1['distance']*pxscale_naco, 
+         -2.5*np.log10(cc_nocdi_1['sensitivity_student']), 
+         'b--', label='5-sigma contrast (noADI)', alpha=1)
+axs[0].plot(cc_cdi_1['distance']*pxscale_naco, 
+         -2.5*np.log10(cc_cdi_1['sensitivity_student']), 
+         'r--', label='5-sigma contrast (CDI)', alpha=1)
+axs[0].plot(cc_ADI['distance']*pxscale_naco, 
+         -2.5*np.log10(cc_ADI['sensitivity_student']), 
+         'g--', label='5-sigma contrast (ADI)', alpha=1)
+axs[0].plot(cc_nocdi_1['distance']*pxscale_naco, 
+         -2.5*np.log10(cc_nocdi_1['sensitivity_student']), 
+         'b--', label='5-sigma contrast (noADI)', alpha=1)
+
+axs[0].plot(cc_ADI['distance']*pxscale_naco, 
+         -2.5*np.log10(cc_ADI['sensitivity_student']), 
+         'g--', label='5-sigma contrast (ADI)', alpha=1)
+
+
+#axs[0].set_title('Image 1')
+axs[0].tick_params(axis="y", labelsize=14)
+axs[0].invert_yaxis()
+axs[0].set_ylabel('Contrast (mag)',fontsize=15)
+plt.xlabel('Separation (arcsec)',fontsize=15)
+axs[0].legend(loc='best',fontsize=15)
+
+axs[1].plot(cc_nocdi_1['distance']*pxscale_naco, 
+         (-2.5*np.log10(cc_cdi_1['sensitivity_student']))- (-2.5*np.log10(cc_nocdi_1['sensitivity_student'])), 
+         'blue', alpha=1)
+axs[1].plot(cc_nocdi_1['distance']*pxscale_naco, 
+         (-2.5*np.log10(cc_cdi_1['sensitivity_student']))- (-2.5*np.log10(cc_ADI['sensitivity_student'])), 
+         'green', alpha=1)
+
+axs[1].set_ylabel('$\Delta$ mag',fontsize=15)
+
+
+plt.xticks(fontsize=14)
+#plt.yticks(np.arange(-1,6,2)/10, fontsize=14)
+
+fig.tight_layout()
+plt.savefig(processed_directory + 'ContrastHR4796.pdf')
+plt.show()"""
 #%% Contrast curves vs iter
 cdi=[]
 no_cdi = []
@@ -1112,27 +1962,43 @@ plt.show()
 #%% Throughput calculation
 plt.figure(figsize=(8,5))
 
-for i in [1, 3, 5, 7, None][::-1]:
-    cc = contrast_curve(cube_im_minus_disk * maxPSF, -newPA, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
-                        sigma=5, nbranch=3, algo=pca, ncomp=1, cube_ref=cube_co_removed, mask_rdi = mask_khi, sigma_hp = i, plot = False)
+for i in [1, 3, 5, None][::-1]:
+#for i in [None]:
+    cc = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp=1, cube_ref=cube_co_removed_test, mask_rdi = mask_khi, sigma_hp = i, plot = False)
     if i == None:
-        lab = 'No high-pass filter'
+        lab = 'CDI - No high-pass filter'
         alph =1 
         color = 'black'
         lin = '-'
     else:
-        lab = 'sigma = ' + str(i)
-        alph = (i) * 1/7 
+        lab = '$\sigma_{hp}$ = ' + str(i) + 'pixels'
+        alph = (i) * 1/7 + 0.2
         color = 'red'
         lin = '-'
     plt.plot(cc['distance_arcsec'], 
-            (cc['throughput']), 
+            (cc['throughput'])/cc['sensitivity_student'], 
          color=color,  alpha = alph, linestyle= lin, label= lab)
+    '''plt.plot(cc['distance_arcsec'], 
+            (cc['throughput']), 
+         color=color,  alpha = alph, linestyle= lin, label= lab)'''
 
+cc = contrast_curve(cube_im_minus_disk * maxPSF, -PA_test, psfn, fwhm=fwhm_sphere, pxscale=pxscale_naco, starphot=flux, 
+                        sigma=5, algo=pca, ncomp=2, plot = False)
+plt.plot(cc['distance_arcsec'], 
+            (cc['throughput'])/cc['sensitivity_student'], 
+         color='green',  alpha = 1, linestyle= '-', label= 'ADI')
+'''plt.plot(cc['distance_arcsec'], 
+            (cc['throughput']), 
+         color='green',  alpha = 1, linestyle= '-', label= 'ADI')'''
 
-plt.ylabel('Throughput')
-plt.xlabel('Separation (arcsec)')
-_ = plt.legend(loc='lower right')
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+plt.ylabel('SNR', fontsize=15)
+plt.xlabel('Separation (arcsec)',fontsize=15)
+_ = plt.legend(loc='lower right' ,fontsize=15)
+plt.yscale('log')
+plt.savefig(processed_directory + 'Throughput.pdf')
 plt.show()
 
 
