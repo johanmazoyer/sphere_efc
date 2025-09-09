@@ -83,7 +83,7 @@ def roundpupil(nbpix, prad1):
     pupilnormal[rr<=prad1] = 1.
     return pupilnormal
 
-def estimateEab(Difference, Vecteurprobes):
+def estimateEab(Difference, PWP_matrix_per_wvl):
     """ --------------------------------------------------
     Estimate focal plane electric field with PW probing
     
@@ -111,7 +111,7 @@ def estimateEab(Difference, Vecteurprobes):
             l = l + 1   """
 
     Difference = Difference.reshape((Difference.shape[0], dimimages ** 2))
-    Resultat_ = np.einsum('ijk,ik->ij', Vecteurprobes, Difference.T)
+    Resultat_ = np.einsum('ijk,ik->ij', PWP_matrix_per_wvl, Difference.T)
     Resultat = Resultat_[:, 0] + 1j * Resultat_[:, 1]
     Resultat = Resultat.reshape(dimimages, dimimages)
 
