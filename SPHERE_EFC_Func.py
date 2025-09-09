@@ -96,8 +96,9 @@ def estimateEab(Difference, Vecteurprobes):
     ------
     Resultat: 2D array, complex, focal plane electric field
     -------------------------------------------------- """
-    numprobe = len(Vecteurprobes[0,0])
+
     dimimages = Difference.shape[1]
+    """ numprobe = len(Vecteurprobes[0,0])
     Differenceij = np.zeros((numprobe))
     Resultat=np.zeros((dimimages,dimimages),dtype=complex)
     l = 0
@@ -107,7 +108,13 @@ def estimateEab(Difference, Vecteurprobes):
             Resultatbis = np.dot(Vecteurprobes[l],Differenceij)
             Resultat[i,j] = Resultatbis[0]+1j*Resultatbis[1]
             
-            l = l + 1  
+            l = l + 1   """
+
+    Difference = Difference.reshape((Difference.shape[0], dimimages ** 2))
+    Resultat_ = np.einsum('ijk,ik->ij', Vecteurprobes, Difference.T)
+    Resultat = Resultat_[:, 0] + 1j * Resultat_[:, 1]
+    Resultat = Resultat.reshape(dimimages, dimimages)
+
     return Resultat/4
        
    
