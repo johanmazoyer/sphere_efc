@@ -750,13 +750,13 @@ def resultEFC(param):
     probe_type = param['probe_type']
     
     filename = probe_type + '_' + zone_to_correct + '_' + str(size_probes) + 'nm' + '_'
-    vectoressai = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'VecteurEstimation.fits')
+    PWP_matrix = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'PWP_matrix.fits')
     maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
     
     print('- Creating difference of images...', flush=True)
     Difference, imagecorrection, Images_to_display = createdifference(param)
     print('- Estimating the focal plane electric field...', flush=True)
-    resultatestimation = estimateEab(Difference, vectoressai)
+    resultatestimation = estimateEab(Difference, PWP_matrix)
     intensity_co = np.abs(resultatestimation)**2
     
     if rescaling == 1:

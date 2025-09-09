@@ -129,7 +129,7 @@ if createPW == True:
     ##
     def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource + filename + 'CorrectedZone',replace=True)
     ##
-    def_mat.SaveFits(vectoressai, ['',0], MatrixDirectory, lightsource + filename + 'VecteurEstimation', replace=True)
+    def_mat.SaveFits(PWP_matrix, ['',0], MatrixDirectory, lightsource + filename + 'PWP_matrix', replace=True)
     ##
     def_mat.SaveFits(int_probes, ['',0], MatrixDirectory, lightsource + filename +'Intensity_probe', replace=True)
     ##
