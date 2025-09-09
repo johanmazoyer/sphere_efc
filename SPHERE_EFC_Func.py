@@ -753,20 +753,34 @@ def resultEFC(param):
     PWP_matrix = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'PWP_matrix.fits')
     maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
     
-    print('- Creating difference of images...', flush=True)
-    Difference, imagecorrection, Images_to_display = createdifference(param)
-    print('- Estimating the focal plane electric field...', flush=True)
-    resultatestimation = estimateEab(Difference, PWP_matrix)
-    intensity_co = np.abs(resultatestimation)**2
-    
-    if rescaling == 1:
-        print('- Rescaling solution and computing incoherent component...', flush=True)
-        intensity_co, intensity_inco, scaling = rescale_coherent_component(intensity_co, imagecorrection, maskDH, 5)
-        print('- Applied factor = ' + str(scaling), flush=True)
-        resultatestimation = resultatestimation * scaling
+    intensity_co = []
+    intensity_inco =[]
+    imagecorrection = []
+    for wvl in np.arange(len(PWP_matrix)):
+        print('- Creating difference of images...', flush=True)
+        Difference, imagecorrection_per_wvl, Images_to_display = createdifference(param)
+        print('- Estimating the focal plane electric field...', flush=True)
+        PWP_matrix_per_wvl = PWP_matrix[wvl]
+        resultatestimation = estimateEab(Difference, PWP_matrix_per_wvl)
+        intensity_co_per_wvl = np.abs(resultatestimation)**2
+
+
+        if rescaling == 1:
+            print('- Rescaling solution and computing incoherent component...', flush=True)
+            intensity_co_per_wvl, intensity_inco_per_wvl, scaling = rescale_coherent_component(intensity_co_per_wvl, imagecorrection_per_wvl, maskDH, 5)
+            print('- Applied factor = ' + str(scaling), flush=True)
+            resultatestimation = resultatestimation * scaling
         
-    else:
-        intensity_inco = imagecorrection - intensity_co
+        else:
+            intensity_inco_per_wvl = imagecorrection_per_wvl - intensity_co_per_wvl
+        
+        intensity_co.append(intensity_co_per_wvl)
+        intensity_inco.append(intensity_inco_per_wvl)
+        imagecorrection.append(imagecorrection_per_wvl)
+    
+    intensity_co = np.array(intensity_co)
+    intensity_inco = np.array(intensity_inco)
+    imagecorrection = np.array(imagecorrection)
     
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
@@ -907,6 +921,10 @@ def FullIterEFC(param):
         fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits', coherent_signal, overwrite = True)
         fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal, overwrite = True)
         fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection, overwrite = True)
+
+        coherent_signal = np.mean(coherent_signal, axis = 0)
+        incoherent_signal = np.mean(incoherent_signal, axis = 0)
+        imagecorrection = np.mean(imagecorrection, axis = 0)
         
         Contrast_tot = str(format(extract_contrast_global([imagecorrection],maskDH)[0,0],'.2e'))
         Contrast_cor = str(format(extract_contrast_global([coherent_signal],maskDH)[0,0],'.2e'))
