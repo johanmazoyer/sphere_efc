@@ -35,7 +35,8 @@ ModelDirectory = os.getcwd()+'/Model/'
 #coro = 'APLC'
 coro = 'FQPM'
 dimimages = 200
-wave = 1.667e-6
+detector = 'IRDIS' #'IFS_YH' or 'IFS_YJ' or 'IRDIS'
+waves = [1.667e-6]
 onsky = 1 #1 if on sky correction
 
 zone_to_correct = 'horizontal' #vertical #horizontal #'FDH'
@@ -57,13 +58,13 @@ createEFCmatrix = False
 
 
 #Wrapper: extract objects in the different pupil and focal planes, depending on the coronagraph and wavelength
-mask384, Pup384, ALC, Lyot384 = def_mat.Upload_CoroConfig(ModelDirectory, coro, wave)
+mask384, Pup384, ALC, Lyot384 = def_mat.Upload_CoroConfig(ModelDirectory, coro)
 
 #Perfect pupil for FQPM (remove numeric noise)
 #AXEL : I don't think this is required:
-if coro == 'FQPM':
-    if onsky == 0:
-        mask384 = def_mat.pupiltodetector(mask384, wave, Lyot384, '', dimimages, coro, pupparf=True)
+# if coro == 'FQPM':
+#     if onsky == 0:
+#         mask384 = def_mat.pupiltodetector(mask384, wave, Lyot384, '', dimimages, coro, pupparf=True)
         
 #Cube of actuator positions in pupil    
 raw_pushact = fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
@@ -82,6 +83,22 @@ amplitudePW = 400/37
 #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
 amplitudeEFCMatrix = 8
 
+if detector == 'IFS_YJ' or detector == 'IFS_YH':
+    if detector == 'IFS_YJ':
+        resolution = 55
+        min_wvl = 1.1e-6
+        max_wvl = 1.35e-6
+        
+    elif detector == 'IFS_YH':
+        resolution = 35
+        min_wvl = 1.45e-6
+        max_wvl = 1.85e-6
+
+    wvl_0 = (min_wvl + max_wvl)/2
+    delta_wvl = wvl_0 / resolution
+    range_wvl = max_wvl - min_wvl
+    nb_wvl = int(range_wvl/delta_wvl)
+    waves = np.linspace(min_wvl, max_wvl, nb_wvl)
 #### Pour estimation
 
 if createPW == True:
@@ -108,20 +125,28 @@ if createPW == True:
     #Choose the truncation above where the pixels won't be taken into account for estimation (not used currently here)
     cutestimation = 1e20#0.3*squaremaxPSF*8/amplitudePW
 
-    vectoressai,SVD,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
-                                                                         wave,
-                                                                         Lyot384 ,
-                                                                         ALC ,
-                                                                         dimimages ,
-                                                                         raw_pushact ,
-                                                                         amplitudePW,
-                                                                         posprobes ,
-                                                                         cutestimation,
-                                                                         coro,
-                                                                         probe_type)
+    PWP_matrix = []
+
+    for wave in waves :
+        print('wavelength: ', format(wave, '.2e'))
+        PWP_one_wvl,SVD,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
+                                                                            wave,
+                                                                            Lyot384 ,
+                                                                            ALC ,
+                                                                            dimimages ,
+                                                                            raw_pushact ,
+                                                                            amplitudePW,
+                                                                            posprobes ,
+                                                                            cutestimation,
+                                                                            coro,
+                                                                            probe_type)
+        
+        PWP_matrix.append(PWP_one_wvl)
+
+    PWP_matrix = np.array(PWP_matrix)
     ##
-    choosepixvisu = [-55,55,-55,55]
-    maskvisu = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
+    #choosepixvisu = [-55,55,-55,55]
+    #maskvisu = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
 
     #plt.imshow(SVD[1]*maskvisu)
     #plt.show()
