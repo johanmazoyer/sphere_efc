@@ -16,7 +16,7 @@ shift = np.fft.fftshift
 ishift=np.fft.ifftshift
 
 
-def Upload_CoroConfig(ModelDirectory, coro, wavelength):
+def Upload_CoroConfig(ModelDirectory, coro):
     """
     
 
@@ -24,7 +24,6 @@ def Upload_CoroConfig(ModelDirectory, coro, wavelength):
     ----------
     ModelDirectory : path to model directory
     coro : coro type
-    wavelength : 
 
     Returns
     -------
