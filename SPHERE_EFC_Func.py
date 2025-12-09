@@ -83,39 +83,27 @@ def roundpupil(nbpix, prad1):
     pupilnormal[rr<=prad1] = 1.
     return pupilnormal
 
-def estimateEab(Difference, PWP_matrix_per_wvl):
+def estimate_efield(Difference, PWP_matrix_per_wvl):
     """ --------------------------------------------------
     Estimate focal plane electric field with PW probing
     
     Parameters:
     ----------
     Difference: Difference of PW images
-    Vecteurprobes: Matrix PW
+    PWP_matrix_per_wvl: Matrix PW
 
     Return:
     ------
-    Resultat: 2D array, complex, focal plane electric field
+    Result: 2D array, complex, focal plane electric field
     -------------------------------------------------- """
 
     dimimages = Difference.shape[1]
-    """ numprobe = len(Vecteurprobes[0,0])
-    Differenceij = np.zeros((numprobe))
-    Resultat=np.zeros((dimimages,dimimages),dtype=complex)
-    l = 0
-    for i in np.arange(dimimages):
-        for j in np.arange(dimimages):
-            Differenceij[:] = Difference[:,i,j]
-            Resultatbis = np.dot(Vecteurprobes[l],Differenceij)
-            Resultat[i,j] = Resultatbis[0]+1j*Resultatbis[1]
-            
-            l = l + 1   """
-
     Difference = Difference.reshape((Difference.shape[0], dimimages ** 2))
-    Resultat_ = np.einsum('ijk,ik->ij', PWP_matrix_per_wvl, Difference.T)
-    Resultat = Resultat_[:, 0] + 1j * Resultat_[:, 1]
-    Resultat = Resultat.reshape(dimimages, dimimages)
+    Result_ = np.einsum('ijk,ik->ij', PWP_matrix_per_wvl, Difference.T)
+    Result = Result_[:, 0] + 1j * Result_[:, 1]
+    Result = Result.reshape(dimimages, dimimages)
 
-    return Resultat/4
+    return Result/4
        
    
 def solutiontocorrect(mask, ResultatEstimate, invertG, WhichInPupil):
@@ -761,7 +749,7 @@ def resultEFC(param):
         Difference, imagecorrection_per_wvl, Images_to_display = createdifference(param)
         print('- Estimating the focal plane electric field...', flush=True)
         PWP_matrix_per_wvl = PWP_matrix[wvl]
-        resultatestimation = estimateEab(Difference, PWP_matrix_per_wvl)
+        resultatestimation = estimate_efield(Difference, PWP_matrix_per_wvl)
         intensity_co_per_wvl = np.abs(resultatestimation)**2
 
 
