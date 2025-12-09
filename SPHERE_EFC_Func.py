@@ -520,8 +520,15 @@ def process_PSF(directory,lightsource_estim,centerx,centery,dimimages):
     file_PSF = last(directory+lightsource_estim+'OffAxisPSF*.fits')
     exppsf = get_exptime(file_PSF)
     PSF = reduceimageSPHERE(file_PSF, directory, 1, int(centerx), int(centery), dimimages, 1, 1, remove_bad_pix = False, high_pass_filter=False)
-    smoothPSF = snd.median_filter(PSF,size=3)
-    maxPSF = PSF[np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] ]
+    smoothPSF = []
+    maxPSF = []
+    for wvl in np.arange(len(PSF)):
+        smoothPSF.append(snd.median_filter(PSF[wvl], size=3))
+        max_coord = np.unravel_index(np.argmax(smoothPSF[-1], axis=None), smoothPSF[-1].shape)
+        maxPSF.append( PSF[ wvl , max_coord[0] , max_coord[1] ] ) 
+
+    smoothPSF = np.array(smoothPSF)
+    maxPSF = np.array(maxPSF)
     return PSF,smoothPSF,maxPSF,exppsf
 
 
