@@ -313,19 +313,15 @@ def mean_window_8pix(array, hotpix):
     return array
 
 
-def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND, remove_bad_pix = True, high_pass_filter = False):
+def reduceimageSPHERE(param, file,  maxPSF, exppsf, ND, remove_bad_pix = True, high_pass_filter = False):
     """ --------------------------------------------------
     Processing of SPHERE images before being used and division by the maximum of the PSF
     
     Parameters:
     ----------
+    param:
     file: str, path to the file to process
-    directory: str, background directory
     maxPSF: int, maximum of the raw PSF
-    ctr_x: int, center of processed image in the x direction
-    ctr_y: int, center of processed image in the y direction
-    newsizeimg: int, size of the processed image (same dimension in x and y)
-    expim: float, exposure time of the image in second
     exppsf: float, exposure time of the recorded PSF in second
     ND: float, neutral density attenuation factor used when recording PSF 
 
@@ -333,6 +329,16 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     ------
     image: processed coronagraphic image, normalized by the max of the PSF
     -------------------------------------------------- """
+
+    centerx = param["centerx"]
+    centery = param["centery"]
+    dimimages = param["dimimages"]
+    directory = param["ImageDirectory"]
+
+    ctr_x = int(centerx)
+    ctr_y = int(centery)
+
+
     # Get image exposure time
     expim = get_exptime(file)
     #if expim>100: expim=96
@@ -342,9 +348,9 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     image = np.mean(fits.getdata(file),axis = 0) 
     
     # Crop to keep relevant part of image
-    image_crop = cropimage(image,ctr_x,ctr_y,newsizeimg)
+    image_crop = cropimage(image,ctr_x,ctr_y,dimimages)
     # Crop to keep relevant part of dark
-    back_crop = cropimage(back,ctr_x,ctr_y,newsizeimg)    
+    back_crop = cropimage(back,ctr_x,ctr_y,dimimages)    
     
     # We subtract the dark
     image = image_crop - back_crop 
@@ -526,7 +532,7 @@ def process_PSF(param):
 
     file_PSF = last(ImageDirectory+lightsource_estim+'OffAxisPSF*.fits')
     exppsf = get_exptime(file_PSF)
-    PSF = reduceimageSPHERE(file_PSF, ImageDirectory, detector, 1, int(centerx), int(centery), dimimages, 1, 1, remove_bad_pix = False, high_pass_filter=False)
+    PSF = reduceimageSPHERE(param, file_PSF, 1, 1, 1, remove_bad_pix = False, high_pass_filter=False)
     smoothPSF = []
     maxPSF = []
     for wvl in np.arange(len(PSF)):
@@ -589,12 +595,12 @@ def createdifference(param):
     
     #Correction
     filecorrection = last(directory + 'iter' + str(nbiter-2) + '_coro_image*.fits')
-    imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND, detector)
+    imagecorrection = reduceimageSPHERE(param, filecorrection, maxPSF, exppsf, ND)
         
     #Traitement de l'image de référence (première image corono et recentrage subpixelique)
     if centeringateachiter == 1 and detector == "IRDIS":
         fileref = last(directory + 'iter0_coro_image*.fits')
-        imageref = reduceimageSPHERE(fileref, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+        imageref = reduceimageSPHERE(param, fileref, maxPSF, exppsf, ND)
         imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
         
         def cost_function(xy_trans):
@@ -624,7 +630,7 @@ def createdifference(param):
     for i in posprobes:
         image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-        Ikplus = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+        Ikplus = reduceimageSPHERE(param, image_name, maxPSF, exppsf, ND)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
         Images_to_display.append((Ikplus-imagecorrection)[30:170,30:170])
         j = j + 1
@@ -632,7 +638,7 @@ def createdifference(param):
         if estim_algorithm == 'PWP':
             image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
             #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-            Ikmoins = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+            Ikmoins = reduceimageSPHERE(param, image_name, maxPSF, exppsf, ND)
             Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
             Images_to_display.append((Ikmoins-imagecorrection)[30:170,30:170])
             j = j + 1
