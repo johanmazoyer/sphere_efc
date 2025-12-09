@@ -744,12 +744,17 @@ def resultEFC(param):
     intensity_co = []
     intensity_inco =[]
     imagecorrection = []
+    resultatestimation = []
+
+    print('- Creating difference of images...', flush=True)
+    Difference, imagecorrection_per_wvl, Images_to_display = createdifference(param)
+
     for wvl in np.arange(len(PWP_matrix)):
-        print('- Creating difference of images...', flush=True)
-        Difference, imagecorrection_per_wvl, Images_to_display = createdifference(param)
         print('- Estimating the focal plane electric field...', flush=True)
+        Difference_per_wvl = Difference[wvl]
+        imagecorrection_per_wvl = imagecorrection[wvl]
         PWP_matrix_per_wvl = PWP_matrix[wvl]
-        resultatestimation = estimate_efield(Difference, PWP_matrix_per_wvl)
+        resultatestimation_per_wvl = estimate_efield(Difference_per_wvl, PWP_matrix_per_wvl)
         intensity_co_per_wvl = np.abs(resultatestimation)**2
 
 
@@ -757,7 +762,7 @@ def resultEFC(param):
             print('- Rescaling solution and computing incoherent component...', flush=True)
             intensity_co_per_wvl, intensity_inco_per_wvl, scaling = rescale_coherent_component(intensity_co_per_wvl, imagecorrection_per_wvl, maskDH, 5)
             print('- Applied factor = ' + str(scaling), flush=True)
-            resultatestimation = resultatestimation * scaling
+            resultatestimation_per_wvl = resultatestimation_per_wvl * scaling
         
         else:
             intensity_inco_per_wvl = imagecorrection_per_wvl - intensity_co_per_wvl
@@ -765,10 +770,12 @@ def resultEFC(param):
         intensity_co.append(intensity_co_per_wvl)
         intensity_inco.append(intensity_inco_per_wvl)
         imagecorrection.append(imagecorrection_per_wvl)
+        resultatestimation.append(resultatestimation_per_wvl)
     
     intensity_co = np.array(intensity_co)
     intensity_inco = np.array(intensity_inco)
     imagecorrection = np.array(imagecorrection)
+    resultatestimation = np.array(resultatestimation)
     
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
