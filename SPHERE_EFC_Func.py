@@ -497,7 +497,7 @@ def rescale_coherent_component(signal_co, signal_tot, maskDH, nb_loop):
     return signal_co_copy, signal_inco, scaling
 
 
-def process_PSF(directory,lightsource_estim,centerx,centery,dimimages):
+def process_PSF(param):
     """
     Process non coronagraphic point spread function and return relevant data
 
@@ -517,9 +517,16 @@ def process_PSF(directory,lightsource_estim,centerx,centery,dimimages):
     exppsf : PSF exposure time
 
     """
-    file_PSF = last(directory+lightsource_estim+'OffAxisPSF*.fits')
+    lightsource_estim = param['lightsource_estim']
+    dimimages = param['dimimages']
+    ImageDirectory = param["ImageDirectory"]
+    centerx = param['centerx']
+    centery = param['centery']
+    detector = param["detector"]
+
+    file_PSF = last(ImageDirectory+lightsource_estim+'OffAxisPSF*.fits')
     exppsf = get_exptime(file_PSF)
-    PSF = reduceimageSPHERE(file_PSF, directory, 1, int(centerx), int(centery), dimimages, 1, 1, remove_bad_pix = False, high_pass_filter=False)
+    PSF = reduceimageSPHERE(file_PSF, ImageDirectory, detector, 1, int(centerx), int(centery), dimimages, 1, 1, remove_bad_pix = False, high_pass_filter=False)
     smoothPSF = []
     maxPSF = []
     for wvl in np.arange(len(PSF)):
@@ -577,12 +584,12 @@ def createdifference(param):
     
 
     #PSF
-    _, _, maxPSF, exppsf = process_PSF(ImageDirectory, lightsource_estim, centerx, centery, dimimages)
+    _, _, maxPSF, exppsf = process_PSF(param)
     #print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ', maxPSF, flush=True)
     
     #Correction
     filecorrection = last(directory + 'iter' + str(nbiter-2) + '_coro_image*.fits')
-    imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+    imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND, detector)
         
     #Traitement de l'image de référence (première image corono et recentrage subpixelique)
     if centeringateachiter == 1 and detector == "IRDIS":
@@ -976,7 +983,7 @@ def FullIterEFC(param):
         ax1 = fig1.subplots(1, 1, sharex=True, sharey=True)      
         display(imagecorrection_to_display, ax1, '', vmin = vmin, vmax = vmax, norm = norm)
         ax1.text(1, 12, 'Contrast = ' + Contrast_tot, size=15, color ='red', weight='bold')
-        PSF_to_display = process_PSF(dir, param['lightsource_estim'], centerx, centery, dimimages)[0]
+        PSF_to_display = process_PSF(param)[0]
         ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
         display(PSF_to_display, ax1bis, 'PSF' , vmin = 1, vmax = np.amax(PSF_to_display), norm='log')
 
