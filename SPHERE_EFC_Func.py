@@ -573,18 +573,19 @@ def createdifference(param):
     size_probes = param["size_probes"]
     probe_type = param["probe_type"]
     zone_to_correct = param["zone_to_correct"]
+    detector = param["detector"]
     
 
     #PSF
-    PSF,smoothPSF,maxPSF,exppsf = process_PSF(ImageDirectory,lightsource_estim,centerx,centery,dimimages)
-    print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ',maxPSF, flush=True)
+    _, _, maxPSF, exppsf = process_PSF(ImageDirectory, lightsource_estim, centerx, centery, dimimages)
+    #print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ', maxPSF, flush=True)
     
     #Correction
     filecorrection = last(directory + 'iter' + str(nbiter-2) + '_coro_image*.fits')
     imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
         
     #Traitement de l'image de référence (première image corono et recentrage subpixelique)
-    if centeringateachiter == 1:
+    if centeringateachiter == 1 and detector == "IRDIS":
         fileref = last(directory + 'iter0_coro_image*.fits')
         imageref = reduceimageSPHERE(fileref, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
         imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])

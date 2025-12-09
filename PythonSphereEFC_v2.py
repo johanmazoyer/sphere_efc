@@ -33,6 +33,7 @@ slope_ini = os.environ['SLOPE_INI']
 rescaling = int(os.environ['rescaling'])
 estim_algorithm = os.environ['ESTIM_ALGORITHM']
 probe_type = os.environ['PROBE_TYPE']
+detector = os.environ['detector']
 
 print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name), flush=True)
 
@@ -62,6 +63,7 @@ param = {
   "rescaling": rescaling,
   "estim_algorithm": estim_algorithm,
   "probe_type": probe_type,
+  "detector":detector
 }
 
 

@@ -270,6 +270,7 @@ if [ "$create_coro" -eq "1" ]; then
 		export rescaling
 		export ESTIM_ALGORITHM
 		export PROBE_TYPE
+		export detector
 
 		#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 		echo "Launch python EFC code"
