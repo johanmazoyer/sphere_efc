@@ -584,7 +584,7 @@ def createdifference(param):
     
 
     #PSF
-    _, _, maxPSF, exppsf = process_PSF(param)
+    PSF, _, maxPSF, exppsf = process_PSF(param)
     #print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ', maxPSF, flush=True)
     
     #Correction
@@ -651,6 +651,7 @@ def createdifference(param):
         Difference[k] = (Ikplus-Ikmoins)
         k = k + 1
 
+    Images_to_display.append(PSF)
     return Difference, imagecorrection, Images_to_display
 
 
@@ -983,7 +984,7 @@ def FullIterEFC(param):
         ax1 = fig1.subplots(1, 1, sharex=True, sharey=True)      
         display(imagecorrection_to_display, ax1, '', vmin = vmin, vmax = vmax, norm = norm)
         ax1.text(1, 12, 'Contrast = ' + Contrast_tot, size=15, color ='red', weight='bold')
-        PSF_to_display = process_PSF(param)[0]
+        PSF_to_display = Images_to_display[-1]
         ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
         display(PSF_to_display, ax1bis, 'PSF' , vmin = 1, vmax = np.amax(PSF_to_display), norm='log')
 
