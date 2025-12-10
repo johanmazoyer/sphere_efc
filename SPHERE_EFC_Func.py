@@ -313,7 +313,7 @@ def mean_window_8pix(array, hotpix):
     return array
 
 
-def reduceimageSPHERE(param, file,  maxPSF, exppsf, ND, remove_bad_pix = True, high_pass_filter = False):
+def reduceimageSPHERE(param, file,  maxPSF, ND, remove_bad_pix = True, high_pass_filter = False):
     """ --------------------------------------------------
     Processing of SPHERE images before being used and division by the maximum of the PSF
     
@@ -524,15 +524,11 @@ def process_PSF(param):
 
     """
     lightsource_estim = param['lightsource_estim']
-    dimimages = param['dimimages']
     ImageDirectory = param["ImageDirectory"]
-    centerx = param['centerx']
-    centery = param['centery']
-    detector = param["detector"]
 
     file_PSF = last(ImageDirectory+lightsource_estim+'OffAxisPSF*.fits')
     exppsf = get_exptime(file_PSF)
-    PSF = reduceimageSPHERE(param, file_PSF, 1, 1, 1, remove_bad_pix = False, high_pass_filter=False)
+    PSF = reduceimageSPHERE(param, file_PSF, 1, 1, remove_bad_pix = False, high_pass_filter=False)
     smoothPSF = []
     maxPSF = []
     for wvl in np.arange(len(PSF)):
@@ -590,17 +586,17 @@ def createdifference(param):
     
 
     #PSF
-    PSF, _, maxPSF, exppsf = process_PSF(param)
+    PSF, _, maxPSF, _ = process_PSF(param)
     #print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ', maxPSF, flush=True)
     
     #Correction
     filecorrection = last(directory + 'iter' + str(nbiter-2) + '_coro_image*.fits')
-    imagecorrection = reduceimageSPHERE(param, filecorrection, maxPSF, exppsf, ND)
+    imagecorrection = reduceimageSPHERE(param, filecorrection, maxPSF, ND)
         
     #Traitement de l'image de référence (première image corono et recentrage subpixelique)
     if centeringateachiter == 1 and detector == "IRDIS":
         fileref = last(directory + 'iter0_coro_image*.fits')
-        imageref = reduceimageSPHERE(param, fileref, maxPSF, exppsf, ND)
+        imageref = reduceimageSPHERE(param, fileref, maxPSF, ND)
         imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
         
         def cost_function(xy_trans):
@@ -630,7 +626,7 @@ def createdifference(param):
     for i in posprobes:
         image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-        Ikplus = reduceimageSPHERE(param, image_name, maxPSF, exppsf, ND)
+        Ikplus = reduceimageSPHERE(param, image_name, maxPSF, ND)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
         Images_to_display.append((Ikplus-imagecorrection)[30:170,30:170])
         j = j + 1
@@ -638,7 +634,7 @@ def createdifference(param):
         if estim_algorithm == 'PWP':
             image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
             #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-            Ikmoins = reduceimageSPHERE(param, image_name, maxPSF, exppsf, ND)
+            Ikmoins = reduceimageSPHERE(param, image_name, maxPSF, ND)
             Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
             Images_to_display.append((Ikmoins-imagecorrection)[30:170,30:170])
             j = j + 1
