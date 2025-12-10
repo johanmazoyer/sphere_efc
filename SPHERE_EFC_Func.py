@@ -328,30 +328,40 @@ def reduceimageSPHERE(param, file,  maxPSF, remove_bad_pix = True, high_pass_fil
     image: processed coronagraphic image, normalized by the max of the PSF
     -------------------------------------------------- """
 
-    centerx = param["centerx"]
-    centery = param["centery"]
-    dimimages = param["dimimages"]
     directory = param["ImageDirectory"]
-
-    ctr_x = int(centerx)
-    ctr_y = int(centery)
-
+    detector = param["detector"]
 
     # Get image exposure time
     expim = get_exptime(file)
-    #if expim>100: expim=96
+
     # Load dark that correspond to image exposure time
     back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] 
     # Load image
     image = np.mean(fits.getdata(file),axis = 0) 
+
+    # Subtract back from image
+    image = image - back
+
+    if detector == "IRDIS":
+        image = reduce_image_IRDIS(param, image, back, remove_bad_pix, high_pass_filter)
     
+    #We normalize the image with the max of the PSF
+    image = (image/expim)/maxPSF
+    return image
+
+
+def reduce_image_IRDIS(param, image, back, remove_bad_pix, high_pass_filter):
+
+    centerx = param["centerx"]
+    centery = param["centery"]
+    dimimages = param["dimimages"]
+    ctr_x = int(centerx)
+    ctr_y = int(centery)
+
     # Crop to keep relevant part of image
-    image_crop = cropimage(image,ctr_x,ctr_y,dimimages)
+    image = cropimage(image,ctr_x,ctr_y,dimimages)
     # Crop to keep relevant part of dark
     back_crop = cropimage(back,ctr_x,ctr_y,dimimages)    
-    
-    # We subtract the dark
-    image = image_crop - back_crop 
     
     # We remove the hot pixels found in dark
     if remove_bad_pix == True:
@@ -364,9 +374,6 @@ def reduceimageSPHERE(param, file,  maxPSF, remove_bad_pix = True, high_pass_fil
     # We process the image with a high pass filter    
     if high_pass_filter == True:
         image = high_pass_filter_gauss(image, 2)
-
-    #We normalize the image with the max of the PSF
-    image = (image/expim)/maxPSF
     return image
 
 def find_hot_pix_in_dark(dark):
