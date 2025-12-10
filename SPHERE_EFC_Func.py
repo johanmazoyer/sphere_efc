@@ -313,7 +313,7 @@ def mean_window_8pix(array, hotpix):
     return array
 
 
-def reduceimageSPHERE(param, file,  maxPSF, ND, remove_bad_pix = True, high_pass_filter = False):
+def reduceimageSPHERE(param, file,  maxPSF, remove_bad_pix = True, high_pass_filter = False):
     """ --------------------------------------------------
     Processing of SPHERE images before being used and division by the maximum of the PSF
     
@@ -322,8 +322,6 @@ def reduceimageSPHERE(param, file,  maxPSF, ND, remove_bad_pix = True, high_pass
     param:
     file: str, path to the file to process
     maxPSF: int, maximum of the raw PSF
-    exppsf: float, exposure time of the recorded PSF in second
-    ND: float, neutral density attenuation factor used when recording PSF 
 
     Return:
     ------
@@ -368,7 +366,7 @@ def reduceimageSPHERE(param, file,  maxPSF, ND, remove_bad_pix = True, high_pass
         image = high_pass_filter_gauss(image, 2)
 
     #We normalize the image with the max of the PSF
-    image = (image/expim)/(maxPSF*ND)  
+    image = (image/expim)/maxPSF
     return image
 
 def find_hot_pix_in_dark(dark):
@@ -525,10 +523,19 @@ def process_PSF(param):
     """
     lightsource_estim = param['lightsource_estim']
     ImageDirectory = param["ImageDirectory"]
+     
+    if param["which_nd"] == 'ND_3.5':
+        ND = 1/0.00105
+    elif param["which_nd"] == 'ND_2.0':
+        ND = 1/0.0179
+    else:
+        ND = 1.
+
 
     file_PSF = last(ImageDirectory+lightsource_estim+'OffAxisPSF*.fits')
     exppsf = get_exptime(file_PSF)
-    PSF = reduceimageSPHERE(param, file_PSF, 1, 1, remove_bad_pix = False, high_pass_filter=False)
+    PSF = reduceimageSPHERE(param, file_PSF, 1, remove_bad_pix = False, high_pass_filter=False)
+    PSF = PSF * ND
     smoothPSF = []
     maxPSF = []
     for wvl in np.arange(len(PSF)):
@@ -538,7 +545,7 @@ def process_PSF(param):
 
     smoothPSF = np.array(smoothPSF)
     maxPSF = np.array(maxPSF)
-    return PSF,smoothPSF,maxPSF,exppsf
+    return PSF, smoothPSF, maxPSF, exppsf
 
 
 
@@ -559,14 +566,6 @@ def createdifference(param):
     ------
     Difference: 3D array, cube of images
     -------------------------------------------------- """
-    
-    if param["which_nd"] == 'ND_3.5':
-        ND = 1/0.00105
-    elif param["which_nd"] == 'ND_2.0':
-        ND = 1/0.0179
-    else:
-        ND = 1.
-
     
     lightsource_estim = param['lightsource_estim']
     dimimages = param['dimimages']
@@ -591,12 +590,12 @@ def createdifference(param):
     
     #Correction
     filecorrection = last(directory + 'iter' + str(nbiter-2) + '_coro_image*.fits')
-    imagecorrection = reduceimageSPHERE(param, filecorrection, maxPSF, ND)
+    imagecorrection = reduceimageSPHERE(param, filecorrection, maxPSF)
         
     #Traitement de l'image de référence (première image corono et recentrage subpixelique)
     if centeringateachiter == 1 and detector == "IRDIS":
         fileref = last(directory + 'iter0_coro_image*.fits')
-        imageref = reduceimageSPHERE(param, fileref, maxPSF, ND)
+        imageref = reduceimageSPHERE(param, fileref, maxPSF)
         imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
         
         def cost_function(xy_trans):
@@ -626,7 +625,7 @@ def createdifference(param):
     for i in posprobes:
         image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-        Ikplus = reduceimageSPHERE(param, image_name, maxPSF, ND)
+        Ikplus = reduceimageSPHERE(param, image_name, maxPSF)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
         Images_to_display.append((Ikplus-imagecorrection)[30:170,30:170])
         j = j + 1
@@ -634,7 +633,7 @@ def createdifference(param):
         if estim_algorithm == 'PWP':
             image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
             #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-            Ikmoins = reduceimageSPHERE(param, image_name, maxPSF, ND)
+            Ikmoins = reduceimageSPHERE(param, image_name, maxPSF)
             Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
             Images_to_display.append((Ikmoins-imagecorrection)[30:170,30:170])
             j = j + 1
