@@ -1085,7 +1085,7 @@ def FullIterEFC(param):
         if nbiter == 2:
             #Calculate the center of the first coronagraphic image using the waffle
             print('Calculating center of the first coronagraphic image:', flush=True)
-            data,centerx,centery = findingcenterwithcosine(param)
+            data,centerx,centery = find_center_with_cosine(param)
             SaveFits([centerx,centery], ['',0], dir2, 'centerxy')
         
         centerx, centery = fits.getdata(dir2 + 'centerxy.fits')
