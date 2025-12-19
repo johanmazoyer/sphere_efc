@@ -1143,9 +1143,9 @@ def FullIterEFC(param):
                 f.writelines( text_in_file )
                 
         # Display data
-        imagecorrection_to_display = high_pass_filter_gauss(imagecorrection, 2)[30:170,30:170]
-        coherent_signal_to_display = high_pass_filter_gauss(coherent_signal, 2)[30:170,30:170]
-        incoherent_signal_to_display = high_pass_filter_gauss(incoherent_signal, 2)[30:170,30:170] 
+        imagecorrection_to_display = high_pass_filter_gauss(extract_image(imagecorrection), 2)
+        coherent_signal_to_display = high_pass_filter_gauss(extract_image(coherent_signal), 2)
+        incoherent_signal_to_display = high_pass_filter_gauss(extract_image(incoherent_signal), 2)
         
         
         if onsky == 1:
