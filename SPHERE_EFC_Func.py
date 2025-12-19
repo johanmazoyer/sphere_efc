@@ -867,7 +867,7 @@ def contrast_global(image,scoring_reg):
     contrast_std = np.nanstd(image[np.where(scoring_reg)])
     return contrast_mean, contrast_std
     
-def extract_contrast_global(cubeimage, scoring_region):
+def extract_contrast_global(cubeimage, scoring_region, index = 0):
     """
     Calculate contrast in image cube
 
@@ -881,12 +881,12 @@ def extract_contrast_global(cubeimage, scoring_region):
     contrast :array of mean contrast and contrast rms
 
     """
-    nb_iter = len(cubeimage)
-    contrast = []
-    for i in np.arange(nb_iter):
-        contrast.append(contrast_global(cubeimage[i], scoring_region))
-    contrast =np.array(contrast).T
-    return contrast
+    if cubeimage.ndim == 3:
+        image = cubeimage[index]
+    else:
+        image = cubeimage
+    
+    return contrast_global(image, scoring_region)
 
 
 def resultEFC(param):
@@ -933,12 +933,11 @@ def resultEFC(param):
 
     for wvl in np.arange(len(PWP_matrix)):
         print('- Estimating the focal plane electric field...', flush=True)
-        Difference_per_wvl = Difference[wvl]
+        Difference_per_wvl = Difference[:, wvl]
         imagecorrection_per_wvl = imagecorrection[wvl]
         PWP_matrix_per_wvl = PWP_matrix[wvl]
         resultatestimation_per_wvl = estimate_efield(Difference_per_wvl, PWP_matrix_per_wvl)
         intensity_co_per_wvl = np.abs(resultatestimation)**2
-
 
         if rescaling == 1:
             print('- Rescaling solution and computing incoherent component...', flush=True)
@@ -1120,14 +1119,10 @@ def FullIterEFC(param):
         fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits', coherent_signal, overwrite = True)
         fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal, overwrite = True)
         fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection, overwrite = True)
-
-        coherent_signal = np.mean(coherent_signal, axis = 0)
-        incoherent_signal = np.mean(incoherent_signal, axis = 0)
-        imagecorrection = np.mean(imagecorrection, axis = 0)
         
-        Contrast_tot = str(format(extract_contrast_global([imagecorrection],maskDH)[0,0],'.2e'))
-        Contrast_cor = str(format(extract_contrast_global([coherent_signal],maskDH)[0,0],'.2e'))
-        Contrast_inc = str(format(extract_contrast_global([incoherent_signal],maskDH)[0,0],'.2e'))
+        Contrast_tot = str(format(extract_contrast_global(imagecorrection,maskDH)[0,0],'.2e'))
+        Contrast_cor = str(format(extract_contrast_global(coherent_signal,maskDH)[0,0],'.2e'))
+        Contrast_inc = str(format(extract_contrast_global(incoherent_signal,maskDH)[0,0],'.2e'))
         
         print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast_tot, flush=True)
         
