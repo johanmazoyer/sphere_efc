@@ -15,6 +15,12 @@ from scipy import ndimage
 import glob
 import os
 
+import charis
+from spherical.pipeline.pipeline_config import defaultIFSReduction
+from joblib import Parallel, delayed
+from functools import partial
+from tqdm import tqdm
+
 #Unit conversion and normalisation
 #influence matrix normalization = defoc meca en rad @ 632 nm
 rad_632_to_nm_opt = 632/2/np.pi
@@ -344,6 +350,8 @@ def reduceimageSPHERE(param, file,  maxPSF, remove_bad_pix = True, high_pass_fil
 
     if detector == "IRDIS":
         image = reduce_image_IRDIS(param, image, back, remove_bad_pix, high_pass_filter)
+    elif detector == "IFS":
+        image = reduce_image_IFS(param, image)
     
     #We normalize the image with the max of the PSF
     image = (image/expim)/maxPSF
@@ -375,6 +383,140 @@ def reduce_image_IRDIS(param, image, back, remove_bad_pix, high_pass_filter):
     if high_pass_filter == True:
         image = high_pass_filter_gauss(image, 2)
     return image
+
+def reduce_image_IFS(param, image):
+
+    return image
+
+
+def build_calibration_IFS(param):
+
+    root_directory = param["RootDirectory"]
+    obs_band = param['obs_band']
+    cal_directory = root_directory + 'IFS_cal/'
+
+    #Look for input (raw SPHERE data) and output (charis calibration files) directories
+    wavecal_outputdir = cal_directory + 'wavecal_outputdir'
+    wavecal_inputdir = cal_directory + 'wavecal_inputdir'
+
+    if not os.path.exists(wavecal_outputdir):
+        os.makedirs(wavecal_outputdir)
+
+    config = defaultIFSReduction()
+
+    # Apply resource configuration to all sub-configs
+    config.apply_resources()
+
+    # Extract step configuration for cleaner code
+    # steps = config.steps
+
+    # Get directory paths from config
+    # raw_directory = config.directories.raw_directory
+    # reduction_directory = config.directories.reduction_directory
+
+    if obs_band == 'OBS_YJ':
+        instrument = charis.instruments.SPHERE('YJ')
+        config.extraction.R = 55
+    elif obs_band == 'OBS_H':
+        instrument = charis.instruments.SPHERE('YH')
+        config.extraction.R = 35
+
+    calibration_parameters, extraction_parameters, _ , _ = config.as_plain_dicts()
+    extraction_parameters['bgsub'] = True
+    extraction_parameters['fitbkgnd'] = False
+    extraction_parameters['fitshift'] = True
+    extraction_parameters['bg_scaling_without_mask'] = False
+    extraction_parameters['maxcpus'] = 1
+    extraction_parameters['refine'] = False
+    extraction_parameters['flatfield'] = False
+    extraction_parameters['resample'] = True
+    extraction_parameters['linear_wavelength'] = True
+    extraction_parameters['smoothandmask'] = False
+    extraction_parameters['method'] = 'optext'
+
+    files_in_calibration_folder = glob.glob(os.path.join(wavecal_outputdir, '*key*.fits'))
+
+    if len(files_in_calibration_folder) == 0: # or overwrite_calibration:
+        calibration_wavelength = instrument.calibration_wavelength
+        wavecal_file = wavecal_inputdir + '/*.fits'#observation.frames['WAVECAL']['FILE'][0]
+        inImage, hdr = charis.buildcalibrations.read_in_file(
+            wavecal_file, instrument, calibration_wavelength,
+            ncpus=calibration_parameters['ncpus'])
+        charis.buildcalibrations.buildcalibrations(
+            inImage=inImage, instrument=instrument,
+            inLam=calibration_wavelength.value,
+            outdir=wavecal_outputdir,
+            header=hdr,
+            **calibration_parameters)
+
+    return extraction_parameters, wavecal_outputdir, instrument
+
+def process_cube_IFS(filename, instrument, delta_wave = 5):
+    
+    #Stack, rotate and save results from charis
+
+    #Pick resampled IFS cube file
+    basename = os.path.basename(filename)
+    filename = basename + '_cube_resampled_DIT_000.fits'
+
+    cube = fits.getdata(filename)
+    raw_nb_wave = len(cube) #39
+
+    min_wave = instrument.wavelength_range[0].value
+    max_wave = instrument.wavelength_range[1].value
+    wavelengths = np.linspace(min_wave, max_wave, raw_nb_wave)
+    wavelength_0 = (min_wave + max_wave)/2
+    d_wavelength = (max_wave - min_wave)
+
+    #Stacking data to get ~5% images
+    nb_images_per_stack = int(delta_wave / ( d_wavelength / wavelength_0 / raw_nb_wave * 100 ))
+    remainder = raw_nb_wave%nb_images_per_stack
+    if remainder<3: #To ensure it suppresses the lowest and highest wavelength
+        remainder = remainder + nb_images_per_stack
+    if remainder % 2 == 0:
+        wavelength_cropped = wavelengths[int(remainder/2):-int(remainder/2)]
+    else:
+        wavelength_cropped = wavelengths[int(remainder/2)+1:-int(remainder/2)]
+
+    #Centraled wavelength stacked
+    wavelength_stacked = [np.mean(wavelength_cropped[a:a+nb_images_per_stack]) for a in nb_images_per_stack * np.arange(len(wavelength_cropped)//nb_images_per_stack)]
+    wavelength_stacked = np.array(wavelength_stacked,dtype=int)
+
+    #Rotate
+    angle_in_degree = -102 + 1.75 #Maire SPIE 2016 Still a slight angle remains wrt IRDIS 1.75
+    if remainder%2 == 0:
+        cube_cropped = cube[int(remainder/2):-int(remainder/2)]
+    else:
+        cube_cropped = cube[int(remainder/2)+1:-int(remainder/2)]
+
+    #Stack wavelength
+    cube_stacked = [ndimage.rotate(np.mean(cube_cropped[a:a+nb_images_per_stack], axis=0), -angle_in_degree) for a in nb_images_per_stack*np.arange(len(cube_cropped)//nb_images_per_stack)]
+    cube_stacked = np.array(cube_stacked)
+
+    #Rename result to fit IRDIS-like code (remove IFS in filenames)
+    before, _, after = basename.partition("IFS_")
+    new_namefile = before + after + 'fits'  # 'after' is everything after "IFS_"
+    fits.writeto(new_namefile, cube_stacked, overwrite = True)
+
+
+def extract_cube_IFS(file, wavecal_outputdir, cube_outputdir, extraction_parameters):
+
+    hdr = fits.getheader(file)
+    ndit: int = int(hdr['HIERARCH ESO DET NDIT'])
+    for dit_index in tqdm(
+                    range(ndit),
+                    desc=f"Extract datacube (1 CPU)",
+                    unit="DIT",
+                    leave=False,
+                ):
+        charis.extractcube.getcube(
+            filename=file,
+            dit=dit_index,
+            bgpath=None,#wavecal_outputdir + '/SPHERE_IRDIFS_IFS_CAL_DARK259_0005.fits',
+            calibdir=wavecal_outputdir + '/',
+            outdir=cube_outputdir,
+            **extraction_parameters,
+        )
 
 def find_hot_pix_in_dark(dark):
     """
@@ -589,7 +731,6 @@ def createdifference(param):
     probe_type = param["probe_type"]
     zone_to_correct = param["zone_to_correct"]
     detector = param["detector"]
-    
 
     #PSF
     PSF, _, maxPSF, _ = process_PSF(param)
@@ -900,7 +1041,7 @@ def FullIterEFC(param):
     dimimages = param["dimimages"]
     onsky = param["onsky"]
     slope_ini = param["slope_ini"]
-    estim_algorithm = param['estim_algorithm']
+    detector = param['detector']
     gain = param['gain']
     #Check if the directory dir exists
     if os.path.isdir(dir) is False:
@@ -918,6 +1059,29 @@ def FullIterEFC(param):
         #Create the cosine of 10nm peak-to-valley amplitude for centering
         recordCoswithvolt(param, 10, slope_ini)
     else:
+
+        if detector == "IFS":
+            # Calibrate the IFS if undone before
+            extraction_parameters, wavecal_outputdir, instrument = build_calibration_IFS(param)
+
+            # Extract all the IFS raw images in the experiment/iter and create cubes
+            filenames = []
+            for name in os.listdir(dir):
+                if "IFS_" in name:
+                    # Split at the first occurrence of "IFS_"
+                    before, _, after = name.partition("IFS_")
+                    x = before + after  # 'after' is everything after "IFS_"
+
+                    if x and not os.path.exists(os.path.join(dir, x)):
+                        filenames.append(name)
+
+            do_extract_cube_IFS = partial(extract_cube_IFS, wavecal_outputdir=wavecal_outputdir, cube_outputdir=dir2, extraction_parameters=extraction_parameters)  # freeze b and c
+            Parallel(n_jobs=-1)(delayed(do_extract_cube_IFS)(filename) for filename in filenames)
+
+            do_process_cube_IFS = partial(process_cube_IFS, instrument=instrument, delta_wave=5)  # freeze b and c
+            Parallel(n_jobs=-1)(delayed(do_process_cube_IFS)(filename) for filename in filenames)
+
+
         if nbiter == 2:
             #Calculate the center of the first coronagraphic image using the waffle
             print('Calculating center of the first coronagraphic image:', flush=True)
