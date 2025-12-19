@@ -158,7 +158,7 @@ def fancy_xy_trans_slice(img_slice, xy_trans):
     else:
         #Resample image using bilinear interpolation (order=1)
         trans_slice = snd.affine_transform(img_slice, [1, 1], xy_trans, order=1)
-        
+
     return trans_slice
 
 def my_callback(params):
@@ -785,7 +785,7 @@ def createdifference(param):
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
         Ikplus = reduceimageSPHERE(param, image_name, maxPSF)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
-        Images_to_display.append((Ikplus-imagecorrection)[30:170,30:170])
+        Images_to_display.append(extract_image(Ikplus-imagecorrection))
         j = j + 1
         
         if estim_algorithm == 'PWP':
@@ -793,7 +793,7 @@ def createdifference(param):
             #print('Loading the probe image {0:s}'.format(image_name), flush=True)
             Ikmoins = reduceimageSPHERE(param, image_name, maxPSF)
             Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
-            Images_to_display.append((Ikmoins-imagecorrection)[30:170,30:170])
+            Images_to_display.append(extract_image(Ikmoins-imagecorrection))
             j = j + 1
             
         elif estim_algorithm == 'BTW':
@@ -801,7 +801,7 @@ def createdifference(param):
             Probe_intens = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'Intensity_probe.fits')[k]
             Ikplus = 2*Ikplus
             Ikmoins = 2*(imagecorrection + Probe_intens) #Missing model component
-            Images_to_display.append(np.zeros((170-130,170-130)))
+            Images_to_display.append(np.zeros((170-30,170-30)))
         
         else: 
             print('ERROR: Unvalid ESTIM_ALGORITHM value: should either be PWP or BTW', flush=True)
@@ -810,8 +810,18 @@ def createdifference(param):
         Difference[k] = (Ikplus-Ikmoins)
         k = k + 1
 
-    Images_to_display.append(PSF)
+    Images_to_display.append(extract_image(PSF, final_size = len(PSF[0])))
     return Difference, imagecorrection, Images_to_display
+
+def extract_image(image_to_extract, final_size = 140, index = 0):
+    if image_to_extract.ndim == 3:
+        image = image_to_extract[index]
+    else:
+        image = image_to_extract
+
+    ctr = int(len(image) /2)
+    return cropimage(image, ctr, ctr, final_size)
+
 
 
 def display(image, axe, title, vmin, vmax , norm = None):
