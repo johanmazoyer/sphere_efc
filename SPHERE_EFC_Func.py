@@ -465,10 +465,10 @@ def process_cube_IFS(filename, instrument, delta_wave = 5):
     #Stack, rotate and save results from charis
 
     #Pick resampled IFS cube file
-    basename = os.path.basename(filename)
-    filename = basename + '_cube_resampled_DIT_000.fits'
+    root, _ = os.path.splitext(filename)
+    filename = root + '_cube_resampled_DIT_000.fits'
 
-    cube, header = fits.getdata(filename)
+    cube, header = fits.getdata(filename, ext=1, header=True)
     raw_nb_wave = len(cube) #39
 
     min_wave = instrument.wavelength_range[0].value
@@ -503,9 +503,12 @@ def process_cube_IFS(filename, instrument, delta_wave = 5):
     cube_stacked = np.array(cube_stacked)
 
     #Rename result to fit IRDIS-like code (remove IFS in filenames)
-    before, _, after = basename.partition("IFS_")
-    new_namefile = before + after + 'fits'  # 'after' is everything after "IFS_"
+    before, _, after = root.partition("IFS_")
+    new_namefile = before + after + '.fits'  # 'after' is everything after "IFS_"
     fits.writeto(new_namefile, cube_stacked, header, overwrite = True)
+
+    os.remove(filename)
+    os.remove(root + '_cube_DIT_000.fits')
 
 
 def extract_cube_IFS(file, wavecal_outputdir, cube_outputdir, extraction_parameters):
@@ -1088,9 +1091,9 @@ def FullIterEFC(param):
                     x = before + after  # 'after' is everything after "IFS_"
 
                     if x and not os.path.exists(os.path.join(dir, x)):
-                        filenames.append(name)
-
-            do_extract_cube_IFS = partial(extract_cube_IFS, wavecal_outputdir=wavecal_outputdir, cube_outputdir=dir2, extraction_parameters=extraction_parameters)  # freeze b and c
+                        filenames.append(dir + name)
+            #print(filenames)
+            do_extract_cube_IFS = partial(extract_cube_IFS, wavecal_outputdir=wavecal_outputdir, cube_outputdir=dir, extraction_parameters=extraction_parameters)  # freeze b and c
             Parallel(n_jobs=-1)(delayed(do_extract_cube_IFS)(filename) for filename in filenames)
 
             do_process_cube_IFS = partial(process_cube_IFS, instrument=instrument, delta_wave=5)  # freeze b and c
