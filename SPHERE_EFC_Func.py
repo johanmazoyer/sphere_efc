@@ -1120,9 +1120,9 @@ def FullIterEFC(param):
         fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal, overwrite = True)
         fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection, overwrite = True)
         
-        Contrast_tot = str(format(extract_contrast_global(imagecorrection,maskDH)[0,0],'.2e'))
-        Contrast_cor = str(format(extract_contrast_global(coherent_signal,maskDH)[0,0],'.2e'))
-        Contrast_inc = str(format(extract_contrast_global(incoherent_signal,maskDH)[0,0],'.2e'))
+        Contrast_tot = str(format(extract_contrast_global(imagecorrection,maskDH)[0],'.2e'))
+        Contrast_cor = str(format(extract_contrast_global(coherent_signal,maskDH)[0],'.2e'))
+        Contrast_inc = str(format(extract_contrast_global(incoherent_signal,maskDH)[0],'.2e'))
         
         print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast_tot, flush=True)
         
