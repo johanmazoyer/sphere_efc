@@ -653,10 +653,7 @@ def rescale_coherent_component(signal_co, signal_tot, maskDH, nb_loop):
         signal_co_copy = signal_co_copy + best_params2[i]
         signal_co_copy = signal_co_copy * best_params3[i]
     
-    # Compute unfiltered incoherent component    
-    signal_inco = signal_tot - signal_co_copy
-    
-    return signal_co_copy, signal_inco, scaling
+    return signal_co_copy, scaling
 
 
 def process_PSF(param):
@@ -949,8 +946,7 @@ def resultEFC(param):
             print('- Applied factor = ' + str(scaling), flush=True)
             resultatestimation_per_wvl = resultatestimation_per_wvl * scaling
         
-        else:
-            intensity_inco_per_wvl = imagecorrection_per_wvl - intensity_co_per_wvl
+        intensity_inco_per_wvl = imagecorrection_per_wvl - intensity_co_per_wvl
         
         intensity_co.append(intensity_co_per_wvl)
         intensity_inco.append(intensity_inco_per_wvl)
