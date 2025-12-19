@@ -340,16 +340,16 @@ def reduceimageSPHERE(param, file,  maxPSF, remove_bad_pix = True, high_pass_fil
     # Get image exposure time
     expim = get_exptime(file)
 
-    # Load dark that correspond to image exposure time
-    back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] 
-    # Load image
-    image = np.mean(fits.getdata(file),axis = 0) 
-
-    # Subtract back from image
-    image = image - back
-
     if detector == "IRDIS":
+        # Load dark that correspond to image exposure time
+        back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] 
+        # Load image
+        image = np.mean(fits.getdata(file),axis = 0) 
+
+        # Subtract back from image
+        image = image - back
         image = reduce_image_IRDIS(param, image, back, remove_bad_pix, high_pass_filter)
+        
     elif detector == "IFS":
         image = reduce_image_IFS(param, image)
     
@@ -459,7 +459,7 @@ def process_cube_IFS(filename, instrument, delta_wave = 5):
     basename = os.path.basename(filename)
     filename = basename + '_cube_resampled_DIT_000.fits'
 
-    cube = fits.getdata(filename)
+    cube, header = fits.getdata(filename)
     raw_nb_wave = len(cube) #39
 
     min_wave = instrument.wavelength_range[0].value
@@ -496,7 +496,7 @@ def process_cube_IFS(filename, instrument, delta_wave = 5):
     #Rename result to fit IRDIS-like code (remove IFS in filenames)
     before, _, after = basename.partition("IFS_")
     new_namefile = before + after + 'fits'  # 'after' is everything after "IFS_"
-    fits.writeto(new_namefile, cube_stacked, overwrite = True)
+    fits.writeto(new_namefile, cube_stacked, header, overwrite = True)
 
 
 def extract_cube_IFS(file, wavecal_outputdir, cube_outputdir, extraction_parameters):
@@ -672,7 +672,8 @@ def process_PSF(param):
     """
     lightsource_estim = param['lightsource_estim']
     ImageDirectory = param["ImageDirectory"]
-     
+
+    #TODO: MIND ND FILTER PER WVLGTH!! 
     if param["which_nd"] == 'ND_3.5':
         ND = 1/0.00105
     elif param["which_nd"] == 'ND_2.0':
@@ -908,11 +909,11 @@ def resultEFC(param):
     
     intensity_co = []
     intensity_inco =[]
-    imagecorrection = []
+    #imagecorrection = []
     resultatestimation = []
 
     print('- Creating difference of images...', flush=True)
-    Difference, imagecorrection_per_wvl, Images_to_display = createdifference(param)
+    Difference, imagecorrection, Images_to_display = createdifference(param)
 
     for wvl in np.arange(len(PWP_matrix)):
         print('- Estimating the focal plane electric field...', flush=True)
@@ -934,12 +935,12 @@ def resultEFC(param):
         
         intensity_co.append(intensity_co_per_wvl)
         intensity_inco.append(intensity_inco_per_wvl)
-        imagecorrection.append(imagecorrection_per_wvl)
+        #imagecorrection.append(imagecorrection_per_wvl)
         resultatestimation.append(resultatestimation_per_wvl)
     
     intensity_co = np.array(intensity_co)
     intensity_inco = np.array(intensity_inco)
-    imagecorrection = np.array(imagecorrection)
+    #imagecorrection = np.array(imagecorrection)
     resultatestimation = np.array(resultatestimation)
     
     if gain!=0:
@@ -1360,7 +1361,7 @@ def find_center_with_cosine(param):
     initial_guess = (np.amax(data1), 1 , 1 , np.unravel_index(np.argmax(data1, axis=None), data1.shape)[0] , np.unravel_index(np.argmax(data1, axis=None), data1.shape)[1] ,np.mean(data1))
     
     try:
-        popt1, pcov = opt.curve_fit(twoD_Gaussian, xy, (data1).flatten(), p0=initial_guess)
+        popt1, _ = opt.curve_fit(twoD_Gaussian, xy, (data1).flatten(), p0=initial_guess)
     except RuntimeError:
         print("Error - curve_fit failed top PSF", flush=True)
 
@@ -1368,7 +1369,7 @@ def find_center_with_cosine(param):
     initial_guess = (np.amax(data2), 1 , 1 , np.unravel_index(np.argmax(data2, axis=None), data2.shape)[0] , np.unravel_index(np.argmax(data2, axis=None), data2.shape)[1] ,np.mean(data2))
     
     try:
-        popt2, pcov = opt.curve_fit(twoD_Gaussian, xy, (data2).flatten(), p0=initial_guess)
+        popt2, _ = opt.curve_fit(twoD_Gaussian, xy, (data2).flatten(), p0=initial_guess)
     except RuntimeError:
         print("Error - curve_fit failed bottom PSF", flush=True)
         
