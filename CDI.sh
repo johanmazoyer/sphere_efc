@@ -201,7 +201,7 @@ if [ "$create_PSF" -eq "1" ]; then
 		msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
 	elif [[ "$detector" == "IFS" ]]; then
-		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_PSF} OCS2.DET1.NDIT ${NDIT_PSF} OCS2.OCS.DET1.IMGNAME ${lightsource_estim}OffAxisPSF_ "
+		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_PSF} OCS2.DET1.NDIT ${NDIT_PSF} OCS2.OCS.DET1.IMGNAME ${lightsource_estim}IFS_OffAxisPSF_ "
 		msgSend -n wsre sroControl START "-detId IFS"
 		msgSend -n wsre sroControl WAIT "-detId IFS"
 
@@ -272,8 +272,8 @@ if [ "$create_coro" -eq "1" ]; then
 		export PROBE_TYPE
 		export detector
 
-		#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
-		echo "Launch python EFC code"
+		#Run the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
+		echo "Run python EFC code"
 		python3 PythonSphereEFC_v2.py #Should be python3 on SPHERE
 
 		if (($nbiter == 2))
@@ -297,9 +297,9 @@ if [ "$create_coro" -eq "1" ]; then
 		if (($nbiter == 1)); then
 
 		
-			# FOR COSINUS TO CENTER
+			# FOR COSINE TO CENTER
 
-			echo "COSINUS!"
+			echo "COSINE!"
 		
 			FILE_COS=( `/bin/ls ${WORK_PATH}/cos_00deg_10nm.fits` )
 			for FILE in "${FILE_COS[@]}"
@@ -312,16 +312,16 @@ if [ "$create_coro" -eq "1" ]; then
 				/bin/sleep ${PAUSE_TIME}
 				echo ' * slopes loaded'
 
-				echo "Acquire Cosinus"
+				echo "Acquire Cosine"
 				echo ' * acquiring image'
 
 				if [[ "$detector" == "IRDIS" ]]; then
-					msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosinusForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
+					msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosineForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
 					msgSend -n wsre sroControl START "-detId IRDIS"
 					msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
 				elif [[ "$detector" == "IFS" ]]; then
-					msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}CosinusForCentering_ "
+					msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_CosineForCentering_ "
 					msgSend -n wsre sroControl START "-detId IFS"
 					msgSend -n wsre sroControl WAIT "-detId IFS"
 
@@ -359,7 +359,7 @@ if [ "$create_coro" -eq "1" ]; then
 			msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
 		elif [[ "$detector" == "IFS" ]]; then
-			msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}iter${imgnb}_coro_image_ "
+			msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ "
 			msgSend -n wsre sroControl START "-detId IFS"
 			msgSend -n wsre sroControl WAIT "-detId IFS"
 
@@ -390,7 +390,7 @@ if [ "$create_coro" -eq "1" ]; then
 				msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
 			elif [[ "$detector" == "IFS" ]]; then
-				msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_probe} OCS2.DET1.NDIT ${NDIT_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${k}_ "
+				msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_probe} OCS2.DET1.NDIT ${NDIT_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${k}_ "
  				msgSend -n wsre sroControl START "-detId IFS"
 				msgSend -n wsre sroControl WAIT "-detId IFS"
 
@@ -405,9 +405,9 @@ if [ "$create_coro" -eq "1" ]; then
     
     # this line is necessary otherwise the cp of existing files fails because of permission problems
     chmod uga+rwx ${WORK_PATH}/${EXP_NAME}*fits
-    scp sphere@wsre:${DATA_PATH}/${EXP_NAME}iter${imgnb}_coro_image_*.fits ${WORK_PATH}/
-    scp sphere@wsre:${DATA_PATH}/${EXP_NAME}iter${nbiter}_Probe_000*.fits ${WORK_PATH}/
-    scp sphere@wsre:${DATA_PATH}/${EXP_NAME}CosinusForCentering_*.fits ${WORK_PATH}/
+    scp sphere@wsre:${DATA_PATH}/${EXP_NAME}*iter${imgnb}_coro_image_*.fits ${WORK_PATH}/
+    scp sphere@wsre:${DATA_PATH}/${EXP_NAME}*iter${nbiter}_Probe_000*.fits ${WORK_PATH}/
+    scp sphere@wsre:${DATA_PATH}/${EXP_NAME}*CosineForCentering_*.fits ${WORK_PATH}/
     
 	done
 fi
@@ -415,7 +415,7 @@ fi
 # this line is necessary otherwise the cp of existing files fails because of permission problems
 chmod uga+rwx ${WORK_PATH}/${EXP_NAME}*fits
 scp sphere@wsre:${DATA_PATH}/SPHERE_BKGRD_EFC_*.fits ${WORK_PATH}/
-scp sphere@wsre:${DATA_PATH}/${lightsource_estim}OffAxisPSF_*.fits ${WORK_PATH}/
+scp sphere@wsre:${DATA_PATH}/${lightsource_estim}*OffAxisPSF_*.fits ${WORK_PATH}/
 #./send.sh
 
 # end

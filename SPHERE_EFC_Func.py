@@ -1053,7 +1053,7 @@ def FullIterEFC(param):
     maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
 
     if nbiter == 1:
-        print('Creating slopes for Cosinus, PSFOffAxis and new probes...', flush=True)
+        print('Creating slopes for Cosine, PSFOffAxis and new probes...', flush=True)
         #Copy the reference slope with the right name for iteration 0 of ExperimentXXXX
         recordslopes(np.zeros(2480), dir, slope_ini, filenameroot+'iter0correction')
         #Create the cosine of 10nm peak-to-valley amplitude for centering
@@ -1085,7 +1085,7 @@ def FullIterEFC(param):
         if nbiter == 2:
             #Calculate the center of the first coronagraphic image using the waffle
             print('Calculating center of the first coronagraphic image:', flush=True)
-            data,centerx,centery = findingcenterwithcosinus(param)
+            data,centerx,centery = findingcenterwithcosine(param)
             SaveFits([centerx,centery], ['',0], dir2, 'centerxy')
         
         centerx, centery = fits.getdata(dir2 + 'centerxy.fits')
@@ -1254,7 +1254,7 @@ def VoltToSlope(MatrixDirectory,Volt):
     
 def recordCoswithvolt(param, amptopushinnm, refslope):
     """ --------------------------------------------------
-    Creation of the cosinus (in slope) to apply on the DM    
+    Creation of the cosine (in slope) to apply on the DM    
     
     Parameters:
     ----------
@@ -1310,13 +1310,13 @@ def record_slope_from_file(param, file_path, amptopushinnm, refslope, name):
     
     
     
-def findingcenterwithcosinus(param):    
+def find_center_with_cosine(param):    
     """ --------------------------------------------------
-    Find center of the coronagraphic image using previously apploed cosinus.
+    Find center of the coronagraphic image using previously applied cosined.
     
     Parameters:
     ----------
-    dir: location of the cosinus
+    dir: location of the cosine
 
     Return:
     ------
@@ -1342,11 +1342,11 @@ def findingcenterwithcosinus(param):
         return (g).flatten()
     
     #LOOK THE FITS FILE AND CHANGE QUIKLY X0,Y0,X1,Y1
-    cosinuspluscoro = last(dir+'CosinusForCentering*.fits')
+    cosinepluscoro = last(dir+'CosineForCentering*.fits')
     coro = last(dir+'iter0_coro_image*.fits')
     
     #Fit gaussian functions
-    data = fits.getdata(cosinuspluscoro)[0]-fits.getdata(coro)[0]
+    data = fits.getdata(cosinepluscoro)[0]-fits.getdata(coro)[0]
     data1 = cropimage(data,x0_up,y0_up,30)
     data2 = cropimage(data,x1_up,y1_up,30)
     data1[np.where(data1<0)] = 0
