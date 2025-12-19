@@ -94,12 +94,13 @@ centeringateachiter=0
 rescaling=0
 
 #Which instrument is used
-detector="IRDIS" #Can be IRDIS or IFS
+detector="IFS" #Can be IRDIS or IFS
+obs_band="OBS_YJ" #Used only if IFS. Can also be 'OBS_H'
 
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
-WORK_PATH0=/vltuser/sphere/zwahhaj/efc
+WORK_PATH0=/Users/apoitier/Documents/Research/Softwares/sphere_efc/ #/vltuser/sphere/zwahhaj/efc/
 
 SLOPE_INI='VisAcq.DET1.REFSLP'
 
@@ -110,7 +111,6 @@ SLOPE_INI='VisAcq.DET1.REFSLP'
 ###################################################################
 ###################################################################
 
-MATRIX_PATH=$WORK_PATH0'/MatricesAndModel'
 WORK_PATH=$WORK_PATH0'/SlopesAndImages'
 
 PAUSE_TIME=2
@@ -248,8 +248,6 @@ if [ "$create_coro" -eq "1" ]; then
 
 		#Export the variables so that they can be retrieved from python
 		export WORK_PATH0
-		export WORK_PATH
-		export MATRIX_PATH
 		export nbiter
 		export EXP_NAME
 		export DHsize
@@ -271,6 +269,7 @@ if [ "$create_coro" -eq "1" ]; then
 		export ESTIM_ALGORITHM
 		export PROBE_TYPE
 		export detector
+		export obs_band
 
 		#Run the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 		echo "Run python EFC code"

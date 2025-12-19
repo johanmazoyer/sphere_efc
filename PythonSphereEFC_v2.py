@@ -8,9 +8,6 @@ warnings.filterwarnings("ignore")
 
 # Retrieve the shell variables
 RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
-# ImageDirectory = os.environ['WORK_PATH']#RootDirectory+'SlopesAndImages/'
-# MatrixDirectory = os.environ['MATRIX_PATH']#RootDirectory+'MatricesAndModel/'
-#RootDirectory = '/vltuser/sphere/zwahhaj/efc/'
 ImageDirectory = RootDirectory+'SlopesAndImages/'
 MatrixDirectory = RootDirectory+'MatricesAndModel/'
 nbiter = int(os.environ['nbiter']) #nb of the iteration (first iteration is 1)
@@ -34,6 +31,7 @@ rescaling = int(os.environ['rescaling'])
 estim_algorithm = os.environ['ESTIM_ALGORITHM']
 probe_type = os.environ['PROBE_TYPE']
 detector = os.environ['detector']
+obs_band = os.environ['obs_band']
 
 print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name), flush=True)
 
@@ -63,7 +61,8 @@ param = {
   "rescaling": rescaling,
   "estim_algorithm": estim_algorithm,
   "probe_type": probe_type,
-  "detector":detector
+  "detector":detector,
+  "obs_band":obs_band
 }
 
 
