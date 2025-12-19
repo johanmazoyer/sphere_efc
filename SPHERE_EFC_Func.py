@@ -148,8 +148,17 @@ def fancy_xy_trans_slice(img_slice, xy_trans):
     Number of pixels (pixels) to translate `img_slice`; can be
     positive or negative, and does not need to be integer value.
     """
-    #Resample image using bilinear interpolation (order=1)
-    trans_slice = snd.affine_transform(img_slice, [1, 1], xy_trans, order=1)
+    if img_slice.ndim == 3:
+        trans = []
+        for wvl in np.arange(len(img_slice)):
+            trans.append(snd.affine_transform(img_slice[wvl], [1, 1], xy_trans, order=1))
+
+        trans_slice = np.array(trans)
+
+    else:
+        #Resample image using bilinear interpolation (order=1)
+        trans_slice = snd.affine_transform(img_slice, [1, 1], xy_trans, order=1)
+        
     return trans_slice
 
 def my_callback(params):
