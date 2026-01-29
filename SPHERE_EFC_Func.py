@@ -398,7 +398,22 @@ def reduce_image_IRDIS(param, image, back, remove_bad_pix, high_pass_filter):
 
 def reduce_image_IFS(param, image):
 
-    return image
+    reduced_image = []
+
+    centerx = param["centerx"]
+    centery = param["centery"]
+    dimimages = param["dimimages"]
+    ctr_x = int(centerx)
+    ctr_y = int(centery)
+
+    for index in np.arange(len(image)):
+        # Crop to keep relevant part of image
+        image_index = cropimage(image[index],ctr_x,ctr_y,dimimages)
+        reduced_image.append(image_index)
+
+    reduced_image = np.array(reduced_image)
+
+    return reduced_image
 
 
 def build_calibration_IFS(param):
