@@ -478,16 +478,9 @@ def build_calibration_IFS(param):
 
     return extraction_parameters, wavecal_outputdir, instrument
 
-def process_cube_IFS(filename, instrument, delta_wave = 5):
-    
-    #Stack, rotate and save results from charis
+def pick_wvl_IFS(instrument, delta_wave = 5):
 
-    #Pick resampled IFS cube file
-    root, _ = os.path.splitext(filename)
-    filename = root + '_cube_resampled_DIT_000.fits'
-
-    cube, header = fits.getdata(filename, ext=1, header=True)
-    raw_nb_wave = len(cube) #39
+    raw_nb_wave = 39
 
     min_wave = instrument.wavelength_range[0].value
     max_wave = instrument.wavelength_range[1].value
@@ -508,6 +501,20 @@ def process_cube_IFS(filename, instrument, delta_wave = 5):
     #Centraled wavelength stacked
     wavelength_stacked = [np.mean(wavelength_cropped[a:a+nb_images_per_stack]) for a in nb_images_per_stack * np.arange(len(wavelength_cropped)//nb_images_per_stack)]
     wavelength_stacked = np.array(wavelength_stacked,dtype=int)
+
+    return nb_images_per_stack, remainder, wavelength_stacked
+
+
+def process_cube_IFS(filename, nb_images_per_stack, remainder):
+    
+    #Stack, rotate and save results from charis
+
+    #Pick resampled IFS cube file
+    root, _ = os.path.splitext(filename)
+    filename = root + '_cube_resampled_DIT_000.fits'
+
+    cube, header = fits.getdata(filename, ext=1, header=True)
+    
 
     #Rotate
     angle_in_degree = -102 + 1.75 #Maire SPIE 2016 Still a slight angle remains wrt IRDIS 1.75
@@ -793,8 +800,9 @@ def createdifference(param):
     
     
     #Probes
-    numprobes = len(posprobes)
-    Difference = np.zeros((numprobes,dimimages,dimimages))  
+    #numprobes = len(posprobes)
+    #Difference = np.zeros((numprobes,dimimages,dimimages))  
+    Difference = []
     Images_to_display=[]
     k = 0
     j = 1
@@ -825,9 +833,10 @@ def createdifference(param):
             print('ERROR: Unvalid ESTIM_ALGORITHM value: should either be PWP or BTW', flush=True)
             break
             
-        Difference[k] = (Ikplus-Ikmoins)
+        Difference.append(Ikplus-Ikmoins)
         k = k + 1
 
+    Difference = np.array(Difference)
     Images_to_display.append(extract_image(PSF, final_size = len(PSF[0])))
     return Difference, imagecorrection, Images_to_display
 
@@ -952,13 +961,14 @@ def resultEFC(param):
     print('- Creating difference of images...', flush=True)
     Difference, imagecorrection, Images_to_display = createdifference(param)
 
+    print(len(PWP_matrix))
     for wvl in np.arange(len(PWP_matrix)):
         print('- Estimating the focal plane electric field...', flush=True)
         Difference_per_wvl = Difference[:, wvl]
         imagecorrection_per_wvl = imagecorrection[wvl]
         PWP_matrix_per_wvl = PWP_matrix[wvl]
         resultatestimation_per_wvl = estimate_efield(Difference_per_wvl, PWP_matrix_per_wvl)
-        intensity_co_per_wvl = np.abs(resultatestimation)**2
+        intensity_co_per_wvl = np.abs(resultatestimation_per_wvl)**2
 
         if rescaling == 1:
             print('- Rescaling solution and computing incoherent component...', flush=True)
@@ -977,6 +987,7 @@ def resultEFC(param):
     intensity_inco = np.array(intensity_inco)
     #imagecorrection = np.array(imagecorrection)
     resultatestimation = np.array(resultatestimation)
+    print(intensity_co.shape)
     
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
@@ -1084,6 +1095,7 @@ def FullIterEFC(param):
         #Create the directory
         os.mkdir(dir)
     dir2 = dir + filenameroot
+    obs_band = param['obs_band']
         
     dhsize = param["dhsize"]
     maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
@@ -1099,6 +1111,8 @@ def FullIterEFC(param):
         if detector == "IFS":
             # Calibrate the IFS if undone before
             extraction_parameters, wavecal_outputdir, instrument = build_calibration_IFS(param)
+            nb_images_per_stack, remainder, wavelength_stacked = pick_wvl_IFS(instrument, delta_wave = 5)
+            fits.writeto(MatrixDirectory + detector + '_' + obs_band + '_wavelength.fits', wavelength_stacked, overwrite = True)
 
             # Extract all the IFS raw images in the experiment/iter and create cubes
             filenames = []
@@ -1114,7 +1128,7 @@ def FullIterEFC(param):
             do_extract_cube_IFS = partial(extract_cube_IFS, wavecal_outputdir=wavecal_outputdir, cube_outputdir=dir, extraction_parameters=extraction_parameters)  # freeze b and c
             Parallel(n_jobs=-1)(delayed(do_extract_cube_IFS)(filename) for filename in filenames)
 
-            do_process_cube_IFS = partial(process_cube_IFS, instrument=instrument, delta_wave=5)  # freeze b and c
+            do_process_cube_IFS = partial(process_cube_IFS, nb_images_per_stack = nb_images_per_stack, remainder = remainder)  # freeze b and c
             Parallel(n_jobs=-1)(delayed(do_process_cube_IFS)(filename) for filename in filenames)
 
 

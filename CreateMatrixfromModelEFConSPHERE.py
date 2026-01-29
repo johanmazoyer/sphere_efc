@@ -32,14 +32,16 @@ MatrixDirectory = os.getcwd()+'/MatricesAndModel/'
 # directory where are all the different model planes (Apod, Lyot, etc..)
 ModelDirectory = os.getcwd()+'/Model/'
 
-#coro = 'APLC'
-coro = 'FQPM'
+coro = 'APLC'
+#coro = 'FQPM'
 dimimages = 200
-detector = 'IRDIS' #'IFS_YH' or 'IFS_YJ' or 'IRDIS'
+detector = 'IFS_OBS_YJ' #'IFS_OBS_YH' or 'IFS_OBS_YJ' or 'IRDIS'
 waves = [1.667e-6]
-onsky = 1 #1 if on sky correction
+waves = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
+waves = waves * 1e-9
+onsky = 0 #1 if on sky correction
 
-zone_to_correct = 'horizontal' #vertical #horizontal #'FDH'
+zone_to_correct = 'FDH' #vertical #horizontal #'FDH'
 createPW = True
 probe_type = 'individual_act' #'sinc' #'individual_act'
 
@@ -83,13 +85,13 @@ amplitudePW = 400/37
 #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
 amplitudeEFCMatrix = 8
 
-if detector == 'IFS_YJ' or detector == 'IFS_YH':
-    if detector == 'IFS_YJ':
+""" if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_YH':
+    if detector == 'IFS_OBS_YJ':
         resolution = 55
         min_wvl = 1.1e-6
         max_wvl = 1.35e-6
         
-    elif detector == 'IFS_YH':
+    elif detector == 'IFS_OBS_YH':
         resolution = 35
         min_wvl = 1.45e-6
         max_wvl = 1.85e-6
@@ -98,7 +100,7 @@ if detector == 'IFS_YJ' or detector == 'IFS_YH':
     delta_wvl = wvl_0 / resolution
     range_wvl = max_wvl - min_wvl
     nb_wvl = int(range_wvl/delta_wvl)
-    waves = np.linspace(min_wvl, max_wvl, nb_wvl)
+    waves = np.linspace(min_wvl, max_wvl, nb_wvl) """
 #### Pour estimation
 
 if createPW == True:
