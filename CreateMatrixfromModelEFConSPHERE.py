@@ -40,6 +40,7 @@ waves = [1.667e-6]
 waves = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
 waves = waves * 1e-9
 onsky = 0 #1 if on sky correction
+print(waves)
 
 zone_to_correct = 'FDH' #vertical #horizontal #'FDH'
 createPW = True
@@ -84,6 +85,13 @@ lightsource = lightsource + coro + '_'
 amplitudePW = 400/37
 #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
 amplitudeEFCMatrix = 8
+
+if detector == 'IFS_OBS_YH' or detector == 'IFS_OBS_YJ':
+    resolinarcsec_pix = 7.4e-3
+elif detector == 'IRDIS':
+    resolinarcsec_pix = 12.25e-3
+else:
+    print('Error resolinarcsec_pix undefined !!!')
 
 """ if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_YH':
     if detector == 'IFS_OBS_YJ':
@@ -141,7 +149,8 @@ if createPW == True:
                                                                             posprobes ,
                                                                             cutestimation,
                                                                             coro,
-                                                                            probe_type)
+                                                                            probe_type,
+                                                                            resolinarcsec_pix = resolinarcsec_pix)
         
         PWP_matrix.append(PWP_one_wvl)
 
@@ -185,7 +194,8 @@ if createjacobian==True:
                                                  dimimages ,
                                                  pushact ,
                                                  WhichInPupil,
-                                                 coro)
+                                                 coro,
+                                                 resolinarcsec_pix = resolinarcsec_pix)
 
     #Saving matrix
     def_mat.SaveFits(Gmatrix, ['',0], ModelDirectory, lightsource + 'Jacobian', replace=True)

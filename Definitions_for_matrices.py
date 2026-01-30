@@ -102,7 +102,7 @@ def SaveFits(image,head,doc_dir2,name,replace=False):
 
 
 #RGa
-def definition_isz(pupsizetmp,wave):
+def definition_isz(pupsizetmp, wave, resolinarcsec_pix):
     """
     Extract relevant data 
 
@@ -125,7 +125,7 @@ def definition_isz(pupsizetmp,wave):
     arcsec2rad = d2rad/d2arcsec  # radian to milliarcsecond conversion factor
     
     #SPHERE detector resol
-    resolinarcsec_pix = 12.25e-3  #arcsec/pix
+    #resolinarcsec_pix = 12.25e-3  #arcsec/pix
     resolinrad_pix = resolinarcsec_pix*arcsec2rad  #rad/pix
     resolinpix_rad = 1 / resolinrad_pix     #pix/rad
     
@@ -135,7 +135,7 @@ def definition_isz(pupsizetmp,wave):
     isz=int(pupsizetmp*ld_p)#-1 # Nombre de pixels dans le plan pupille pour atteindre la résolution ld_p voulue
     return [isz,ld_mas]
 
-def pupiltodetector(input_wavefront, wave, lyot_mask, Name_ALC, isz_foc, coro, pupparf=False):
+def pupiltodetector(input_wavefront, wave, lyot_mask, Name_ALC, isz_foc, coro, resolinarcsec_pix, pupparf=False):
     """
     Propagate E-field from entrance pupil plane to detector
 
@@ -164,7 +164,7 @@ def pupiltodetector(input_wavefront, wave, lyot_mask, Name_ALC, isz_foc, coro, p
     # Size of pupil in pixel (384)
     pupsize = pup_shape[0]
     # Nombre de pixels dans le plan pupille pour atteindre la résolution ld_p voulue
-    [isz_pup,ld_mas] = definition_isz(pupsize, wave)
+    isz_pup, ld_mas = definition_isz(pupsize, wave, resolinarcsec_pix)
 
     if coro == 'APLC':
 
@@ -329,7 +329,7 @@ def invertDSCC(interact, cut ,goal='e', regul="truncation", visu=False):
     return [np.diag(InvS),pseudoinverse]
 
 
-def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, amplitudePW, posprobes , cutsvd, coro, probe_type):
+def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, amplitudePW, posprobes , cutsvd, coro, probe_type, resolinarcsec_pix):
     """
     Create PW matrix
 
@@ -373,17 +373,17 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
     SVD = np.zeros((2,isz_foc,isz_foc))
     
     
-    [isz_pup,ld_mas] = definition_isz(pupsize, wave)
+    isz_pup, _ = definition_isz(pupsize, wave, resolinarcsec_pix)
     # Create off-axis PSF
     maskoffaxis = cropimage(translationFFT(isz_pup,30,30), int(isz_pup/2), int(isz_pup)/2, pupsize)
-    OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, coro)
+    OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, coro, resolinarcsec_pix)
     squaremaxPSF = np.amax(np.abs(OffAxisPSF))
 
     # Regularization
     cutsvd = 1e20 #0.3*squaremaxPSF*8/(400/37)
     
     # Get constant E-field in the detector with corono
-    pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc, coro)
+    pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc, coro, resolinarcsec_pix)
 
     k=0
     
@@ -408,7 +408,7 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
         #entrance pupil plane field (can be real, or complex with amplitude and phase)
         input_wavefront_k = input_wavefront*(1+1j*probephase[k])
         # Propagate input through the coronagraph, remove constant E-field and normalize with PSF
-        deltapsikbis = pupiltodetector(input_wavefront_k, wave,lyot_mask,Name_ALC,isz_foc,coro)
+        deltapsikbis = pupiltodetector(input_wavefront_k, wave,lyot_mask,Name_ALC,isz_foc,coro, resolinarcsec_pix)
         deltapsik[k] = (deltapsikbis-pupilnoabb)/squaremaxPSF
         k=k+1
     
@@ -650,7 +650,7 @@ def creatingMaskDH(dimimages,
     
     
     
-def creatingCorrectionmatrix(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, Whichact, coro):
+def creatingCorrectionmatrix(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, Whichact, coro, resolinarcsec_pix):
     """
     Create full jacobian
 
@@ -682,14 +682,14 @@ def creatingCorrectionmatrix(input_wavefront, wave, lyot_mask , Name_ALC , isz_f
     pup_shape = input_wavefront.shape
     # Size of pupil in pixel (384)
     pupsize = pup_shape[0]
-    [isz_pup,ld_mas] = definition_isz(pupsize, wave)
+    isz_pup, _ = definition_isz(pupsize, wave, resolinarcsec_pix)
     # Create off-axis PSF
     maskoffaxis = cropimage(translationFFT(isz_pup,30,30), int(isz_pup/2), int(isz_pup)/2, pupsize)
-    OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, coro)
+    OffAxisPSF = pupiltodetector(maskoffaxis*input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, coro, resolinarcsec_pix)
     squaremaxPSF = np.amax(np.abs(OffAxisPSF))
     
     # Get constant E-field in the detector with corono
-    pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc, coro)
+    pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc, coro, resolinarcsec_pix)
     
     # Jacobian calculation cube (Real-Imag, pixels, nb modes)
     Gmatrixbis=np.zeros((2,int(isz_foc*isz_foc),len(Whichact)))
@@ -703,7 +703,7 @@ def creatingCorrectionmatrix(input_wavefront, wave, lyot_mask , Name_ALC , isz_f
         # Entrance pupil plane field (can be real, or complex with amplitude and phase)
         input_wavefront_k = input_wavefront*(1+1j*Psivector)
         # Propagate input through the coronagraph, remove constant E-field and normalize with PSF
-        Gvectorbisbis = (pupiltodetector(input_wavefront_k , wave , lyot_mask , Name_ALC , isz_foc, coro)- pupilnoabb)/squaremaxPSF
+        Gvectorbisbis = (pupiltodetector(input_wavefront_k , wave , lyot_mask , Name_ALC , isz_foc, coro, resolinarcsec_pix)- pupilnoabb)/squaremaxPSF
     
         # Fill jacobian with real data
         Gmatrixbis[0,:,k] = np.real(Gvectorbisbis).flatten()
