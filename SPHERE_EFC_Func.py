@@ -706,14 +706,36 @@ def process_PSF(param):
     """
     lightsource_estim = param['lightsource_estim']
     ImageDirectory = param["ImageDirectory"]
+    MatrixDirectory = param["MatrixDirectory"]
+    detector = param["detector"]
+    obs_band = param["obs_band"]
+
+    if detector == 'IFS':
+        wavelength_stacked = fits.getdata(MatrixDirectory + detector + '_' + obs_band + '_wavelength.fits')
+        ND_file = np.loadtxt(MatrixDirectory + "SPHERE_CPI_ND.dat")
+
+        if param["which_nd"] == 'ND_3.5':
+            ND_col = 4
+        elif param["which_nd"] == 'ND_2.0':
+            ND_col = 3
+        else:
+            ND_col = 1.
+        
+        ND = []
+        col0 = ND_file[:, 0]
+        for wvl in wavelength_stacked:
+            idx = np.argmin(np.abs(col0 - wvl))
+            ND.append(1/ND_file[idx,ND_col])
+        ND = np.array(ND)[:, None, None]
 
     #TODO: MIND ND FILTER PER WVLGTH!! 
-    if param["which_nd"] == 'ND_3.5':
-        ND = 1/0.00105
-    elif param["which_nd"] == 'ND_2.0':
-        ND = 1/0.0179
     else:
-        ND = 1.
+        if param["which_nd"] == 'ND_3.5':
+            ND = 1/0.00105
+        elif param["which_nd"] == 'ND_2.0':
+            ND = 1/0.0179
+        else:
+            ND = 1.
 
 
     file_PSF = last(ImageDirectory+lightsource_estim+'OffAxisPSF*.fits')
@@ -769,7 +791,7 @@ def createdifference(param):
 
     #PSF
     PSF, _, maxPSF, _ = process_PSF(param)
-    #print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ', maxPSF, flush=True)
+    print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ', maxPSF, flush=True)
     
     #Correction
     filecorrection = last(directory + 'iter' + str(nbiter-2) + '_coro_image*.fits')
@@ -840,7 +862,7 @@ def createdifference(param):
     Images_to_display.append(extract_image(PSF, final_size = len(PSF[0])))
     return Difference, imagecorrection, Images_to_display
 
-def extract_image(image_to_extract, final_size = 140, index = 0):
+def extract_image(image_to_extract, final_size = 140, index = 3):
     if image_to_extract.ndim == 3:
         image = image_to_extract[index]
     else:
@@ -961,7 +983,7 @@ def resultEFC(param):
     print('- Creating difference of images...', flush=True)
     Difference, imagecorrection, Images_to_display = createdifference(param)
 
-    print(len(PWP_matrix))
+    #print(len(PWP_matrix))
     for wvl in np.arange(len(PWP_matrix)):
         print('- Estimating the focal plane electric field...', flush=True)
         Difference_per_wvl = Difference[:, wvl]
@@ -987,7 +1009,7 @@ def resultEFC(param):
     intensity_inco = np.array(intensity_inco)
     #imagecorrection = np.array(imagecorrection)
     resultatestimation = np.array(resultatestimation)
-    print(intensity_co.shape)
+    #print(intensity_co.shape)
     
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
