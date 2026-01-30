@@ -862,7 +862,7 @@ def createdifference(param):
     Images_to_display.append(extract_image(PSF, final_size = len(PSF[0])))
     return Difference, imagecorrection, Images_to_display
 
-def extract_image(image_to_extract, final_size = 140, index = 3):
+def extract_image(image_to_extract, final_size = 140, index = -1):
     if image_to_extract.ndim == 3:
         image = image_to_extract[index]
     else:
@@ -1200,9 +1200,14 @@ def FullIterEFC(param):
                 f.writelines( text_in_file )
                 
         # Display data
-        imagecorrection_to_display = high_pass_filter_gauss(extract_image(imagecorrection), 2)
-        coherent_signal_to_display = high_pass_filter_gauss(extract_image(coherent_signal), 2)
-        incoherent_signal_to_display = high_pass_filter_gauss(extract_image(incoherent_signal), 2)
+        imagecorrection_to_display = extract_image(imagecorrection)
+        coherent_signal_to_display = extract_image(coherent_signal)
+        incoherent_signal_to_display = extract_image(incoherent_signal)
+
+        if onsky == 1:
+            imagecorrection_to_display = high_pass_filter_gauss(imagecorrection_to_display, 2)
+            coherent_signal_to_display = high_pass_filter_gauss(coherent_signal_to_display, 2)
+            incoherent_signal_to_display = high_pass_filter_gauss(incoherent_signal_to_display, 2)
         
         
         if onsky == 1:
@@ -1211,8 +1216,8 @@ def FullIterEFC(param):
             norm = None #'log'
         
         else:
-            vmin = -6e-6 #1e-7
-            vmax = 6e-6 #1e-3
+            vmin = -1e-4
+            vmax = 1e-4
             norm = None #'log'
         
         plt.close()
