@@ -111,8 +111,15 @@ def estimate_efield(Difference, PWP_matrix_per_wvl):
 
     return Result/4
        
+def transform_estimate_from_2D_to_1D(Estimate_2D, mask):
+    Estimate_1D = np.zeros(2*int(np.sum(mask)))
+    Estimate_ROI = (Estimate_2D[np.where(mask==1)])
+    Estimate_1D[0:int(np.sum(mask))] = np.real(Estimate_ROI).flatten()     
+    Estimate_1D[int(np.sum(mask)):] = np.imag(Estimate_ROI).flatten()
+
+    return Estimate_1D
    
-def solutiontocorrect(mask, ResultatEstimate, invertG, WhichInPupil):
+def solutiontocorrect(Estimate_1D, invertG, WhichInPupil):
     """ --------------------------------------------------
     Solution in nanometer to dig the DH at next iteration
     
@@ -126,11 +133,7 @@ def solutiontocorrect(mask, ResultatEstimate, invertG, WhichInPupil):
     ------
     solition: 1D array, floats with nanometers
     -------------------------------------------------- """
-    Eab = np.zeros(2*int(np.sum(mask)))
-    Resultatbis = (ResultatEstimate[np.where(mask==1)])
-    Eab[0:int(np.sum(mask))] = np.real(Resultatbis).flatten()     
-    Eab[int(np.sum(mask)):] = np.imag(Resultatbis).flatten()
-    cool = np.dot(invertG,Eab)
+    cool = np.dot(invertG, Estimate_1D)
     
     solution = np.zeros(int(1377))
     solution[WhichInPupil] = cool
@@ -862,7 +865,7 @@ def createdifference(param):
     Images_to_display.append(extract_image(PSF, final_size = len(PSF[0])))
     return Difference, imagecorrection, Images_to_display
 
-def extract_image(image_to_extract, final_size = 140, index = -1):
+def extract_image(image_to_extract, final_size = 140, index = -2):
     if image_to_extract.ndim == 3:
         image = image_to_extract[index]
     else:
@@ -990,26 +993,29 @@ def resultEFC(param):
         imagecorrection_per_wvl = imagecorrection[wvl]
         PWP_matrix_per_wvl = PWP_matrix[wvl]
         resultatestimation_per_wvl = estimate_efield(Difference_per_wvl, PWP_matrix_per_wvl)
-        intensity_co_per_wvl = np.abs(resultatestimation_per_wvl)**2
-
+        
         if rescaling == 1:
             print('- Rescaling solution and computing incoherent component...', flush=True)
             intensity_co_per_wvl, intensity_inco_per_wvl, scaling = rescale_coherent_component(intensity_co_per_wvl, imagecorrection_per_wvl, maskDH, 5)
             print('- Applied factor = ' + str(scaling), flush=True)
             resultatestimation_per_wvl = resultatestimation_per_wvl * scaling
         
+        intensity_co_per_wvl = ndimage.gaussian_filter(np.abs(resultatestimation_per_wvl)**2, 1)
         intensity_inco_per_wvl = imagecorrection_per_wvl - intensity_co_per_wvl
         
         intensity_co.append(intensity_co_per_wvl)
         intensity_inco.append(intensity_inco_per_wvl)
         #imagecorrection.append(imagecorrection_per_wvl)
-        resultatestimation.append(resultatestimation_per_wvl)
+        #resultatestimation.append(resultatestimation_per_wvl)
+        resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH)
+        resultatestimation = np.concatenate ((resultatestimation, resultatestimation_per_wvl_1D), axis = None)
+        print(len(resultatestimation))
     
     intensity_co = np.array(intensity_co)
     intensity_inco = np.array(intensity_inco)
+    
     #imagecorrection = np.array(imagecorrection)
-    resultatestimation = np.array(resultatestimation)
-    #print(intensity_co.shape)
+    #resultatestimation = np.array(resultatestimation)
     
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
@@ -1017,7 +1023,7 @@ def resultEFC(param):
         invertGDH = fits.getdata(MatrixDirectory+lightsource_corr+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
 
         
-        solution1 = solutiontocorrect(maskDH, resultatestimation, invertGDH, WhichInPupil)
+        solution1 = solutiontocorrect(resultatestimation, invertGDH, WhichInPupil)
         solution1 = solution1*amplitudeEFCMatrix/rad_632_to_nm_opt
         solution1 = -gain*solution1
         slopes = VoltToSlope(MatrixDirectory, solution1)
