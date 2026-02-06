@@ -4,9 +4,9 @@
 
 : '
 This script should be run on the sparta gateway.
-It will launch the EFC python code and record IRDIS data
+It will run the EFC python code and record IRDIS data
 
-Preliminary steps to perfornm before running this script
+Preliminary steps to perform before running this script
 
 1/ In the folder called SlopesAndImages in WORK_PATH0: 
    a/ Save the Visible WFS ref slopes  (VisAcq.DET1.REFSLP.fits)
@@ -50,10 +50,6 @@ WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
 DIT_bkgrd=1
 NDIT_bkgrd=2
 
-#Other images
-DIT_cosinus=1
-NDIT_cosinus=2
-
 
 ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
 Assuming_VLT_PUP_for_corr=0 
@@ -65,10 +61,6 @@ coro='APLC'
 #coro='FQPM'
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
-#DHsize = 0 for half dark hole 188mas to 625mas x -625mas to 625mas
-#DHsize = 1 for half dark hole 125mas to 625mas x -625mas to 625mas
-#DHsize = 2 for full dark hole -625mas to 625mas x -625mas to 625mas
-#DHsize = 3 for half dark hole -625mas to 625mas x 125mas to 625mas
 DHsize=1
 
 #Correction mode
@@ -97,10 +89,21 @@ Y0UP=1493    #1494 #1511 #X position of the upper PSF echo in python
 X1UP=192    #550 #478 #474 #Y position of the bottom PSF echo in python #485
 Y1UP=1528    #1531 #1511 #X position of the bottom PSF echo in python
 
+#For IFS
+X0UP=193    #490 #548 #544 #Y position of the upper PSF echo in python #553
+Y0UP=173    #1494 #1511 #X position of the upper PSF echo in python
+X1UP=114    #550 #478 #474 #Y position of the bottom PSF echo in python #485
+Y1UP=129    #1531 #1511 #X position of the bottom PSF echo in python
+
+
 #Do you want to center your image at each iteration. Set 1 for yes, 0 for no.
 centeringateachiter=0
 #Do you want to rescale the coherent intensity to match the total intensity in the DH?
 rescaling=0
+
+#Which instrument is used
+detector="IFS" #Can be IRDIS or IFS
+obs_band="OBS_YJ" #Used only if IFS. Can also be 'OBS_H'
 
 
 # Path common to wsre and wsrsgw
@@ -153,9 +156,18 @@ if [ "$create_bkgrd" -eq "1" ]; then
 
     # acquire background
     echo "Acquire background"
-    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_bkgrd} OCS1.DET1.NDIT ${NDIT_bkgrd} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
-    msgSend -n wsre sroControl START "-detId IRDIS"
-    msgSend -n wsre sroControl WAIT "-detId IRDIS"
+ 
+	if [[ "$detector" == "IRDIS" ]]; then
+		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_bkgrd} OCS1.DET1.NDIT ${NDIT_bkgrd} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
+		msgSend -n wsre sroControl START "-detId IRDIS"
+		msgSend -n wsre sroControl WAIT "-detId IRDIS"
+
+	elif [[ "$detector" == "IFS" ]]; then
+		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_bkgrd} OCS2.DET1.NDIT ${NDIT_bkgrd} OCS2.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ "
+		msgSend -n wsre sroControl START "-detId IFS"
+		msgSend -n wsre sroControl WAIT "-detId IFS"
+
+	fi
 
 
     # open shutter
@@ -192,11 +204,18 @@ if [ "$create_PSF" -eq "1" ]; then
 
     echo "Acquire OFF-Axis PSF"
     echo ' * acquiring image'
-    msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_PSF} OCS1.DET1.NDIT ${NDIT_PSF} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${lightsource_estim}OffAxisPSF_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
-    msgSend -n wsre sroControl START "-detId IRDIS"
-    msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
+	if [[ "$detector" == "IRDIS" ]]; then
+		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_PSF} OCS1.DET1.NDIT ${NDIT_PSF} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${lightsource_estim}OffAxisPSF_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
+		msgSend -n wsre sroControl START "-detId IRDIS"
+		msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
+	elif [[ "$detector" == "IFS" ]]; then
+		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_PSF} OCS2.DET1.NDIT ${NDIT_PSF} OCS2.OCS.DET1.IMGNAME ${lightsource_estim}IFS_OffAxisPSF_ "
+		msgSend -n wsre sroControl START "-detId IFS"
+		msgSend -n wsre sroControl WAIT "-detId IFS"
+
+	fi
     echo "!!!! ACTION: Bring the PSF back behind the corono by changing DTTS and press ENTER when well-centered"
     read -n1 -r key
 
@@ -232,8 +251,6 @@ if [ "$create_coro" -eq "1" ]; then
 
 	#Export the variables so that they can be retrived from python
 	export WORK_PATH0
-	export WORK_PATH
-	export MATRIX_PATH
 	export nbiter
 	export EXP_NAME
 	export DHsize
@@ -254,9 +271,11 @@ if [ "$create_coro" -eq "1" ]; then
 	export rescaling
 	export ESTIM_ALGORITHM
 	export PROBE_TYPE
-
-	#Launch the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
-	echo "Launch python EFC code"
+	export detector
+	export obs_band
+	
+	#Run the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
+	echo "Run python EFC code"
 	python3 PythonSphereEFC_v2.py #Should be python3 on SPHERE
 
 	if (($nbiter == 2))
@@ -280,9 +299,9 @@ if [ "$create_coro" -eq "1" ]; then
 	if [ ${#FILES_WFS[@]} -eq "1" ]; then
 
 		
-		# FOR COSINUS TO CENTER
+		# FOR COSINE TO CENTER
 
-		echo "COSINUS!"
+		echo "COSINE!"
 		
 		FILE_COS=( `/bin/ls ${WORK_PATH}/cos_00deg_10nm.fits` )
 		for FILE in "${FILE_COS[@]}"
@@ -295,11 +314,21 @@ if [ "$create_coro" -eq "1" ]; then
 			/bin/sleep ${PAUSE_TIME}
 			echo ' * slopes loaded'
 
-			echo "Acquire Cosinus"
+			echo "Acquire Cosine"
 			echo ' * acquiring image'
-			msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_cosinus} OCS1.DET1.NDIT ${NDIT_cosinus} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosinusForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
-			msgSend -n wsre sroControl START "-detId IRDIS"
-			msgSend -n wsre sroControl WAIT "-detId IRDIS"
+			
+				if [[ "$detector" == "IRDIS" ]]; then
+					msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosineForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
+					msgSend -n wsre sroControl START "-detId IRDIS"
+					msgSend -n wsre sroControl WAIT "-detId IRDIS"
+
+				elif [[ "$detector" == "IFS" ]]; then
+					msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_CosineForCentering_ "
+					msgSend -n wsre sroControl START "-detId IFS"
+					msgSend -n wsre sroControl WAIT "-detId IFS"
+
+				fi
+
 
 		done
 	fi
@@ -325,11 +354,18 @@ if [ "$create_coro" -eq "1" ]; then
 	echo "Acquire coronagraphic image"
 	echo ' * acquiring image'
 	let imgnb=$nbiter-1
-	#echo ${imgnb}
-	msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${imgnb}_coro_image_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
-	msgSend -n wsre sroControl START "-detId IRDIS"
-	msgSend -n wsre sroControl WAIT "-detId IRDIS"
+		
+		if [[ "$detector" == "IRDIS" ]]; then
+			msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${imgnb}_coro_image_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
+			msgSend -n wsre sroControl START "-detId IRDIS"
+			msgSend -n wsre sroControl WAIT "-detId IRDIS"
 
+		elif [[ "$detector" == "IFS" ]]; then
+			msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ "
+			msgSend -n wsre sroControl START "-detId IFS"
+			msgSend -n wsre sroControl WAIT "-detId IFS"
+
+		fi
 
 	#echo "Press enter to take the probe images..."
 	#read -n1 -r key
@@ -350,9 +386,18 @@ if [ "$create_coro" -eq "1" ]; then
 
 		echo "Acquire Probe"
 		echo ' * acquiring image'
-		msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_probe} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${k}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
-		msgSend -n wsre sroControl START "-detId IRDIS"
-		msgSend -n wsre sroControl WAIT "-detId IRDIS"
+					if [[ "$detector" == "IRDIS" ]]; then
+				msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_probe} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${k}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
+				msgSend -n wsre sroControl START "-detId IRDIS"
+				msgSend -n wsre sroControl WAIT "-detId IRDIS"
+
+			elif [[ "$detector" == "IFS" ]]; then
+				msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_probe} OCS2.DET1.NDIT ${NDIT_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${k}_ "
+ 				msgSend -n wsre sroControl START "-detId IFS"
+				msgSend -n wsre sroControl WAIT "-detId IFS"
+
+			fi
+			
 		let k=$k+1
 	done
 fi
