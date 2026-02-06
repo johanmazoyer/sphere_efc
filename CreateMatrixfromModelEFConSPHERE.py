@@ -204,7 +204,6 @@ if createjacobian==True:
         Gmatrix.append(Gmatrix_one_wvl)
 
     Gmatrix = np.array(Gmatrix)
-    print(Gmatrix.shape)
     #Saving matrix
     def_mat.SaveFits(Gmatrix, ['',0], ModelDirectory, lightsource + 'Jacobian', replace=True)
 

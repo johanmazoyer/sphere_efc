@@ -980,13 +980,11 @@ def resultEFC(param):
     
     intensity_co = []
     intensity_inco =[]
-    #imagecorrection = []
     resultatestimation = []
 
     print('- Creating difference of images...', flush=True)
     Difference, imagecorrection, Images_to_display = createdifference(param)
 
-    #print(len(PWP_matrix))
     for wvl in np.arange(len(PWP_matrix)):
         print('- Estimating the focal plane electric field...', flush=True)
         Difference_per_wvl = Difference[:, wvl]
@@ -1005,18 +1003,12 @@ def resultEFC(param):
         
         intensity_co.append(intensity_co_per_wvl)
         intensity_inco.append(intensity_inco_per_wvl)
-        #imagecorrection.append(imagecorrection_per_wvl)
-        #resultatestimation.append(resultatestimation_per_wvl)
         resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH)
-        resultatestimation = np.concatenate ((resultatestimation, resultatestimation_per_wvl_1D), axis = None)
         resultatestimation.append(resultatestimation_per_wvl_1D)
     
     resultatestimation = np.concatenate(resultatestimation, axis=0)
     intensity_co = np.array(intensity_co)
     intensity_inco = np.array(intensity_inco)
-    
-    #imagecorrection = np.array(imagecorrection)
-    #resultatestimation = np.array(resultatestimation)
     
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
