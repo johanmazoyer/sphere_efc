@@ -37,13 +37,15 @@ coro = 'APLC'
 dimimages = 200
 detector = 'IFS_OBS_YJ' #'IFS_OBS_YH' or 'IFS_OBS_YJ' or 'IRDIS'
 waves = [1.667e-6]
-waves = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
-waves = waves * 1e-9
+
+if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_YH':
+    waves = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
+    waves = waves * 1e-9
+
 onsky = 0 #1 if on sky correction
-print(waves)
 
 zone_to_correct = 'FDH' #vertical #horizontal #'FDH'
-createPW = True
+createPW = False
 probe_type = 'individual_act' #'sinc' #'individual_act'
 
 createwhich = False
@@ -187,7 +189,10 @@ if createjacobian==True:
     pushact = amplitudeEFCMatrix * raw_pushact
     WhichInPupil = fits.getdata(MatrixDirectory + lightsource + 'WhichInPupil0_5.fits')
     #Creating Matrix
-    Gmatrix = def_mat.creatingCorrectionmatrix(input_wavefront,
+    Gmatrix = []
+    for wave in waves :
+        print('wavelength: ', format(wave, '.2e'))
+        Gmatrix_one_wvl = def_mat.creatingCorrectionmatrix(input_wavefront,
                                                  wave,
                                                  Lyot384 ,
                                                  ALC ,
@@ -196,7 +201,10 @@ if createjacobian==True:
                                                  WhichInPupil,
                                                  coro,
                                                  resolinarcsec_pix = resolinarcsec_pix)
+        Gmatrix.append(Gmatrix_one_wvl)
 
+    Gmatrix = np.array(Gmatrix)
+    print(Gmatrix.shape)
     #Saving matrix
     def_mat.SaveFits(Gmatrix, ['',0], ModelDirectory, lightsource + 'Jacobian', replace=True)
 
@@ -214,7 +222,12 @@ if createEFCmatrix == True:
     print('...Creating EFC matrix...')
     maskDH = fits.getdata(MatrixDirectory + 'mask_DH' + namemask + '.fits')
     Gmatrix = fits.getdata(ModelDirectory + lightsource + 'Jacobian.fits')
-    masked_Gmatrix = def_mat.get_masked_jacobian(Gmatrix, maskDH)
+    masked_Gmatrix = []
+    for k, wave in enumerate(waves) :
+        print('wavelength: ', format(wave, '.2e'))
+        masked_Gmatrix_per_wvl = def_mat.get_masked_jacobian(Gmatrix[k], maskDH)
+        masked_Gmatrix.append(masked_Gmatrix_per_wvl)
+    masked_Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
     #Set how many modes you want to use to correct
     invertGDH = def_mat.invertDSCC(masked_Gmatrix, nbmodes, goal='c', regul='tikhonov', visu=True)[1]
     def_mat.SaveFits(invertGDH, ['',0], MatrixDirectory, lightsource+'Interactionmatrix_DH'+namemask+'_SVD'+corr_mode, replace=True)
