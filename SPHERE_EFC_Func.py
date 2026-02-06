@@ -1009,8 +1009,9 @@ def resultEFC(param):
         #resultatestimation.append(resultatestimation_per_wvl)
         resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH)
         resultatestimation = np.concatenate ((resultatestimation, resultatestimation_per_wvl_1D), axis = None)
-        print(len(resultatestimation))
+        resultatestimation.append(resultatestimation_per_wvl_1D)
     
+    resultatestimation = np.concatenate(resultatestimation, axis=0)
     intensity_co = np.array(intensity_co)
     intensity_inco = np.array(intensity_inco)
     
