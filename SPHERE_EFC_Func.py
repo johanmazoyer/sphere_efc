@@ -52,23 +52,6 @@ def SHslopes2map(MatrixDirectory, slopes, visu=True):
         fig.colorbar(im, cax=cbar_ax)
     return mapx,mapy
 
-
-def SaveFits(image, head,doc_dir2, name):
-    """ --------------------------------------------------
-    Save fits file
-    
-    Parameters:
-    ----------
-    image: float, file to save
-    head: list, header
-    doc_dir2: str, directory where to save the file
-    name: str, name of the saved file
-    -------------------------------------------------- """
-    hdu = fits.PrimaryHDU(image)
-    hdul = fits.HDUList([hdu])
-    hdr = hdul[0].header
-    hdr.set(head[0],head[1])
-    hdu.writeto(doc_dir2+name+'.fits',overwrite=True)
     
 def roundpupil(nbpix, prad1):
     """ --------------------------------------------------
@@ -731,7 +714,6 @@ def process_PSF(param):
             ND.append(1/ND_file[idx,ND_col])
         ND = np.array(ND)[:, None, None]
 
-    #TODO: MIND ND FILTER PER WVLGTH!! 
     else:
         if param["which_nd"] == 'ND_3.5':
             ND = 1/0.00105
@@ -823,10 +805,6 @@ def createdifference(param):
         best_params = [centerx-int(centerx), centery-int(centery)]
     imagecorrection = fancy_xy_trans_slice(imagecorrection, best_params)
     
-    
-    #Probes
-    #numprobes = len(posprobes)
-    #Difference = np.zeros((numprobes,dimimages,dimimages))  
     Difference = []
     Images_to_display=[]
     k = 0
@@ -1135,8 +1113,6 @@ def FullIterEFC(param):
     posprobes = param["posprobes"]
     nbiter = param['nbiter']
     filenameroot = param["exp_name"]
-    size_probes = param["size_probes"]
-    dimimages = param["dimimages"]
     onsky = param["onsky"]
     slope_ini = param["slope_ini"]
     detector = param['detector']
@@ -1187,7 +1163,7 @@ def FullIterEFC(param):
             #Calculate the center of the first coronagraphic image using the waffle
             print('Calculating center of the first coronagraphic image:', flush=True)
             data,centerx,centery = find_center_with_cosine(param)
-            SaveFits([centerx,centery], ['',0], dir2, 'centerxy')
+            fits.writeto(dir2 + 'centerxy.fits', np.array([centerx,centery]), overwrite=True )
         
         centerx, centery = fits.getdata(dir2 + 'centerxy.fits')
         param['centerx'] = centerx
