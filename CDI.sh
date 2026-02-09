@@ -66,9 +66,6 @@ DHsize=1
 # corr_mode=2: more aggressive correction (may be unstable)
 corr_mode=1
 
-#DO NOT MODIFY THE GAIN IF CDI
-gain=0
-
 #Algorithm for estimation. Should be either PWP or BTW
 ESTIM_ALGORITHM='PWP'
 
@@ -108,7 +105,7 @@ obs_band="OBS_YJ" #Used only if IFS. Can also be 'OBS_H'
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
-WORK_PATH0=/Users/apoitier/Documents/Research/Softwares/sphere_efc/ #/vltuser/sphere/zwahhaj/efc/
+WORK_PATH0=/home/rgalicher/software/python/sphere_efc/
 
 SLOPE_INI='VisAcq.DET1.REFSLP'
 
@@ -119,9 +116,18 @@ SLOPE_INI='VisAcq.DET1.REFSLP'
 ###################################################################
 ###################################################################
 
+#DO NOT MODIFY THE GAIN IF CDI
+gain=0
+
+#Weighting broadband corrrection
+#Can be an integer that represents the wvl channel used for correction.
+#Can be "equal_weight" to use all the wvl equally
+#Can be "longer_weight" to priviledge the longer wavelength
+correction_channel=1
+
 WORK_PATH=$WORK_PATH0'/SlopesAndImages'
 
-PAUSE_TIME=2
+PAUSE_TIME=0
 #Windows sizes are not currently working with IFS
 SX=1
 SY=1220
@@ -278,6 +284,7 @@ if [ "$create_coro" -eq "1" ]; then
 		export PROBE_TYPE
 		export detector
 		export obs_band
+		export correction_channel
 
 		#Run the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 		echo "Run python EFC code"

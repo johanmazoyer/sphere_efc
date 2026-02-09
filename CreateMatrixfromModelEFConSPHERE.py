@@ -84,7 +84,7 @@ else:
 lightsource = lightsource + coro + '_'
 
 #Amplitude in x nm/37 for the PW pokes such that pushact amplitude is equal to x nm
-amplitudePW = 400/37
+amplitudePW = 296/37
 #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
 amplitudeEFCMatrix = 8
 
