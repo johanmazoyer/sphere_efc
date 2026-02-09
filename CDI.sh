@@ -19,7 +19,7 @@ Preliminary steps to perform before running this script
 '
 
 #Total number of iterations to run in the loop
-tot_nbiter=3
+tot_nbiter=2
 
 
 #Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
@@ -48,14 +48,14 @@ DIT_bkgrd=1
 NDIT_bkgrd=2
 
 
-ONSKY=1 #Set 0 for internal pup ; 1 for an on sky correction
+ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
 Assuming_VLT_PUP_for_corr=0 
 #Work only if ONSKY=0. If  Assuming_VLT_PUP_for_corr=1 assume ONSKY=1 for EFC correction only
 
 
 #Coronagraph that is used
 #coro='APLC'
-coro='FQPM'
+coro='APLC'
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
 DHsize=1
@@ -73,20 +73,28 @@ gain=0
 ESTIM_ALGORITHM='PWP'
 
 #Number of probing actuator
-zone_to_correct='horizontal' #vertical #horizontal #FDH
+zone_to_correct='FDH' #vertical #horizontal #FDH
 
 #Type of probes used for PWP
 PROBE_TYPE='individual_act' #'sinc' #'individual_act'
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
-size_probes=400
+size_probes=296
 
 # First guess for the PSF echo position used for image centering (WARNING X and Y are inverted here)
 # (adding a cosine to DM phase)
+#For IRDIS
 X0UP=130    #490 #548 #544 #Y position of the upper PSF echo in python #553
 Y0UP=1493    #1494 #1511 #X position of the upper PSF echo in python
 X1UP=192    #550 #478 #474 #Y position of the bottom PSF echo in python #485
 Y1UP=1528    #1531 #1511 #X position of the bottom PSF echo in python
+
+#For IFS
+X0UP=193    #490 #548 #544 #Y position of the upper PSF echo in python #553
+Y0UP=173    #1494 #1511 #X position of the upper PSF echo in python
+X1UP=114    #550 #478 #474 #Y position of the bottom PSF echo in python #485
+Y1UP=129    #1531 #1511 #X position of the bottom PSF echo in python
+
 
 #Do you want to center your image at each iteration. Set 1 for yes, 0 for no.
 centeringateachiter=0

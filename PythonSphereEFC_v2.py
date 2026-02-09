@@ -36,6 +36,7 @@ if __name__ == '__main__':
     probe_type = os.environ['PROBE_TYPE']
     detector = os.environ['detector']
     obs_band = os.environ['obs_band']
+    correction_channel = os.environ['correction_channel']
 
     print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name), flush=True)
 
@@ -66,7 +67,8 @@ if __name__ == '__main__':
     "estim_algorithm": estim_algorithm,
     "probe_type": probe_type,
     "detector":detector,
-    "obs_band":obs_band
+    "obs_band":obs_band,
+    "correction_channel":correction_channel
     }
 
 

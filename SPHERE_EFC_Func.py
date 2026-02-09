@@ -973,6 +973,7 @@ def resultEFC(param):
     gain = param['gain']
     rescaling = param['rescaling']
     probe_type = param['probe_type']
+    correction_channel = param['correction_channel']
     
     filename = probe_type + '_' + zone_to_correct + '_' + str(size_probes) + 'nm' + '_'
     PWP_matrix = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'PWP_matrix.fits')
@@ -982,10 +983,12 @@ def resultEFC(param):
     intensity_inco =[]
     resultatestimation = []
 
+    nb_wvl = len(PWP_matrix)
+
     print('- Creating difference of images...', flush=True)
     Difference, imagecorrection, Images_to_display = createdifference(param)
-
-    for wvl in np.arange(len(PWP_matrix)):
+    
+    for wvl in np.arange(nb_wvl):
         print('- Estimating the focal plane electric field...', flush=True)
         Difference_per_wvl = Difference[:, wvl]
         imagecorrection_per_wvl = imagecorrection[wvl]
@@ -1006,12 +1009,19 @@ def resultEFC(param):
         resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH)
         resultatestimation.append(resultatestimation_per_wvl_1D)
     
-    resultatestimation = np.concatenate(resultatestimation, axis=0)
     intensity_co = np.array(intensity_co)
     intensity_inco = np.array(intensity_inco)
     
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
+        
+        if nb_wvl>1:
+            rieman_factors = compute_rieman(nb_wvl, correction_channel)
+            resultatestimation = np.array(resultatestimation)
+            resultatestimation = resultatestimation * rieman_factors[: , None]
+            resultatestimation = np.concatenate(resultatestimation, axis=0)
+        else:
+            resultatestimation = np.array(resultatestimation)
         WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
         invertGDH = fits.getdata(MatrixDirectory+lightsource_corr+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
 
@@ -1027,6 +1037,26 @@ def resultEFC(param):
     return intensity_co, intensity_inco, imagecorrection, Images_to_display, slopes
         
 
+def compute_rieman(nb_wavelength, correction_channel):
+    if correction_channel.isdigit() == True:
+        correction_channel = int(correction_channel)
+        if correction_channel>nb_wavelength:
+            print('Correction channel higher than number of channels. Switch to central channel')
+            correction_channel = int(nb_wavelength/2) + 1
+        print('Correction using channel ' + str(correction_channel))
+        rieman_factors = np.zeros(nb_wavelength)
+        rieman_factors[correction_channel - 1] = 1
+    else:
+        if correction_channel == 'equal_weight':
+            rieman_factors = np.ones(nb_wavelength)
+        elif correction_channel == 'longer_weight':
+            rieman_factors = np.linspace(0, 1, num=nb_wavelength)
+        else:
+            print('Unrecognized weighting channel parameter. Switch to equal weight')
+            correction_channel = 'equal_weight'
+            rieman_factors = compute_rieman(nb_wavelength, correction_channel)
+    
+    return rieman_factors
 
 
 def recordslopes(slopes, dir, refslope, namerecord):

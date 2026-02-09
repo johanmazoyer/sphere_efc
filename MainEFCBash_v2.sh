@@ -74,13 +74,13 @@ gain=0.5
 ESTIM_ALGORITHM='PWP'
 
 #Number of probing actuator
-zone_to_correct='horizontal' #vertical #FDH
+zone_to_correct='FDH' #vertical #FDH
 
 #Type of probes used for PWP
 PROBE_TYPE='individual_act' #'sinc' #'individual_act'
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
-size_probes=400
+size_probes=296
 
 # First guess for the PSF echo position used for image centering (WARNING X and Y are inverted here)
 # (adding a cosine to DM phase)
@@ -105,13 +105,15 @@ rescaling=0
 detector="IFS" #Can be IRDIS or IFS
 obs_band="OBS_YJ" #Used only if IFS. Can also be 'OBS_H'
 
+#Weighting broadband corrrection
+#Can be an integer that represents the wvl channel used for correction.
+#Can be "equal_weight" to use all the wvl equally
+#Can be "longer_weight" to priviledge the longer wavelength
+correction_channel=1
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
-#WORK_PATH0=/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/
-#WORK_PATH0=/vltuser/sphere/zwahhaj/efc
-WORK_PATH0=/Users/axel/Documents/Research/SPHERE/sphere_efc/
-#WORK_PATH0=~/Documents/Recherche/DonneesTHD/EFConSPHERE/sphere_efc
+WORK_PATH0=/Users/apoitier/Documents/Research/Softwares/sphere_efc/ #/vltuser/sphere/zwahhaj/efc/
 
 SLOPE_INI='VisAcq.DET1.REFSLP'
 
@@ -241,7 +243,7 @@ if [ "$create_coro" -eq "1" ]; then
 		fi
 		#Find the last file starting by Experiment in WORK_PATH
 		TMP=$(ls ${WORK_PATH}/Experiment*iter0correction.fits|wc -l)
-		let TMP=$TMP-$tmpplus
+		TMP=$(( TMP - tmpplus ))
 		#This number is the number of the next experiment
 		EXP_NAME=Experiment$(printf "%04d" $TMP)'_'
 	else
@@ -273,6 +275,7 @@ if [ "$create_coro" -eq "1" ]; then
 	export PROBE_TYPE
 	export detector
 	export obs_band
+	export correction_channel
 	
 	#Run the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 	echo "Run python EFC code"
