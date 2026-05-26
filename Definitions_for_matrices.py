@@ -71,36 +71,6 @@ def roundpupil(nbpix,prad1):
     return pupilnormal
 
 
-def SaveFits(image,head,doc_dir2,name,replace=False):
-    """
-    
-
-    Parameters
-    ----------
-    image : TYPE
-        DESCRIPTION.
-    head : TYPE
-        DESCRIPTION.
-    doc_dir2 : TYPE
-        DESCRIPTION.
-    name : TYPE
-        DESCRIPTION.
-    replace : TYPE, optional
-        DESCRIPTION. The default is False.
-
-    Returns
-    -------
-    None.
-
-    """
-    hdu = fits.PrimaryHDU(image)
-    hdul = fits.HDUList([hdu])
-    hdr = hdul[0].header
-    hdr.set(head[0],head[1])
-    hdu.writeto(doc_dir2+name+'.fits', overwrite=replace)
-
-
-
 #RGa
 def definition_isz(pupsizetmp, wave, resolinarcsec_pix):
     """
