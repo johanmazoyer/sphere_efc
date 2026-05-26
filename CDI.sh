@@ -148,9 +148,9 @@ if [ "$create_bkgrd" -eq "1" ]; then
     # close shutter
     echo "Close shutter (instrument shutter on sky or IRDIS shutter for internal lamp"
     if [ "$ONSKY" -eq "1" ]; then
-	ssh wsre msgSend -n wsre sroControl SETUP "-function INS.SHUT.ST F"
+	ssh wsre "msgSend -n wsre sroControl SETUP \"-function INS.SHUT.ST F\""
     else
-	ssh wsre msgSend -n wsre sroControl SETUP "-function OCS1.INS.OPTI1.NAME CLOSED"
+	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS1.INS.OPTI1.NAME CLOSED\""
     fi
     /bin/sleep 3
     echo "The shutter should be closed now (check)"
@@ -161,14 +161,14 @@ if [ "$create_bkgrd" -eq "1" ]; then
     echo "Acquire background"
 
 	if [[ "$detector" == "IRDIS" ]]; then
-		ssh wsre msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_bkgrd} OCS1.DET1.NDIT ${NDIT_bkgrd} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
-		ssh wsre msgSend -n wsre sroControl START "-detId IRDIS"
-		ssh wsre msgSend -n wsre sroControl WAIT "-detId IRDIS"
+		ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_bkgrd} OCS1.DET1.NDIT ${NDIT_bkgrd} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}\""
+		ssh wsre "msgSend -n wsre sroControl START \"-detId IRDIS\""
+		ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\""
 
 	elif [[ "$detector" == "IFS" ]]; then
-		ssh wsre msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_bkgrd} OCS2.DET1.NDIT ${NDIT_bkgrd} OCS2.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ "
-		ssh wsre msgSend -n wsre sroControl START "-detId IFS"
-		ssh wsre msgSend -n wsre sroControl WAIT "-detId IFS"
+		ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_bkgrd} OCS2.DET1.NDIT ${NDIT_bkgrd} OCS2.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ \""
+		ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\""
+		ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\""
 
 	fi
     
@@ -177,9 +177,9 @@ if [ "$create_bkgrd" -eq "1" ]; then
     # open shutter
     echo "Open shutter (IRDIS shutter for internal test or instrument shutter on sky)"
     if [ "$ONSKY" -eq "1" ]; then
-	ssh wsre msgSend -n wsre sroControl SETUP "-function INS.SHUT.ST T"
+	ssh wsre "msgSend -n wsre sroControl SETUP \"-function INS.SHUT.ST T\""
     else
-	ssh wsre msgSend -n wsre sroControl SETUP "-function OCS1.INS.OPTI1.NAME ST_ALC2"
+	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS1.INS.OPTI1.NAME ST_ALC2\""
     fi
     /bin/sleep 3
 
@@ -195,7 +195,7 @@ if [ "$create_PSF" -eq "1" ]; then
     #echo "Press enter to continue and introduce the ND and take the off axis PSF"
     #read -n1 -r key
     
-    ssh wsre msgSend -n wsre sroControl SETUP "-function INS.FILT2.NAME "$WHICH_ND
+    ssh wsre "msgSend -n wsre sroControl SETUP \"-function INS.FILT2.NAME \"$WHICH_ND"
     #echo "Waiting 3s for the ND to be loaded"
     #/bin/sleep 3
     
@@ -210,14 +210,14 @@ if [ "$create_PSF" -eq "1" ]; then
     echo ' * acquiring image'
 
 	if [[ "$detector" == "IRDIS" ]]; then
-		ssh wsre msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_PSF} OCS1.DET1.NDIT ${NDIT_PSF} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${lightsource_estim}OffAxisPSF_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
-		ssh wsre msgSend -n wsre sroControl START "-detId IRDIS"
-		ssh wsre msgSend -n wsre sroControl WAIT "-detId IRDIS"
+		ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_PSF} OCS1.DET1.NDIT ${NDIT_PSF} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${lightsource_estim}OffAxisPSF_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}\""
+		ssh wsre "msgSend -n wsre sroControl START \"-detId IRDIS\""
+		ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\""
 
 	elif [[ "$detector" == "IFS" ]]; then
-		ssh wsre msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_PSF} OCS2.DET1.NDIT ${NDIT_PSF} OCS2.OCS.DET1.IMGNAME ${lightsource_estim}IFS_OffAxisPSF_ "
-		ssh wsre msgSend -n wsre sroControl START "-detId IFS"
-		ssh wsre msgSend -n wsre sroControl WAIT "-detId IFS"
+		ssh wsre "msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_PSF} OCS2.DET1.NDIT ${NDIT_PSF} OCS2.OCS.DET1.IMGNAME ${lightsource_estim}IFS_OffAxisPSF_ \""
+		ssh wsre "msgSend -n wsre sroControl START "-detId IFS\""
+		ssh wsre "msgSend -n wsre sroControl WAIT "-detId IFS\""
 
 	fi
 
@@ -225,7 +225,7 @@ if [ "$create_PSF" -eq "1" ]; then
     read -n1 -r key
 
     echo "Remove "$WHICH_ND
-    ssh wsre msgSend -n wsre sroControl SETUP "-function INS.FILT2.NAME OPEN"
+    ssh wsre "msgSend -n wsre sroControl SETUP \"-function INS.FILT2.NAME OPEN\""
     echo "Waiting 3s for the ND to be removed"
     /bin/sleep 3
 	
@@ -319,8 +319,8 @@ if [ "$create_coro" -eq "1" ]; then
 			for FILE in "${FILE_COS[@]}"
 			do
 				echo " * loading ref slopes: ${FILE}"
-				ssh wsre rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP 
-				ssh wsre rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\""
+				rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP 
+				rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\""
 
 				echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 				/bin/sleep ${PAUSE_TIME}
@@ -330,14 +330,14 @@ if [ "$create_coro" -eq "1" ]; then
 				echo ' * acquiring image'
 
 				if [[ "$detector" == "IRDIS" ]]; then
-					ssh wsre msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosineForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
-					ssh wsre msgSend -n wsre sroControl START "-detId IRDIS"
-					ssh wsre msgSend -n wsre sroControl WAIT "-detId IRDIS"
+					ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}CosineForCentering_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}\""
+					ssh wsre "msgSend -n wsre sroControl START \"-detId IRDIS\""
+					ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\""
 
 				elif [[ "$detector" == "IFS" ]]; then
-					ssh wsre msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_CosineForCentering_ "
-					ssh wsre msgSend -n wsre sroControl START "-detId IFS"
-					ssh wsre msgSend -n wsre sroControl WAIT "-detId IFS"
+					ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_CosineForCentering_ \""
+					ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\""
+					ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\""
 
 				fi
 
@@ -355,8 +355,8 @@ if [ "$create_coro" -eq "1" ]; then
 		# load the LAST reference slopes in the list
 		FILE_WFS=${FILES_WFS[${#FILES_WFS[@]}-1]}
 		echo " * loading ref slopes: ${FILE_WFS}"
-		ssh wsre rsh wsrsgw cdmsLoad -f ${FILE_WFS} -r VisAcq.DET1.REFSLP 
-		ssh wsre rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\""
+		rsh wsrsgw cdmsLoad -f ${FILE_WFS} -r VisAcq.DET1.REFSLP 
+		rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\""
 
 		echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 		/bin/sleep ${PAUSE_TIME}
@@ -368,14 +368,14 @@ if [ "$create_coro" -eq "1" ]; then
 		let imgnb=$nbiter-1
 		
 		if [[ "$detector" == "IRDIS" ]]; then
-			ssh wsre msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${imgnb}_coro_image_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
-			ssh wsre msgSend -n wsre sroControl START "-detId IRDIS"
-			ssh wsre msgSend -n wsre sroControl WAIT "-detId IRDIS"
+			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_image} OCS1.DET1.NDIT ${NDIT_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${imgnb}_coro_image_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}\""
+			ssh wsre "msgSend -n wsre sroControl START \"-detId IRDIS\""
+			ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\""
 
 		elif [[ "$detector" == "IFS" ]]; then
-			ssh wsre msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ "
-			ssh wsre msgSend -n wsre sroControl START "-detId IFS"
-			ssh wsre msgSend -n wsre sroControl WAIT "-detId IFS"
+			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ \""
+			ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\""
+			ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\""
 
 		fi
 
@@ -389,8 +389,8 @@ if [ "$create_coro" -eq "1" ]; then
 		for FILE in "${FILES_probes[@]}"
 		do
 			echo " * loading ref slopes: ${FILE}"
-			ssh wsre rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP 
-			ssh wsre rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\""
+			rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP 
+			rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\""
 
 			echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 			/bin/sleep ${PAUSE_TIME}
@@ -399,14 +399,14 @@ if [ "$create_coro" -eq "1" ]; then
 			echo "Acquire Probe"
 			echo ' * acquiring image'
 			if [[ "$detector" == "IRDIS" ]]; then
-				ssh wsre msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_probe} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${k}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
-				ssh wsre msgSend -n wsre sroControl START "-detId IRDIS"
-				ssh wsre msgSend -n wsre sroControl WAIT "-detId IRDIS"
+				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_probe} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${k}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}"
+				ssh wsre "msgSend -n wsre sroControl START \"-detId IRDIS"
+				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS"
 
 			elif [[ "$detector" == "IFS" ]]; then
-				ssh wsre msgSend -n wsre sroControl SETUP "-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_probe} OCS2.DET1.NDIT ${NDIT_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${k}_ "
- 				ssh wsre msgSend -n wsre sroControl START "-detId IFS"
-				ssh wsre msgSend -n wsre sroControl WAIT "-detId IFS"
+				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_probe} OCS2.DET1.NDIT ${NDIT_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${k}_ \""
+ 				ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\""
+				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\""
 
 			fi
 			
