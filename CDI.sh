@@ -105,7 +105,7 @@ obs_band="OBS_YJ" #Used only if IFS. Can also be 'OBS_H'
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
-WORK_PATH0=/home/rgalicher/software/python/sphere_efc/
+WORK_PATH0=/vltuser/sphere/cdesgran/cdi/sphere_efc/
 
 SLOPE_INI='VisAcq.DET1.REFSLP'
 
