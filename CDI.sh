@@ -319,8 +319,8 @@ if [ "$create_coro" -eq "1" ]; then
 			for FILE in "${FILE_COS[@]}"
 			do
 				echo " * loading ref slopes: ${FILE}"
-				rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP 
-				rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" "
+				ssh wsre "rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP "
+				ssh wsre "rsh wsrsgw \"msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" \" "
 
 				echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 				/bin/sleep ${PAUSE_TIME}
@@ -355,8 +355,8 @@ if [ "$create_coro" -eq "1" ]; then
 		# load the LAST reference slopes in the list
 		FILE_WFS=${FILES_WFS[${#FILES_WFS[@]}-1]}
 		echo " * loading ref slopes: ${FILE_WFS}"
-		rsh wsrsgw cdmsLoad -f ${FILE_WFS} -r VisAcq.DET1.REFSLP 
-		rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" "
+		ssh wrse "rsh wsrsgw cdmsLoad -f ${FILE_WFS} -r VisAcq.DET1.REFSLP "
+		ssh wrse "rsh wsrsgw \"msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" \" "
 
 		echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 		/bin/sleep ${PAUSE_TIME}
@@ -389,8 +389,8 @@ if [ "$create_coro" -eq "1" ]; then
 		for FILE in "${FILES_probes[@]}"
 		do
 			echo " * loading ref slopes: ${FILE}"
-			rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP 
-			rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" "
+			ssh wrse "rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP"
+			ssh wrse "rsh wsrsgw \"msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" \" "
 
 			echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 			/bin/sleep ${PAUSE_TIME}
