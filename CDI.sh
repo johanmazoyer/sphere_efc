@@ -100,7 +100,7 @@ rescaling=0
 
 #Which instrument is used
 detector="IFS" #Can be IRDIS or IFS
-obs_band="OBS_H" #Used only if IFS. Can also be 'OBS_H'
+obs_band="OBS_H" #Can also be 'OBS_YJ' or 'OBS_H3'
 
 
 # Path common to wsre and wsrsgw

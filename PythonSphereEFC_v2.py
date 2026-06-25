@@ -11,9 +11,6 @@ if __name__ == '__main__':
     #freeze_support()
 
     # Retrieve the shell variables
-    RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
-    ImageDirectory = RootDirectory+'SlopesAndImages/'
-    MatrixDirectory = RootDirectory+'MatricesAndModel/'
     nbiter = int(os.environ['nbiter']) #nb of the iteration (first iteration is 1)
     exp_name = os.environ['EXP_NAME'] #Rootname of the Experiment
     dhsize = os.environ['DHsize']#Dark hole shape and size choice
@@ -37,6 +34,9 @@ if __name__ == '__main__':
     detector = os.environ['detector']
     obs_band = os.environ['obs_band']
     correction_channel = os.environ['correction_channel']
+    RootDirectory = os.environ['WORK_PATH0']#'/vltuser/sphere/jmilli/test_EFC_20190830/PackageEFConSPHERE/'
+    ImageDirectory = RootDirectory + 'SlopesAndImages/'
+    MatrixDirectory = RootDirectory + 'MatricesAndModel/' + detector + '_' + obs_band + '/'
 
     print('Your working path is {0:s} and you are doing iteration number {1:d} of {2:s}'.format(RootDirectory,nbiter,exp_name), flush=True)
 
