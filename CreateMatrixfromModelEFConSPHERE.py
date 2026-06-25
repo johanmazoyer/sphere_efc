@@ -1,7 +1,7 @@
 #Tests with Zahed, with EssaiBash.sh
 #Use with MainSphereEFC
 #LyotStop was modified!
-#Version 6/12/2019
+#Version 05/05/2026
 ## Parameters and function
 
 
@@ -35,10 +35,10 @@ ModelDirectory = os.getcwd()+'/Model/'
 coro = 'APLC'
 #coro = 'FQPM'
 dimimages = 200
-detector = 'IFS_OBS_YJ' #'IFS_OBS_YH' or 'IFS_OBS_YJ' or 'IRDIS'
+detector = 'IFS_OBS_H' #'IFS_OBS_H' or 'IFS_OBS_YJ' or 'IRDIS'
 waves = [1.667e-6]
 
-if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_YH':
+if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_H':
     waves = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
     waves = waves * 1e-9
 
@@ -48,16 +48,16 @@ zone_to_correct = 'FDH' #vertical #horizontal #'FDH'
 createPW = False
 probe_type = 'individual_act' #'sinc' #'individual_act'
 
-createwhich = False
-createjacobian = False
+createwhich = True
+createjacobian = True
 
 #name of the mask that can be saved with createmask and then used in createEFCmatrix
-namemask ='1'
-maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,55], circ_side='Top', circ_offset=8)
-createmask = False
+namemask ='6'
+maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,67], circ_side='Top', circ_offset=8)
+createmask = True
 
-nbmodes = 600
-corr_mode='1'
+nbmodes = 450
+corr_mode='450'
 createEFCmatrix = False
 
 
@@ -84,24 +84,24 @@ else:
 lightsource = lightsource + coro + '_'
 
 #Amplitude in x nm/37 for the PW pokes such that pushact amplitude is equal to x nm
-amplitudePW = 296/37
+amplitudePW = 100/37
 #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
 amplitudeEFCMatrix = 8
 
-if detector == 'IFS_OBS_YH' or detector == 'IFS_OBS_YJ':
+if detector == 'IFS_OBS_H' or detector == 'IFS_OBS_YJ':
     resolinarcsec_pix = 7.4e-3
 elif detector == 'IRDIS':
     resolinarcsec_pix = 12.25e-3
 else:
     print('Error resolinarcsec_pix undefined !!!')
 
-""" if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_YH':
+""" if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_H':
     if detector == 'IFS_OBS_YJ':
         resolution = 55
         min_wvl = 1.1e-6
         max_wvl = 1.35e-6
         
-    elif detector == 'IFS_OBS_YH':
+    elif detector == 'IFS_OBS_H':
         resolution = 35
         min_wvl = 1.45e-6
         max_wvl = 1.85e-6

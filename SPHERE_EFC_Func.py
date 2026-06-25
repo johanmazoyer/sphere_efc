@@ -843,7 +843,7 @@ def createdifference(param):
     Images_to_display.append(extract_image(PSF, final_size = len(PSF[0])))
     return Difference, imagecorrection, Images_to_display
 
-def extract_image(image_to_extract, final_size = 140, index = -2):
+def extract_image(image_to_extract, final_size = 140, index = -4):
     if image_to_extract.ndim == 3:
         image = image_to_extract[index]
     else:
@@ -1425,7 +1425,7 @@ def find_center_with_cosine(param):
     
     #Fit gaussian functions
     #fits.getdata(cosinepluscoro)
-    data = fits.getdata(cosinepluscoro)[-1]-fits.getdata(coro)[-1]
+    data = fits.getdata(cosinepluscoro)[-4]-fits.getdata(coro)[-4]
     data1 = cropimage(data,x0_up,y0_up,30)
     data2 = cropimage(data,x1_up,y1_up,30)
     data1[np.where(data1<0)] = 0

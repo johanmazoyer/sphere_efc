@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#Version 2019/11/27
+#Version 2026/06/05 14h52 UT
 
 : '
 This script should be run on the sparta gateway.
@@ -19,7 +19,7 @@ Preliminary steps to perform before running this script
 '
 
 #Total number of iterations to run in the loop
-tot_nbiter=2
+tot_nbiter=5
 
 
 #Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
@@ -31,24 +31,24 @@ create_coro=1
 ## IRDIS parameters
 
 #coronagraphic image
-DIT_image=1
+DIT_image=96
 NDIT_image=1
 
 #Image diversity
-DIT_probe=1
+DIT_probe=96
 NDIT_probe=1
 
 #Off-axis PSF
-DIT_PSF=1
+DIT_PSF=64
 NDIT_PSF=1
-WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
+WHICH_ND='ND_2.0' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
 
 #Background
 DIT_bkgrd=1
-NDIT_bkgrd=2
+NDIT_bkgrd=20
 
 
-ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
+ONSKY=1 #Set 0 for internal pup ; 1 for an on sky correction
 Assuming_VLT_PUP_for_corr=0 
 #Work only if ONSKY=0. If  Assuming_VLT_PUP_for_corr=1 assume ONSKY=1 for EFC correction only
 
@@ -100,7 +100,7 @@ rescaling=0
 
 #Which instrument is used
 detector="IFS" #Can be IRDIS or IFS
-obs_band="OBS_YJ" #Used only if IFS. Can also be 'OBS_H'
+obs_band="OBS_H" #Used only if IFS. Can also be 'OBS_H'
 
 
 # Path common to wsre and wsrsgw
@@ -185,6 +185,9 @@ if [ "$create_bkgrd" -eq "1" ]; then
 
     echo "The shutter should be opened now (check)"
 
+    chmod uga+rwx ${WORK_PATH}/SPHERE_BKGRD_EFC_*.fits
+    scp sphere@wsre:${DATA_PATH}/SPHERE_BKGRD_EFC_*.fits ${WORK_PATH}/
+
 fi
 
 if [ "$create_PSF" -eq "1" ]; then
@@ -228,8 +231,13 @@ if [ "$create_PSF" -eq "1" ]; then
     ssh wsre "msgSend -n wsre sroControl SETUP \"-function INS.FILT2.NAME OPEN\" "
     echo "Waiting 3s for the ND to be removed"
     /bin/sleep 3
-	
+
+    chmod uga+rwx ${WORK_PATH}/${lightsource_estim}*OffAxisPSF_*.fits
+    
+    scp sphere@wsre:${DATA_PATH}/${lightsource_estim}*OffAxisPSF_*.fits ${WORK_PATH}/
+    #mv ${WORK_PATH}/*hdr*.fits old/.
 fi
+
 
 
 if [ "$create_coro" -eq "1" ]; then
@@ -253,38 +261,41 @@ if [ "$create_coro" -eq "1" ]; then
 	else
 		# First Experiment
 		EXP_NAME='Experiment0000_'
-	fi 
+	fi
+
+	export WORK_PATH0
+	export EXP_NAME
+	export DHsize
+	export corr_mode
+	export zone_to_correct
+	export X0UP
+	export Y0UP
+	export X1UP
+	export Y1UP
+	export WHICH_ND
+	export ONSKY
+	export Assuming_VLT_PUP_for_corr
+	export size_probes
+	export centeringateachiter
+	export coro
+	export gain
+	export SLOPE_INI
+	export rescaling
+	export ESTIM_ALGORITHM
+	export PROBE_TYPE
+	export detector
+	export obs_band
+	export correction_channel
 	
 	
-    #Loop over tot_nbiter
+	#Loop over tot_nbiter
+			
 	for nbiter in $(seq 1 $tot_nbiter)
 	do
 
-		#Export the variables so that they can be retrieved from python
-		export WORK_PATH0
-		export nbiter
-		export EXP_NAME
-		export DHsize
-		export corr_mode
-		export zone_to_correct
-		export X0UP
-		export Y0UP
-		export X1UP
-		export Y1UP
-		export WHICH_ND
-		export ONSKY
-		export Assuming_VLT_PUP_for_corr
-		export size_probes
-		export centeringateachiter
-		export coro
-		export gain
-		export SLOPE_INI
-		export rescaling
-		export ESTIM_ALGORITHM
-		export PROBE_TYPE
-		export detector
-		export obs_band
-		export correction_channel
+	        #Export the variables so that they can be retrieved from python
+	        export nbiter
+	  
 
 		#Run the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)
 		echo "Run python EFC code"
@@ -319,8 +330,11 @@ if [ "$create_coro" -eq "1" ]; then
 			for FILE in "${FILE_COS[@]}"
 			do
 				echo " * loading ref slopes: ${FILE}"
-				ssh wsre "rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP "
-				ssh wsre "rsh wsrsgw \"msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" \" "
+				#rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP 
+				#rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" "
+				cat ${FILE} | ssh wsre "rsh  wsrsgw cdmsLoad -f - -r VisAcq.DET1.REFSLP"
+				#ssh wsre "rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP" 
+				ssh wsre "rsh wsrsgw \"msgSend \\\"\\\" CommandGateway EXEC \\\"VisAcq.update ALL\\\" \" "
 
 				echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 				/bin/sleep ${PAUSE_TIME}
@@ -355,8 +369,11 @@ if [ "$create_coro" -eq "1" ]; then
 		# load the LAST reference slopes in the list
 		FILE_WFS=${FILES_WFS[${#FILES_WFS[@]}-1]}
 		echo " * loading ref slopes: ${FILE_WFS}"
-		ssh wrse "rsh wsrsgw cdmsLoad -f ${FILE_WFS} -r VisAcq.DET1.REFSLP "
-		ssh wrse "rsh wsrsgw \"msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" \" "
+		#rsh wsrsgw cdmsLoad -f ${FILE_WFS} -r VisAcq.DET1.REFSLP 
+		#rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" "
+		cat ${FILE_WFS} | ssh wsre "rsh  wsrsgw cdmsLoad -f - -r VisAcq.DET1.REFSLP"
+		#ssh wsre "rsh wsrsgw cdmsLoad -f ${FILE_WFS} -r VisAcq.DET1.REFSLP" 
+		ssh wsre "rsh wsrsgw \"msgSend \\\"\\\" CommandGateway EXEC \\\"VisAcq.update ALL\\\" \" "
 
 		echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 		/bin/sleep ${PAUSE_TIME}
@@ -389,9 +406,11 @@ if [ "$create_coro" -eq "1" ]; then
 		for FILE in "${FILES_probes[@]}"
 		do
 			echo " * loading ref slopes: ${FILE}"
-			ssh wrse "rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP"
-			ssh wrse "rsh wsrsgw \"msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" \" "
-
+			cat ${FILE} | ssh wsre "rsh  wsrsgw cdmsLoad -f - -r VisAcq.DET1.REFSLP"
+			#ssh wsre "rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP" 
+			#rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" "
+			ssh wsre "rsh wsrsgw \"msgSend \\\"\\\" CommandGateway EXEC \\\"VisAcq.update ALL\\\" \" "
+			
 			echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 			/bin/sleep ${PAUSE_TIME}
 			echo ' * slopes loaded'
@@ -424,15 +443,13 @@ if [ "$create_coro" -eq "1" ]; then
     scp sphere@wsre:${DATA_PATH}/${EXP_NAME}*CosineForCentering_*.fits ${WORK_PATH}/
     
 	done
+
+let nbiter=$tot_nbiter+1
+export nbiter
+python3 PythonSphereEFC_v2.py
+
 fi
 
-# this line is necessary otherwise the cp of existing files fails because of permission problems
-chmod uga+rwx ${WORK_PATH}/${EXP_NAME}*fits
-scp sphere@wsre:${DATA_PATH}/SPHERE_BKGRD_EFC_*.fits ${WORK_PATH}/
-scp sphere@wsre:${DATA_PATH}/${lightsource_estim}*OffAxisPSF_*.fits ${WORK_PATH}/
-#./send.sh
-
-# end
 echo "Done!"
 
 

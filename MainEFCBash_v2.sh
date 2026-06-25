@@ -20,7 +20,7 @@ Preliminary steps to perform before running this script
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically created
-nbiter=1
+nbiter=8
 # First try with nbiter= 1 to see if initialization runs
 # then nbiter=2 to see at least 1 full loop 
 
@@ -34,15 +34,15 @@ create_coro=1
 ## IRDIS parameters
 
 #coronagraphic image
-DIT_image=1
+DIT_image=8
 NDIT_image=1
 
 #Image diversity
-DIT_probe=1
+DIT_probe=4
 NDIT_probe=1
 
 #Off-axis PSF
-DIT_PSF=1
+DIT_PSF=8
 NDIT_PSF=1
 WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
 
@@ -61,26 +61,27 @@ coro='APLC'
 #coro='FQPM'
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
-DHsize=1
+DHsize=4
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
 # corr_mode=1: less stable correction but better contrast
 # corr_mode=2: more aggressive correction (may be unstable)
-corr_mode=1
-gain=0.5
+corr_mode=600
+gain=1.5
 
 #Algorithm for estimation. Should be either PWP or BTW
 ESTIM_ALGORITHM='PWP'
 
 #Number of probing actuator
-zone_to_correct='FDH' #vertical #FDH
+#zone_to_correct='FDH' #vertical #FDH
+zone_to_correct='vertical'
 
 #Type of probes used for PWP
 PROBE_TYPE='individual_act' #'sinc' #'individual_act'
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
-size_probes=296
+size_probes=100
 
 # First guess for the PSF echo position used for image centering (WARNING X and Y are inverted here)
 # (adding a cosine to DM phase)
@@ -109,7 +110,8 @@ obs_band="OBS_YJ" #Used only if IFS. Can also be 'OBS_H'
 #Can be an integer that represents the wvl channel used for correction.
 #Can be "equal_weight" to use all the wvl equally
 #Can be "longer_weight" to priviledge the longer wavelength
-correction_channel=1
+#correction_channel=2
+correction_channel="longer_weight"
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
@@ -166,7 +168,8 @@ if [ "$create_bkgrd" -eq "1" ]; then
 		ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\" "
 
 	elif [[ "$detector" == "IFS" ]]; then
-		ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_bkgrd} OCS2.DET1.NDIT ${NDIT_bkgrd} OCS2.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ \" "
+                ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE TEST" \"
+	        ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_bkgrd} OCS2.DET1.NDIT ${NDIT_bkgrd} OCS2.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_bkgrd}s_ \" "
 		ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
 		ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
 
@@ -214,6 +217,7 @@ if [ "$create_PSF" -eq "1" ]; then
 		ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\" "
 
 	elif [[ "$detector" == "IFS" ]]; then
+	        ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE TEST" \"
 		ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_PSF} OCS2.DET1.NDIT ${NDIT_PSF} OCS2.OCS.DET1.IMGNAME ${lightsource_estim}IFS_OffAxisPSF_ \" "
 		ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
 		ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
@@ -226,7 +230,8 @@ if [ "$create_PSF" -eq "1" ]; then
     ssh wsre "msgSend -n wsre sroControl SETUP \"-function INS.FILT2.NAME OPEN\" "
     echo "Waiting 3s for the ND to be removed"
     /bin/sleep 3
-	
+    chmod uga+rwx ${WORK_PATH}/${EXP_NAME}*fits
+    scp sphere@wsre:${DATA_PATH}/${lightsource_estim}*OffAxisPSF_*.fits ${WORK_PATH}/
 fi
 
 
@@ -311,8 +316,9 @@ if [ "$create_coro" -eq "1" ]; then
 		for FILE in "${FILE_COS[@]}"
 		do
 			echo " * loading ref slopes: ${FILE}"
-			rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP 
-			rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" "
+			cat ${FILE} | ssh wsre "rsh  wsrsgw cdmsLoad -f - -r VisAcq.DET1.REFSLP"
+			ssh wsre "rsh wsrsgw \"msgSend \\\"\\\" CommandGateway EXEC \\\"VisAcq.update ALL\\\" \" "
+
 
 			echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 			/bin/sleep ${PAUSE_TIME}
@@ -327,6 +333,7 @@ if [ "$create_coro" -eq "1" ]; then
 					ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\" "
 
 				elif [[ "$detector" == "IFS" ]]; then
+				        ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE TEST" \"
 					ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_CosineForCentering_ \" "
 					ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
 					ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
@@ -347,9 +354,9 @@ if [ "$create_coro" -eq "1" ]; then
 	# load the LAST reference slopes in the list
 	FILE_WFS=${FILES_WFS[${#FILES_WFS[@]}-1]}
 	echo " * loading ref slopes: ${FILE_WFS}"
-	rsh wsrsgw cdmsLoad -f ${FILE_WFS} -r VisAcq.DET1.REFSLP 
-	rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" "
-
+	cat ${FILE_WFS} | ssh wsre "rsh  wsrsgw cdmsLoad -f - -r VisAcq.DET1.REFSLP"
+	ssh wsre "rsh wsrsgw \"msgSend \\\"\\\" CommandGateway EXEC \\\"VisAcq.update ALL\\\" \" "
+	
 	echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 	/bin/sleep ${PAUSE_TIME}
 	echo ' * slopes loaded'
@@ -365,6 +372,7 @@ if [ "$create_coro" -eq "1" ]; then
 			ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\" "
 
 		elif [[ "$detector" == "IFS" ]]; then
+		        ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE TEST" \"
 			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_image} OCS2.DET1.NDIT ${NDIT_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ \" "
 			ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
 			ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
@@ -381,9 +389,9 @@ if [ "$create_coro" -eq "1" ]; then
 	for FILE in "${FILES_probes[@]}"
 	do
 		echo " * loading ref slopes: ${FILE}"
-		rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP 
-		rsh wsrsgw "msgSend \"\" CommandGateway EXEC \"VisAcq.update ALL\" "
-
+		cat ${FILE} | ssh wsre "rsh  wsrsgw cdmsLoad -f - -r VisAcq.DET1.REFSLP"
+		ssh wsre "rsh wsrsgw \"msgSend \\\"\\\" CommandGateway EXEC \\\"VisAcq.update ALL\\\" \" "		
+		
 		echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 		/bin/sleep ${PAUSE_TIME}
 		echo ' * slopes loaded'
@@ -396,6 +404,7 @@ if [ "$create_coro" -eq "1" ]; then
 				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\" "
 
 			elif [[ "$detector" == "IFS" ]]; then
+                                ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE TEST" \"
 				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_probe} OCS2.DET1.NDIT ${NDIT_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${k}_ \" "
  				ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
 				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
@@ -404,20 +413,21 @@ if [ "$create_coro" -eq "1" ]; then
 			
 		let k=$k+1
 	done
+	let imgnb=$nbiter-1
+	# this line is necessary otherwise the cp of existing files fails because of permission problems
+	chmod uga+rwx ${WORK_PATH}/${EXP_NAME}*fits
+	scp sphere@wsre:${DATA_PATH}/${EXP_NAME}*CosineForCentering_*.fits ${WORK_PATH}/
+	scp sphere@wsre:${DATA_PATH}/${EXP_NAME}*iter${imgnb}_coro_image_*.fits ${WORK_PATH}/
+	scp sphere@wsre:${DATA_PATH}/${EXP_NAME}*iter${nbiter}_Probe_000*.fits ${WORK_PATH}/
+
 fi
 
 
 # copy all science files into working directory
 echo "Copy science files"
-
-# this line is necessary otherwise the cp of existing files fails because of permission problems
-chmod uga+rwx ${WORK_PATH}/${EXP_NAME}*fits
-scp sphere@wsre:${DATA_PATH}/${EXP_NAME}iter[0-9]_coro_image_*.fits ${WORK_PATH}/
-scp sphere@wsre:${DATA_PATH}/${EXP_NAME}iter[0-9]_Probe_000[0-9]_*.fits ${WORK_PATH}/
-scp sphere@wsre:${DATA_PATH}/${EXP_NAME}CosinusForCentering_*.fits ${WORK_PATH}/
 scp sphere@wsre:${DATA_PATH}/SPHERE_BKGRD_EFC_*.fits ${WORK_PATH}/
-scp sphere@wsre:${DATA_PATH}/${lightsource_estim}OffAxisPSF_*.fits ${WORK_PATH}/
-#./send.sh
+
+
 
 # end
 echo "Done!"
