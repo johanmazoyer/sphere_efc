@@ -281,7 +281,7 @@ def invertDSCC(interact, cut ,goal='e', regul="truncation", visu=False):
 
         
     if goal == 'e':
-        if np.sum(np.where(InvS>cut))>0 : InvS = 0
+        InvS[np.where(InvS>cut)]=0
     
     
     if goal == "c":
@@ -323,8 +323,6 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
         DESCRIPTION.
     coro : TYPE
         DESCRIPTION.
-    probe_type : TYPE
-        DESCRIPTION.
 
     Returns
     -------
@@ -352,7 +350,7 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
     squaremaxPSF = np.amax(np.abs(OffAxisPSF))
 
     # Regularization
-    #cutsvd = 1e20 #0.3*squaremaxPSF*8/(400/37)
+    cutsvd = 1e20 #0.3*squaremaxPSF*8/(400/37)
     
     # Get constant E-field in the detector with corono
     pupilnoabb = pupiltodetector(input_wavefront , wave , lyot_mask , Name_ALC , isz_foc, coro, resolinarcsec_pix)
@@ -395,11 +393,11 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
                 SVD[:,i,j] = invertDSCC(matrix,cutsvd,visu=False)[0]
                 Vecteurenvoi[l] = invertDSCC(matrix,cutsvd,visu=False)[1]
             except:
-                #print('Careful: Error! for l='+str(l))
+                print('Careful: Error! for l='+str(l))
                 SVD[:,i,j] = np.zeros(2)
                 Vecteurenvoi[l] = np.zeros((2,numprobe))
             l = l+1  
-    return [Vecteurenvoi, SVD, deltapsik, abs(deltapsik)**2, probevoltage]
+    return [Vecteurenvoi,SVD,abs(deltapsik)**2,probevoltage]
 
 
 def create_poke_probe(act_matrix, act_index, amplitudePW):
