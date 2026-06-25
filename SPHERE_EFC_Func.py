@@ -774,13 +774,6 @@ def createdifference(param):
     zone_to_correct = param["zone_to_correct"]
     detector = param["detector"]
 
-    coro = param["coro"]
-    live_matrix_measurement = param["live_matrix_measurement"]
-    onsky = param["onsky"]
-    amplitudePW = size_probes/37
-    wave = param["wave"]
-    ModelDirectory = param["ModelDirectory"]
-
     #PSF
     PSF, _, maxPSF, _ = process_PSF(param)
     print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ', maxPSF, flush=True)
@@ -835,9 +828,6 @@ def createdifference(param):
         elif estim_algorithm == 'BTW':
             filename = probe_type + '_' + zone_to_correct + '_' + str(size_probes) + 'nm' + '_'
             Probe_intens = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'Intensity_probe.fits')[k]
-
-            #j = j + 1 TO DO :if len(last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits'))>3, then 
-
             Ikplus = 2*Ikplus
             Ikmoins = 2*(imagecorrection + Probe_intens) #Missing model component
             Images_to_display.append(np.zeros((170-30,170-30)))
