@@ -104,7 +104,7 @@ rescaling=0
 
 #Which instrument is used
 detector="IFS" #Can be IRDIS or IFS
-obs_band="OBS_YJ" #Used only if IFS. Can also be 'OBS_H'
+obs_band="OBS_YJ" #Can also be 'OBS_YJ' or 'H3'
 
 #Weighting broadband corrrection
 #Can be an integer that represents the wvl channel used for correction.

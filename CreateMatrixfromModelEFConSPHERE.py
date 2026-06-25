@@ -36,11 +36,17 @@ coro = 'APLC'
 #coro = 'FQPM'
 dimimages = 200
 detector = 'IFS_OBS_H' #'IFS_OBS_H' or 'IFS_OBS_YJ' or 'IRDIS'
-waves = [1.667e-6]
+
+MatrixDirectory = MatrixDirectory + detector + '/'
+if os.path.isdir(MatrixDirectory) is False:
+        #Create the directory
+        os.mkdir(MatrixDirectory)
 
 if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_H':
     waves = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
     waves = waves * 1e-9
+elif detector == 'IRDIS_H3':
+    waves = [1.667e-6]
 
 onsky = 0 #1 if on sky correction
 
@@ -90,27 +96,11 @@ amplitudeEFCMatrix = 8
 
 if detector == 'IFS_OBS_H' or detector == 'IFS_OBS_YJ':
     resolinarcsec_pix = 7.4e-3
-elif detector == 'IRDIS':
+elif detector == 'IRDIS_H3' or detector == 'IRDIS_H2':
     resolinarcsec_pix = 12.25e-3
 else:
     print('Error resolinarcsec_pix undefined !!!')
 
-""" if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_H':
-    if detector == 'IFS_OBS_YJ':
-        resolution = 55
-        min_wvl = 1.1e-6
-        max_wvl = 1.35e-6
-        
-    elif detector == 'IFS_OBS_H':
-        resolution = 35
-        min_wvl = 1.45e-6
-        max_wvl = 1.85e-6
-
-    wvl_0 = (min_wvl + max_wvl)/2
-    delta_wvl = wvl_0 / resolution
-    range_wvl = max_wvl - min_wvl
-    nb_wvl = int(range_wvl/delta_wvl)
-    waves = np.linspace(min_wvl, max_wvl, nb_wvl) """
 #### Pour estimation
 
 if createPW == True:
