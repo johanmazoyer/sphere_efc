@@ -170,7 +170,7 @@ def last(files):
     extract : last file in stack
 
     """
-    extract = natsorted(glob.glob(files))[-1]
+    extract = sorted(glob.glob(files))[-1]
     return extract
 
 
