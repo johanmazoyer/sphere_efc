@@ -135,7 +135,7 @@ if createPW == True:
             raise ValueError('This setting is not available for FQPM yet')
         
     #Choose the truncation above where the pixels won't be taken into account for estimation (not used currently here)
-    cutestimation = 5000#0.3*squaremaxPSF*8/amplitudePW  #1e20
+    cutestimation = 1e20#0.3*squaremaxPSF*8/amplitudePW
 
     PWP_matrix = []
 
@@ -168,10 +168,6 @@ if createPW == True:
     def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource + filename + 'CorrectedZone',replace=True)
     ##
     def_mat.SaveFits(PWP_matrix, ['',0], MatrixDirectory, lightsource + filename + 'PWP_matrix', replace=True)
-    ##
-    def_mat.SaveFits(np.real(EF_probes), ['',0], MatrixDirectory, lightsource + filename +'EF_probe_Real', replace=True)
-    ##
-    def_mat.SaveFits(np.imag(EF_probes), ['',0], MatrixDirectory, lightsource + filename +'EF_probe_Imag', replace=True)
     ##
     def_mat.SaveFits(int_probes, ['',0], MatrixDirectory, lightsource + filename +'Intensity_probe', replace=True)
     ##
