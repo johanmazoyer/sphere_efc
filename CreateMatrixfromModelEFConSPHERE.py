@@ -1,7 +1,7 @@
 #Tests with Zahed, with EssaiBash.sh
 #Use with MainSphereEFC
 #LyotStop was modified!
-#Version 6/12/2019
+#Version 05/05/2026
 ## Parameters and function
 
 
@@ -35,35 +35,41 @@ ModelDirectory = os.getcwd()+'/Model/'
 coro = 'APLC'
 #coro = 'FQPM'
 dimimages = 200
-wave = 1.667e-6
-onsky = 1 #1 if on sky correction
+detector = 'IFS_OBS_H' #'IFS_OBS_H' or 'IFS_OBS_YJ' or 'IRDIS'
+waves = [1.667e-6]
+
+if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_H':
+    waves = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
+    waves = waves * 1e-9
+
+onsky = 0 #1 if on sky correction
 
 zone_to_correct = 'FDH' #vertical #horizontal #'FDH'
-createPW = True
+createPW = False
 probe_type = 'individual_act' #'sinc' #'individual_act'
 
-createwhich = False
-createjacobian = False
+createwhich = True
+createjacobian = True
 
 #name of the mask that can be saved with createmask and then used in createEFCmatrix
-namemask ='1'
-maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,55], circ_side='Top', circ_offset=8)
-createmask = False
+namemask ='6'
+maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,67], circ_side='Top', circ_offset=8)
+createmask = True
 
-nbmodes = 600
-corr_mode='1'
+nbmodes = 450
+corr_mode='450'
 createEFCmatrix = False
 
 
 
 #Wrapper: extract objects in the different pupil and focal planes, depending on the coronagraph and wavelength
-mask384, Pup384, ALC, Lyot384 = def_mat.Upload_CoroConfig(ModelDirectory, coro, wave)
+mask384, Pup384, ALC, Lyot384 = def_mat.Upload_CoroConfig(ModelDirectory, coro)
 
 #Perfect pupil for FQPM (remove numeric noise)
 #AXEL : I don't think this is required:
-if coro == 'FQPM':
-    if onsky == 0:
-        mask384 = def_mat.pupiltodetector(mask384, wave, Lyot384, '', dimimages, coro, pupparf=True)
+# if coro == 'FQPM':
+#     if onsky == 0:
+#         mask384 = def_mat.pupiltodetector(mask384, wave, Lyot384, '', dimimages, coro, pupparf=True)
         
 #Cube of actuator positions in pupil    
 raw_pushact = fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
@@ -78,10 +84,33 @@ else:
 lightsource = lightsource + coro + '_'
 
 #Amplitude in x nm/37 for the PW pokes such that pushact amplitude is equal to x nm
-amplitudePW = 400/37
+amplitudePW = 100/37
 #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
 amplitudeEFCMatrix = 8
 
+if detector == 'IFS_OBS_H' or detector == 'IFS_OBS_YJ':
+    resolinarcsec_pix = 7.4e-3
+elif detector == 'IRDIS':
+    resolinarcsec_pix = 12.25e-3
+else:
+    print('Error resolinarcsec_pix undefined !!!')
+
+""" if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_H':
+    if detector == 'IFS_OBS_YJ':
+        resolution = 55
+        min_wvl = 1.1e-6
+        max_wvl = 1.35e-6
+        
+    elif detector == 'IFS_OBS_H':
+        resolution = 35
+        min_wvl = 1.45e-6
+        max_wvl = 1.85e-6
+
+    wvl_0 = (min_wvl + max_wvl)/2
+    delta_wvl = wvl_0 / resolution
+    range_wvl = max_wvl - min_wvl
+    nb_wvl = int(range_wvl/delta_wvl)
+    waves = np.linspace(min_wvl, max_wvl, nb_wvl) """
 #### Pour estimation
 
 if createPW == True:
@@ -108,20 +137,29 @@ if createPW == True:
     #Choose the truncation above where the pixels won't be taken into account for estimation (not used currently here)
     cutestimation = 5000#0.3*squaremaxPSF*8/amplitudePW  #1e20
 
-    vectoressai,SVD,EF_probes,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
-                                                                         wave,
-                                                                         Lyot384 ,
-                                                                         ALC ,
-                                                                         dimimages ,
-                                                                         raw_pushact ,
-                                                                         amplitudePW,
-                                                                         posprobes ,
-                                                                         cutestimation,
-                                                                         coro,
-                                                                         probe_type)
+    PWP_matrix = []
+
+    for wave in waves :
+        print('wavelength: ', format(wave, '.2e'))
+        PWP_one_wvl,SVD,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
+                                                                            wave,
+                                                                            Lyot384 ,
+                                                                            ALC ,
+                                                                            dimimages ,
+                                                                            raw_pushact ,
+                                                                            amplitudePW,
+                                                                            posprobes ,
+                                                                            cutestimation,
+                                                                            coro,
+                                                                            probe_type,
+                                                                            resolinarcsec_pix = resolinarcsec_pix)
+        
+        PWP_matrix.append(PWP_one_wvl)
+
+    PWP_matrix = np.array(PWP_matrix)
     ##
-    choosepixvisu = [-55,55,-55,55]
-    maskvisu = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
+    #choosepixvisu = [-55,55,-55,55]
+    #maskvisu = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
 
     #plt.imshow(SVD[1]*maskvisu)
     #plt.show()
@@ -129,7 +167,7 @@ if createPW == True:
     ##
     def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource + filename + 'CorrectedZone',replace=True)
     ##
-    def_mat.SaveFits(vectoressai, ['',0], MatrixDirectory, lightsource + filename + 'VecteurEstimation', replace=True)
+    def_mat.SaveFits(PWP_matrix, ['',0], MatrixDirectory, lightsource + filename + 'PWP_matrix', replace=True)
     ##
     def_mat.SaveFits(np.real(EF_probes), ['',0], MatrixDirectory, lightsource + filename +'EF_probe_Real', replace=True)
     ##
@@ -155,15 +193,21 @@ if createjacobian==True:
     pushact = amplitudeEFCMatrix * raw_pushact
     WhichInPupil = fits.getdata(MatrixDirectory + lightsource + 'WhichInPupil0_5.fits')
     #Creating Matrix
-    Gmatrix = def_mat.creatingCorrectionmatrix(input_wavefront,
+    Gmatrix = []
+    for wave in waves :
+        print('wavelength: ', format(wave, '.2e'))
+        Gmatrix_one_wvl = def_mat.creatingCorrectionmatrix(input_wavefront,
                                                  wave,
                                                  Lyot384 ,
                                                  ALC ,
                                                  dimimages ,
                                                  pushact ,
                                                  WhichInPupil,
-                                                 coro)
+                                                 coro,
+                                                 resolinarcsec_pix = resolinarcsec_pix)
+        Gmatrix.append(Gmatrix_one_wvl)
 
+    Gmatrix = np.array(Gmatrix)
     #Saving matrix
     def_mat.SaveFits(Gmatrix, ['',0], ModelDirectory, lightsource + 'Jacobian', replace=True)
 
@@ -181,7 +225,12 @@ if createEFCmatrix == True:
     print('...Creating EFC matrix...')
     maskDH = fits.getdata(MatrixDirectory + 'mask_DH' + namemask + '.fits')
     Gmatrix = fits.getdata(ModelDirectory + lightsource + 'Jacobian.fits')
-    masked_Gmatrix = def_mat.get_masked_jacobian(Gmatrix, maskDH)
+    masked_Gmatrix = []
+    for k, wave in enumerate(waves) :
+        print('wavelength: ', format(wave, '.2e'))
+        masked_Gmatrix_per_wvl = def_mat.get_masked_jacobian(Gmatrix[k], maskDH)
+        masked_Gmatrix.append(masked_Gmatrix_per_wvl)
+    masked_Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
     #Set how many modes you want to use to correct
     invertGDH = def_mat.invertDSCC(masked_Gmatrix, nbmodes, goal='c', regul='tikhonov', visu=True)[1]
     def_mat.SaveFits(invertGDH, ['',0], MatrixDirectory, lightsource+'Interactionmatrix_DH'+namemask+'_SVD'+corr_mode, replace=True)

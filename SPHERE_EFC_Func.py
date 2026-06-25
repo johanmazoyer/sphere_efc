@@ -15,12 +15,11 @@ from scipy import ndimage
 import glob
 import os
 
-import Definitions_for_matrices as def_mat
-import importlib
-
-from natsort import natsorted
-
-importlib.reload(def_mat)
+import charis
+from spherical.pipeline.pipeline_config import defaultIFSReduction
+from joblib import Parallel, delayed
+from functools import partial
+from tqdm import tqdm
 
 #Unit conversion and normalisation
 #influence matrix normalization = defoc meca en rad @ 632 nm
@@ -53,23 +52,6 @@ def SHslopes2map(MatrixDirectory, slopes, visu=True):
         fig.colorbar(im, cax=cbar_ax)
     return mapx,mapy
 
-
-def SaveFits(image, head,doc_dir2, name):
-    """ --------------------------------------------------
-    Save fits file
-    
-    Parameters:
-    ----------
-    image: float, file to save
-    head: list, header
-    doc_dir2: str, directory where to save the file
-    name: str, name of the saved file
-    -------------------------------------------------- """
-    hdu = fits.PrimaryHDU(image)
-    hdul = fits.HDUList([hdu])
-    hdr = hdul[0].header
-    hdr.set(head[0],head[1])
-    hdu.writeto(doc_dir2+name+'.fits',overwrite=True)
     
 def roundpupil(nbpix, prad1):
     """ --------------------------------------------------
@@ -90,35 +72,37 @@ def roundpupil(nbpix, prad1):
     pupilnormal[rr<=prad1] = 1.
     return pupilnormal
 
-def estimateEab(Difference, Vecteurprobes):
+def estimate_efield(Difference, PWP_matrix_per_wvl):
     """ --------------------------------------------------
     Estimate focal plane electric field with PW probing
     
     Parameters:
     ----------
     Difference: Difference of PW images
-    Vecteurprobes: Matrix PW
+    PWP_matrix_per_wvl: Matrix PW
 
     Return:
     ------
-    Resultat: 2D array, complex, focal plane electric field
+    Result: 2D array, complex, focal plane electric field
     -------------------------------------------------- """
-    numprobe = len(Vecteurprobes[0,0])
+
     dimimages = Difference.shape[1]
-    Differenceij = np.zeros((numprobe))
-    Resultat=np.zeros((dimimages,dimimages),dtype=complex)
-    l = 0
-    for i in np.arange(dimimages):
-        for j in np.arange(dimimages):
-            Differenceij[:] = Difference[:,i,j]
-            Resultatbis = np.dot(Vecteurprobes[l],Differenceij)
-            Resultat[i,j] = Resultatbis[0]+1j*Resultatbis[1]
-            
-            l = l + 1  
-    return Resultat/4
+    Difference = Difference.reshape((Difference.shape[0], dimimages ** 2))
+    Result_ = np.einsum('ijk,ik->ij', PWP_matrix_per_wvl, Difference.T)
+    Result = Result_[:, 0] + 1j * Result_[:, 1]
+    Result = Result.reshape(dimimages, dimimages)
+
+    return Result/4
        
+def transform_estimate_from_2D_to_1D(Estimate_2D, mask):
+    Estimate_1D = np.zeros(2*int(np.sum(mask)))
+    Estimate_ROI = (Estimate_2D[np.where(mask==1)])
+    Estimate_1D[0:int(np.sum(mask))] = np.real(Estimate_ROI).flatten()     
+    Estimate_1D[int(np.sum(mask)):] = np.imag(Estimate_ROI).flatten()
+
+    return Estimate_1D
    
-def solutiontocorrect(mask, ResultatEstimate, invertG, WhichInPupil):
+def solutiontocorrect(Estimate_1D, invertG, WhichInPupil):
     """ --------------------------------------------------
     Solution in nanometer to dig the DH at next iteration
     
@@ -132,11 +116,7 @@ def solutiontocorrect(mask, ResultatEstimate, invertG, WhichInPupil):
     ------
     solition: 1D array, floats with nanometers
     -------------------------------------------------- """
-    Eab = np.zeros(2*int(np.sum(mask)))
-    Resultatbis = (ResultatEstimate[np.where(mask==1)])
-    Eab[0:int(np.sum(mask))] = np.real(Resultatbis).flatten()     
-    Eab[int(np.sum(mask)):] = np.imag(Resultatbis).flatten()
-    cool = np.dot(invertG,Eab)
+    cool = np.dot(invertG, Estimate_1D)
     
     solution = np.zeros(int(1377))
     solution[WhichInPupil] = cool
@@ -154,8 +134,17 @@ def fancy_xy_trans_slice(img_slice, xy_trans):
     Number of pixels (pixels) to translate `img_slice`; can be
     positive or negative, and does not need to be integer value.
     """
-    #Resample image using bilinear interpolation (order=1)
-    trans_slice = snd.affine_transform(img_slice, [1, 1], xy_trans, order=1)
+    if img_slice.ndim == 3:
+        trans = []
+        for wvl in np.arange(len(img_slice)):
+            trans.append(snd.affine_transform(img_slice[wvl], [1, 1], xy_trans, order=1))
+
+        trans_slice = np.array(trans)
+
+    else:
+        #Resample image using bilinear interpolation (order=1)
+        trans_slice = snd.affine_transform(img_slice, [1, 1], xy_trans, order=1)
+
     return trans_slice
 
 def my_callback(params):
@@ -325,41 +314,60 @@ def mean_window_8pix(array, hotpix):
     return array
 
 
-def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf, ND, remove_bad_pix = True, high_pass_filter = False):
+def reduceimageSPHERE(param, file,  maxPSF, remove_bad_pix = True, high_pass_filter = False):
     """ --------------------------------------------------
     Processing of SPHERE images before being used and division by the maximum of the PSF
     
     Parameters:
     ----------
+    param:
     file: str, path to the file to process
-    directory: str, background directory
     maxPSF: int, maximum of the raw PSF
-    ctr_x: int, center of processed image in the x direction
-    ctr_y: int, center of processed image in the y direction
-    newsizeimg: int, size of the processed image (same dimension in x and y)
-    expim: float, exposure time of the image in second
-    exppsf: float, exposure time of the recorded PSF in second
-    ND: float, neutral density attenuation factor used when recording PSF 
 
     Return:
     ------
     image: processed coronagraphic image, normalized by the max of the PSF
     -------------------------------------------------- """
+
+    directory = param["ImageDirectory"]
+    detector = param["detector"]
+
     # Get image exposure time
     expim = get_exptime(file)
-    #if expim>100: expim=96
-    # Load dark that correspond to image exposure time
-    back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] 
-    # Load image
-    image = np.mean(fits.getdata(file),axis = 0) 
+
+    if detector == "IRDIS":
+        # Load dark that correspond to image exposure time
+        back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] 
+        # Load image
+        image = np.mean(fits.getdata(file),axis = 0) 
+
+        # Subtract back from image
+        image = image - back
+        image = reduce_image_IRDIS(param, image, back, remove_bad_pix, high_pass_filter)
+        
+    elif detector == "IFS":
+        image = reduce_image_IFS(param, fits.getdata(file))
     
+    #We normalize the image with the max of the PSF
+    if len(maxPSF)>1:
+        image = (image/expim) / maxPSF[:, None, None]
+    else:
+        image = (image/expim) / maxPSF
+    return image
+
+
+def reduce_image_IRDIS(param, image, back, remove_bad_pix, high_pass_filter):
+
+    centerx = param["centerx"]
+    centery = param["centery"]
+    dimimages = param["dimimages"]
+    ctr_x = int(centerx)
+    ctr_y = int(centery)
+
     # Crop to keep relevant part of image
-    image_crop = cropimage(image,ctr_x,ctr_y,newsizeimg)
+    image = cropimage(image,ctr_x,ctr_y,dimimages)
     # Crop to keep relevant part of dark
-    back_crop = cropimage(back,ctr_x,ctr_y,newsizeimg)    
-    
-    # We subtract the dark
-    image = image_crop - back_crop 
+    back_crop = cropimage(back,ctr_x,ctr_y,dimimages)    
     
     # We remove the hot pixels found in dark
     if remove_bad_pix == True:
@@ -372,10 +380,166 @@ def reduceimageSPHERE(file, directory,  maxPSF, ctr_x, ctr_y, newsizeimg, exppsf
     # We process the image with a high pass filter    
     if high_pass_filter == True:
         image = high_pass_filter_gauss(image, 2)
-
-    #We normalize the image with the max of the PSF
-    image = (image/expim)/(maxPSF*ND)  
     return image
+
+def reduce_image_IFS(param, image):
+
+    reduced_image = []
+
+    centerx = param["centerx"]
+    centery = param["centery"]
+    dimimages = param["dimimages"]
+    ctr_x = int(centerx)
+    ctr_y = int(centery)
+
+    for index in np.arange(len(image)):
+        # Crop to keep relevant part of image
+        image_index = cropimage(image[index],ctr_x,ctr_y,dimimages)
+        reduced_image.append(image_index)
+
+    reduced_image = np.array(reduced_image)
+
+    return reduced_image
+
+
+def build_calibration_IFS(param):
+
+    root_directory = param["RootDirectory"]
+    obs_band = param['obs_band']
+    cal_directory = root_directory + 'IFS_cal/'
+
+    #Look for input (raw SPHERE data) and output (charis calibration files) directories
+    wavecal_outputdir = cal_directory + 'wavecal_outputdir'
+    wavecal_inputdir = cal_directory + 'wavecal_inputdir'
+
+    if not os.path.exists(wavecal_outputdir):
+        os.makedirs(wavecal_outputdir)
+
+    config = defaultIFSReduction()
+
+    # Apply resource configuration to all sub-configs
+    config.apply_resources()
+
+    # Extract step configuration for cleaner code
+    # steps = config.steps
+
+    # Get directory paths from config
+    # raw_directory = config.directories.raw_directory
+    # reduction_directory = config.directories.reduction_directory
+
+    if obs_band == 'OBS_YJ':
+        instrument = charis.instruments.SPHERE('YJ')
+        config.extraction.R = 55
+    elif obs_band == 'OBS_H':
+        instrument = charis.instruments.SPHERE('YH')
+        config.extraction.R = 35
+
+    calibration_parameters, extraction_parameters, _ , _ = config.as_plain_dicts()
+    extraction_parameters['bgsub'] = True
+    extraction_parameters['fitbkgnd'] = False
+    extraction_parameters['fitshift'] = True
+    extraction_parameters['bg_scaling_without_mask'] = False
+    extraction_parameters['maxcpus'] = 1
+    extraction_parameters['refine'] = False
+    extraction_parameters['flatfield'] = False
+    extraction_parameters['resample'] = True
+    extraction_parameters['linear_wavelength'] = True
+    extraction_parameters['smoothandmask'] = False
+    extraction_parameters['method'] = 'optext'
+
+    files_in_calibration_folder = glob.glob(os.path.join(wavecal_outputdir, '*key*.fits'))
+
+    if len(files_in_calibration_folder) == 0: # or overwrite_calibration:
+        calibration_wavelength = instrument.calibration_wavelength
+        wavecal_file = wavecal_inputdir + '/*.fits'#observation.frames['WAVECAL']['FILE'][0]
+        inImage, hdr = charis.buildcalibrations.read_in_file(
+            wavecal_file, instrument, calibration_wavelength,
+            ncpus=calibration_parameters['ncpus'])
+        charis.buildcalibrations.buildcalibrations(
+            inImage=inImage, instrument=instrument,
+            inLam=calibration_wavelength.value,
+            outdir=wavecal_outputdir,
+            header=hdr,
+            **calibration_parameters)
+
+    return extraction_parameters, wavecal_outputdir, instrument
+
+def pick_wvl_IFS(instrument, delta_wave = 5):
+
+    raw_nb_wave = 39
+
+    min_wave = instrument.wavelength_range[0].value
+    max_wave = instrument.wavelength_range[1].value
+    wavelengths = np.linspace(min_wave, max_wave, raw_nb_wave)
+    wavelength_0 = (min_wave + max_wave)/2
+    d_wavelength = (max_wave - min_wave)
+
+    #Stacking data to get ~5% images
+    nb_images_per_stack = int(delta_wave / ( d_wavelength / wavelength_0 / raw_nb_wave * 100 ))
+    remainder = raw_nb_wave%nb_images_per_stack
+    if remainder<3: #To ensure it suppresses the lowest and highest wavelength
+        remainder = remainder + nb_images_per_stack
+    if remainder % 2 == 0:
+        wavelength_cropped = wavelengths[int(remainder/2):-int(remainder/2)]
+    else:
+        wavelength_cropped = wavelengths[int(remainder/2)+1:-int(remainder/2)]
+
+    #Centraled wavelength stacked
+    wavelength_stacked = [np.mean(wavelength_cropped[a:a+nb_images_per_stack]) for a in nb_images_per_stack * np.arange(len(wavelength_cropped)//nb_images_per_stack)]
+    wavelength_stacked = np.array(wavelength_stacked,dtype=int)
+
+    return nb_images_per_stack, remainder, wavelength_stacked
+
+
+def process_cube_IFS(filename, nb_images_per_stack, remainder):
+    
+    #Stack, rotate and save results from charis
+
+    #Pick resampled IFS cube file
+    root, _ = os.path.splitext(filename)
+    filename = root + '_cube_resampled_DIT_000.fits'
+
+    cube, header = fits.getdata(filename, ext=1, header=True)
+    
+
+    #Rotate
+    angle_in_degree = -102 + 1.75 #Maire SPIE 2016 Still a slight angle remains wrt IRDIS 1.75
+    if remainder%2 == 0:
+        cube_cropped = cube[int(remainder/2):-int(remainder/2)]
+    else:
+        cube_cropped = cube[int(remainder/2)+1:-int(remainder/2)]
+
+    #Stack wavelength
+    cube_stacked = [ndimage.rotate(np.mean(cube_cropped[a:a+nb_images_per_stack], axis=0), -angle_in_degree) for a in nb_images_per_stack*np.arange(len(cube_cropped)//nb_images_per_stack)]
+    cube_stacked = np.array(cube_stacked)
+
+    #Rename result to fit IRDIS-like code (remove IFS in filenames)
+    before, _, after = root.partition("IFS_")
+    new_namefile = before + after + '.fits'  # 'after' is everything after "IFS_"
+    fits.writeto(new_namefile, cube_stacked, header, overwrite = True)
+
+    os.remove(filename)
+    os.remove(root + '_cube_DIT_000.fits')
+
+
+def extract_cube_IFS(file, wavecal_outputdir, cube_outputdir, extraction_parameters):
+
+    hdr = fits.getheader(file)
+    ndit: int = int(hdr['HIERARCH ESO DET NDIT'])
+    for dit_index in tqdm(
+                    range(ndit),
+                    desc=f"Extract datacube (1 CPU)",
+                    unit="DIT",
+                    leave=False,
+                ):
+        charis.extractcube.getcube(
+            filename=file,
+            dit=dit_index,
+            bgpath=None,#wavecal_outputdir + '/SPHERE_IRDIFS_IFS_CAL_DARK259_0005.fits',
+            calibdir=wavecal_outputdir + '/',
+            outdir=cube_outputdir,
+            **extraction_parameters,
+        )
 
 def find_hot_pix_in_dark(dark):
     """
@@ -503,13 +667,10 @@ def rescale_coherent_component(signal_co, signal_tot, maskDH, nb_loop):
         signal_co_copy = signal_co_copy + best_params2[i]
         signal_co_copy = signal_co_copy * best_params3[i]
     
-    # Compute unfiltered incoherent component    
-    signal_inco = signal_tot - signal_co_copy
-    
-    return signal_co_copy, signal_inco, scaling
+    return signal_co_copy, scaling
 
 
-def process_PSF(directory,lightsource_estim,centerx,centery,dimimages):
+def process_PSF(param):
     """
     Process non coronagraphic point spread function and return relevant data
 
@@ -529,12 +690,53 @@ def process_PSF(directory,lightsource_estim,centerx,centery,dimimages):
     exppsf : PSF exposure time
 
     """
-    file_PSF = last(directory+lightsource_estim+'OffAxisPSF*.fits')
+    lightsource_estim = param['lightsource_estim']
+    ImageDirectory = param["ImageDirectory"]
+    MatrixDirectory = param["MatrixDirectory"]
+    detector = param["detector"]
+    obs_band = param["obs_band"]
+
+    if detector == 'IFS':
+        wavelength_stacked = fits.getdata(MatrixDirectory + detector + '_' + obs_band + '_wavelength.fits')
+        ND_file = np.loadtxt(MatrixDirectory + "SPHERE_CPI_ND.dat")
+
+        if param["which_nd"] == 'ND_3.5':
+            ND_col = 4
+        elif param["which_nd"] == 'ND_2.0':
+            ND_col = 3
+        else:
+            ND_col = 1.
+        
+        ND = []
+        col0 = ND_file[:, 0]
+        for wvl in wavelength_stacked:
+            idx = np.argmin(np.abs(col0 - wvl))
+            ND.append(1/ND_file[idx,ND_col])
+        ND = np.array(ND)[:, None, None]
+
+    else:
+        if param["which_nd"] == 'ND_3.5':
+            ND = 1/0.00105
+        elif param["which_nd"] == 'ND_2.0':
+            ND = 1/0.0179
+        else:
+            ND = 1.
+
+
+    file_PSF = last(ImageDirectory+lightsource_estim+'OffAxisPSF*.fits')
     exppsf = get_exptime(file_PSF)
-    PSF = reduceimageSPHERE(file_PSF, directory, 1, int(centerx), int(centery), dimimages, 1, 1, remove_bad_pix = False, high_pass_filter=False)
-    smoothPSF = snd.median_filter(PSF,size=3)
-    maxPSF = PSF[np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[0] , np.unravel_index(np.argmax(smoothPSF, axis=None), smoothPSF.shape)[1] ]
-    return PSF,smoothPSF,maxPSF,exppsf
+    PSF = reduceimageSPHERE(param, file_PSF, np.array([1]), remove_bad_pix = False, high_pass_filter=False)
+    PSF = PSF * ND
+    smoothPSF = []
+    maxPSF = []
+    for wvl in np.arange(len(PSF)):
+        smoothPSF.append(snd.median_filter(PSF[wvl], size=3))
+        max_coord = np.unravel_index(np.argmax(smoothPSF[-1], axis=None), smoothPSF[-1].shape)
+        maxPSF.append( PSF[ wvl , max_coord[0] , max_coord[1] ] ) 
+
+    smoothPSF = np.array(smoothPSF)
+    maxPSF = np.array(maxPSF)
+    return PSF, smoothPSF, maxPSF, exppsf
 
 
 
@@ -556,14 +758,6 @@ def createdifference(param):
     Difference: 3D array, cube of images
     -------------------------------------------------- """
     
-    if param["which_nd"] == 'ND_3.5':
-        ND = 1/0.00105
-    elif param["which_nd"] == 'ND_2.0':
-        ND = 1/0.0179
-    else:
-        ND = 1.
-
-    
     lightsource_estim = param['lightsource_estim']
     dimimages = param['dimimages']
     centeringateachiter = param['centeringateachiter']
@@ -578,6 +772,7 @@ def createdifference(param):
     size_probes = param["size_probes"]
     probe_type = param["probe_type"]
     zone_to_correct = param["zone_to_correct"]
+    detector = param["detector"]
 
     coro = param["coro"]
     live_matrix_measurement = param["live_matrix_measurement"]
@@ -587,17 +782,17 @@ def createdifference(param):
     ModelDirectory = param["ModelDirectory"]
 
     #PSF
-    PSF,smoothPSF,maxPSF,exppsf = process_PSF(ImageDirectory,lightsource_estim,centerx,centery,dimimages)
-    print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ',maxPSF, flush=True)
+    PSF, _, maxPSF, _ = process_PSF(param)
+    print('!!!! ACTION: MAXIMUM PSF HAS TO BE VERIFIED ON IMAGE: ', maxPSF, flush=True)
     
     #Correction
     filecorrection = last(directory + 'iter' + str(nbiter-2) + '_coro_image*.fits')
-    imagecorrection = reduceimageSPHERE(filecorrection, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+    imagecorrection = reduceimageSPHERE(param, filecorrection, maxPSF)
         
     #Traitement de l'image de référence (première image corono et recentrage subpixelique)
-    if centeringateachiter == 1:
+    if centeringateachiter == 1 and detector == "IRDIS":
         fileref = last(directory + 'iter0_coro_image*.fits')
-        imageref = reduceimageSPHERE(fileref, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+        imageref = reduceimageSPHERE(param, fileref, maxPSF)
         imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
         
         def cost_function(xy_trans):
@@ -617,28 +812,24 @@ def createdifference(param):
         best_params = [centerx-int(centerx), centery-int(centery)]
     imagecorrection = fancy_xy_trans_slice(imagecorrection, best_params)
     
-    
-    #Probes
-    numprobes = len(posprobes)
-    Difference = np.zeros((numprobes,dimimages,dimimages)) 
-    probe_amplitude = np.zeros((numprobes,dimimages,dimimages)) 
+    Difference = []
     Images_to_display=[]
     k = 0
     j = 1
     for i in posprobes:
         image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
         #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-        Ikplus = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+        Ikplus = reduceimageSPHERE(param, image_name, maxPSF)
         Ikplus = fancy_xy_trans_slice(Ikplus, best_params)
-        Images_to_display.append((Ikplus-imagecorrection)[30:170,30:170])
+        Images_to_display.append(extract_image(Ikplus-imagecorrection))
         j = j + 1
         
         if estim_algorithm == 'PWP':
             image_name = last(directory+'iter'+str(nbiter-1)+'_Probe_'+'%04d' % j+'*.fits')
             #print('Loading the probe image {0:s}'.format(image_name), flush=True)
-            Ikmoins = reduceimageSPHERE(image_name, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
+            Ikmoins = reduceimageSPHERE(param, image_name, maxPSF)
             Ikmoins = fancy_xy_trans_slice(Ikmoins, best_params)
-            Images_to_display.append((Ikmoins-imagecorrection)[30:170,30:170])
+            Images_to_display.append(extract_image(Ikmoins-imagecorrection))
             j = j + 1
             
         elif estim_algorithm == 'BTW':
@@ -649,59 +840,28 @@ def createdifference(param):
 
             Ikplus = 2*Ikplus
             Ikmoins = 2*(imagecorrection + Probe_intens) #Missing model component
-            Images_to_display.append(np.zeros((170-130,170-130)))
+            Images_to_display.append(np.zeros((170-30,170-30)))
         
         else: 
             print('ERROR: Unvalid ESTIM_ALGORITHM value: should either be PWP or BTW', flush=True)
             break
             
-        Difference[k] = (Ikplus-Ikmoins)
-        
-
-        if live_matrix_measurement:
-            probe_amplitude[k] = np.sqrt(np.abs((Ikplus + Ikmoins)/2 - imagecorrection))
-        
+        Difference.append(Ikplus-Ikmoins)
         k = k + 1
 
-    # if live_matrix_measurement:
-    #     mask384, Pup384, ALC, Lyot384 = def_mat.Upload_CoroConfig(ModelDirectory, coro, wave)
-
-    #     cutestimation = 5000#0.3*squaremaxPSF*8/amplitudePW  #1e20
-    #     raw_pushact = fits.getdata(ModelDirectory+'PushActInPup384SecondWay.fits')
-    #     if onsky==0:
-    #         input_wavefront = mask384
-    #         lightsource = 'InternalPupil_'
-    #     else:
-    #         input_wavefront = mask384*Pup384
-    #         lightsource = 'VLTPupil_'
-        
-    #     lightsource = lightsource + coro + '_'
-
-    #     vectoressai,SVD,int_probes,probevoltage = def_mat.createvectorprobes(input_wavefront,
-    #                                                                     wave,
-    #                                                                     Lyot384 ,
-    #                                                                     ALC ,
-    #                                                                     dimimages ,
-    #                                                                     raw_pushact ,
-    #                                                                     amplitudePW,
-    #                                                                     posprobes ,
-    #                                                                     cutestimation,
-    #                                                                     coro,
-    #                                                                     probe_type,
-    #                                                                     probe_amplitude=probe_amplitude)
-    #     filename = probe_type + '_' + zone_to_correct + '_' + str(int(amplitudePW*37)) + 'nm' + '_'
-
-    #     def_mat.SaveFits(vectoressai, ['',0], MatrixDirectory, lightsource + filename + 'VecteurEstimation', replace=True)
-    #     ##
-    #     def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource + filename + 'CorrectedZone',replace=True)
-    #     ##
-    #     def_mat.SaveFits((probe_amplitude), ['',0], MatrixDirectory, lightsource + filename + 'Intensity_probe_empirical',replace=True)
-    
-
-
-        
-
+    Difference = np.array(Difference)
+    Images_to_display.append(extract_image(PSF, final_size = len(PSF[0])))
     return Difference, imagecorrection, Images_to_display
+
+def extract_image(image_to_extract, final_size = 140, index = -4):
+    if image_to_extract.ndim == 3:
+        image = image_to_extract[index]
+    else:
+        image = image_to_extract
+
+    ctr = int(len(image) /2)
+    return cropimage(image, ctr, ctr, final_size)
+
 
 
 def display(image, axe, title, vmin, vmax , norm = None):
@@ -750,7 +910,7 @@ def contrast_global(image,scoring_reg):
     contrast_std = np.nanstd(image[np.where(scoring_reg)])
     return contrast_mean, contrast_std
     
-def extract_contrast_global(cubeimage, scoring_region):
+def extract_contrast_global(cubeimage, scoring_region, index = 0):
     """
     Calculate contrast in image cube
 
@@ -764,12 +924,12 @@ def extract_contrast_global(cubeimage, scoring_region):
     contrast :array of mean contrast and contrast rms
 
     """
-    nb_iter = len(cubeimage)
-    contrast = []
-    for i in np.arange(nb_iter):
-        contrast.append(contrast_global(cubeimage[i], scoring_region))
-    contrast =np.array(contrast).T
-    return contrast
+    if cubeimage.ndim == 3:
+        image = cubeimage[index]
+    else:
+        image = cubeimage
+    
+    return contrast_global(image, scoring_region)
 
 
 def resultEFC(param):
@@ -801,33 +961,60 @@ def resultEFC(param):
     gain = param['gain']
     rescaling = param['rescaling']
     probe_type = param['probe_type']
+    correction_channel = param['correction_channel']
     
     filename = probe_type + '_' + zone_to_correct + '_' + str(size_probes) + 'nm' + '_'
+    PWP_matrix = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'PWP_matrix.fits')
     maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
     
+    intensity_co = []
+    intensity_inco =[]
+    resultatestimation = []
+
+    nb_wvl = len(PWP_matrix)
+
     print('- Creating difference of images...', flush=True)
     Difference, imagecorrection, Images_to_display = createdifference(param)
-    print('- Estimating the focal plane electric field...', flush=True)
-    vectoressai = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'VecteurEstimation.fits')
-    resultatestimation = estimateEab(Difference, vectoressai)
-    intensity_co = np.abs(resultatestimation)**2
     
-    if rescaling == 1:
-        print('- Rescaling solution and computing incoherent component...', flush=True)
-        intensity_co, intensity_inco, scaling = rescale_coherent_component(intensity_co, imagecorrection, maskDH, 5)
-        print('- Applied factor = ' + str(scaling), flush=True)
-        resultatestimation = resultatestimation * scaling
+    for wvl in np.arange(nb_wvl):
+        print('- Estimating the focal plane electric field...', flush=True)
+        Difference_per_wvl = Difference[:, wvl]
+        imagecorrection_per_wvl = imagecorrection[wvl]
+        PWP_matrix_per_wvl = PWP_matrix[wvl]
+        resultatestimation_per_wvl = estimate_efield(Difference_per_wvl, PWP_matrix_per_wvl)
         
-    else:
-        intensity_inco = imagecorrection - intensity_co
+        if rescaling == 1:
+            print('- Rescaling solution and computing incoherent component...', flush=True)
+            intensity_co_per_wvl, intensity_inco_per_wvl, scaling = rescale_coherent_component(intensity_co_per_wvl, imagecorrection_per_wvl, maskDH, 5)
+            print('- Applied factor = ' + str(scaling), flush=True)
+            resultatestimation_per_wvl = resultatestimation_per_wvl * scaling
+        
+        intensity_co_per_wvl = ndimage.gaussian_filter(np.abs(resultatestimation_per_wvl)**2, 1)
+        intensity_inco_per_wvl = imagecorrection_per_wvl - intensity_co_per_wvl
+        
+        intensity_co.append(intensity_co_per_wvl)
+        intensity_inco.append(intensity_inco_per_wvl)
+        resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH)
+        resultatestimation.append(resultatestimation_per_wvl_1D)
+    
+    intensity_co = np.array(intensity_co)
+    intensity_inco = np.array(intensity_inco)
     
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
+        
+        if nb_wvl>1:
+            rieman_factors = compute_rieman(nb_wvl, correction_channel)
+            resultatestimation = np.array(resultatestimation)
+            resultatestimation = resultatestimation * rieman_factors[: , None]
+            resultatestimation = np.concatenate(resultatestimation, axis=0)
+        else:
+            resultatestimation = np.array(resultatestimation)
         WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
         invertGDH = fits.getdata(MatrixDirectory+lightsource_corr+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
 
         
-        solution1 = solutiontocorrect(maskDH, resultatestimation, invertGDH, WhichInPupil)
+        solution1 = solutiontocorrect(resultatestimation, invertGDH, WhichInPupil)
         solution1 = solution1*amplitudeEFCMatrix/rad_632_to_nm_opt
         solution1 = -gain*solution1
         slopes = VoltToSlope(MatrixDirectory, solution1)
@@ -838,6 +1025,26 @@ def resultEFC(param):
     return intensity_co, intensity_inco, imagecorrection, Images_to_display, slopes
         
 
+def compute_rieman(nb_wavelength, correction_channel):
+    if correction_channel.isdigit() == True:
+        correction_channel = int(correction_channel)
+        if correction_channel>nb_wavelength:
+            print('Correction channel higher than number of channels. Switch to central channel')
+            correction_channel = int(nb_wavelength/2) + 1
+        print('Correction using channel ' + str(correction_channel))
+        rieman_factors = np.zeros(nb_wavelength)
+        rieman_factors[correction_channel - 1] = 1
+    else:
+        if correction_channel == 'equal_weight':
+            rieman_factors = np.ones(nb_wavelength)
+        elif correction_channel == 'longer_weight':
+            rieman_factors = np.linspace(0, 1, num=nb_wavelength)
+        else:
+            print('Unrecognized weighting channel parameter. Switch to equal weight')
+            correction_channel = 'equal_weight'
+            rieman_factors = compute_rieman(nb_wavelength, correction_channel)
+    
+    return rieman_factors
 
 
 def recordslopes(slopes, dir, refslope, namerecord):
@@ -916,33 +1123,57 @@ def FullIterEFC(param):
     posprobes = param["posprobes"]
     nbiter = param['nbiter']
     filenameroot = param["exp_name"]
-    size_probes = param["size_probes"]
-    dimimages = param["dimimages"]
     onsky = param["onsky"]
     slope_ini = param["slope_ini"]
-    estim_algorithm = param['estim_algorithm']
+    detector = param['detector']
     gain = param['gain']
     #Check if the directory dir exists
     if os.path.isdir(dir) is False:
         #Create the directory
         os.mkdir(dir)
     dir2 = dir + filenameroot
+    obs_band = param['obs_band']
         
     dhsize = param["dhsize"]
     maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
 
     if nbiter == 1:
-        print('Creating slopes for Cosinus, PSFOffAxis and new probes...', flush=True)
+        print('Creating slopes for Cosine, PSFOffAxis and new probes...', flush=True)
         #Copy the reference slope with the right name for iteration 0 of ExperimentXXXX
         recordslopes(np.zeros(2480), dir, slope_ini, filenameroot+'iter0correction')
         #Create the cosine of 10nm peak-to-valley amplitude for centering
         recordCoswithvolt(param, 10, slope_ini)
     else:
+
+        if detector == "IFS":
+            # Calibrate the IFS if undone before
+            extraction_parameters, wavecal_outputdir, instrument = build_calibration_IFS(param)
+            nb_images_per_stack, remainder, wavelength_stacked = pick_wvl_IFS(instrument, delta_wave = 5)
+            fits.writeto(MatrixDirectory + detector + '_' + obs_band + '_wavelength.fits', wavelength_stacked, overwrite = True)
+
+            # Extract all the IFS raw images in the experiment/iter and create cubes
+            filenames = []
+            for name in os.listdir(dir):
+                if "IFS_" in name:
+                    # Split at the first occurrence of "IFS_"
+                    before, _, after = name.partition("IFS_")
+                    x = before + after  # 'after' is everything after "IFS_"
+
+                    if x and not os.path.exists(os.path.join(dir, x)):
+                        filenames.append(dir + name)
+            #print(filenames)
+            do_extract_cube_IFS = partial(extract_cube_IFS, wavecal_outputdir=wavecal_outputdir, cube_outputdir=dir, extraction_parameters=extraction_parameters)  # freeze b and c
+            Parallel(n_jobs=-1)(delayed(do_extract_cube_IFS)(filename) for filename in filenames)
+
+            do_process_cube_IFS = partial(process_cube_IFS, nb_images_per_stack = nb_images_per_stack, remainder = remainder)  # freeze b and c
+            Parallel(n_jobs=-1)(delayed(do_process_cube_IFS)(filename) for filename in filenames)
+
+
         if nbiter == 2:
             #Calculate the center of the first coronagraphic image using the waffle
             print('Calculating center of the first coronagraphic image:', flush=True)
-            data,centerx,centery = findingcenterwithcosinus(param)
-            SaveFits([centerx,centery], ['',0], dir2, 'centerxy')
+            data,centerx,centery = find_center_with_cosine(param)
+            fits.writeto(dir2 + 'centerxy.fits', np.array([centerx,centery]), overwrite=True )
         
         centerx, centery = fits.getdata(dir2 + 'centerxy.fits')
         param['centerx'] = centerx
@@ -961,9 +1192,9 @@ def FullIterEFC(param):
         fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal, overwrite = True)
         fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection, overwrite = True)
         
-        Contrast_tot = str(format(extract_contrast_global([imagecorrection],maskDH)[0,0],'.2e'))
-        Contrast_cor = str(format(extract_contrast_global([coherent_signal],maskDH)[0,0],'.2e'))
-        Contrast_inc = str(format(extract_contrast_global([incoherent_signal],maskDH)[0,0],'.2e'))
+        Contrast_tot = str(format(extract_contrast_global(imagecorrection,maskDH)[0],'.2e'))
+        Contrast_cor = str(format(extract_contrast_global(coherent_signal,maskDH)[0],'.2e'))
+        Contrast_inc = str(format(extract_contrast_global(incoherent_signal,maskDH)[0],'.2e'))
         
         print('Contrast in DH region at iter '+str(nbiter-2)+ ' = ' , Contrast_tot, flush=True)
         
@@ -984,9 +1215,14 @@ def FullIterEFC(param):
                 f.writelines( text_in_file )
                 
         # Display data
-        imagecorrection_to_display = high_pass_filter_gauss(imagecorrection, 2)[30:170,30:170]
-        coherent_signal_to_display = high_pass_filter_gauss(coherent_signal, 2)[30:170,30:170]
-        incoherent_signal_to_display = high_pass_filter_gauss(incoherent_signal, 2)[30:170,30:170] 
+        imagecorrection_to_display = extract_image(imagecorrection)
+        coherent_signal_to_display = extract_image(coherent_signal)
+        incoherent_signal_to_display = extract_image(incoherent_signal)
+
+        if onsky == 1:
+            imagecorrection_to_display = high_pass_filter_gauss(imagecorrection_to_display, 2)
+            coherent_signal_to_display = high_pass_filter_gauss(coherent_signal_to_display, 2)
+            incoherent_signal_to_display = high_pass_filter_gauss(incoherent_signal_to_display, 2)
         
         
         if onsky == 1:
@@ -995,8 +1231,8 @@ def FullIterEFC(param):
             norm = None #'log'
         
         else:
-            vmin = -6e-6 #1e-7
-            vmax = 6e-6 #1e-3
+            vmin = -1e-4
+            vmax = 1e-4
             norm = None #'log'
         
         plt.close()
@@ -1008,7 +1244,7 @@ def FullIterEFC(param):
         ax1 = fig1.subplots(1, 1, sharex=True, sharey=True)      
         display(imagecorrection_to_display, ax1, '', vmin = vmin, vmax = vmax, norm = norm)
         ax1.text(1, 12, 'Contrast = ' + Contrast_tot, size=15, color ='red', weight='bold')
-        PSF_to_display = process_PSF(dir, param['lightsource_estim'], centerx, centery, dimimages)[0]
+        PSF_to_display = Images_to_display[-1]
         ax1bis = fig1.add_axes([0.65, 0.70, 0.25, 0.25])
         display(PSF_to_display, ax1bis, 'PSF' , vmin = 1, vmax = np.amax(PSF_to_display), norm='log')
 
@@ -1106,7 +1342,7 @@ def VoltToSlope(MatrixDirectory,Volt):
     
 def recordCoswithvolt(param, amptopushinnm, refslope):
     """ --------------------------------------------------
-    Creation of the cosinus (in slope) to apply on the DM    
+    Creation of the cosine (in slope) to apply on the DM    
     
     Parameters:
     ----------
@@ -1162,13 +1398,13 @@ def record_slope_from_file(param, file_path, amptopushinnm, refslope, name):
     
     
     
-def findingcenterwithcosinus(param):    
+def find_center_with_cosine(param):    
     """ --------------------------------------------------
-    Find center of the coronagraphic image using previously apploed cosinus.
+    Find center of the coronagraphic image using previously applied cosined.
     
     Parameters:
     ----------
-    dir: location of the cosinus
+    dir: location of the cosine
 
     Return:
     ------
@@ -1194,11 +1430,12 @@ def findingcenterwithcosinus(param):
         return (g).flatten()
     
     #LOOK THE FITS FILE AND CHANGE QUIKLY X0,Y0,X1,Y1
-    cosinuspluscoro = last(dir+'CosinusForCentering*.fits')
+    cosinepluscoro = last(dir+'CosineForCentering*.fits')
     coro = last(dir+'iter0_coro_image*.fits')
     
     #Fit gaussian functions
-    data = fits.getdata(cosinuspluscoro)[0]-fits.getdata(coro)[0]
+    #fits.getdata(cosinepluscoro)
+    data = fits.getdata(cosinepluscoro)[-4]-fits.getdata(coro)[-4]
     data1 = cropimage(data,x0_up,y0_up,30)
     data2 = cropimage(data,x1_up,y1_up,30)
     data1[np.where(data1<0)] = 0
@@ -1212,7 +1449,7 @@ def findingcenterwithcosinus(param):
     initial_guess = (np.amax(data1), 1 , 1 , np.unravel_index(np.argmax(data1, axis=None), data1.shape)[0] , np.unravel_index(np.argmax(data1, axis=None), data1.shape)[1] ,np.mean(data1))
     
     try:
-        popt1, pcov = opt.curve_fit(twoD_Gaussian, xy, (data1).flatten(), p0=initial_guess)
+        popt1, _ = opt.curve_fit(twoD_Gaussian, xy, (data1).flatten(), p0=initial_guess)
     except RuntimeError:
         print("Error - curve_fit failed top PSF", flush=True)
 
@@ -1220,7 +1457,7 @@ def findingcenterwithcosinus(param):
     initial_guess = (np.amax(data2), 1 , 1 , np.unravel_index(np.argmax(data2, axis=None), data2.shape)[0] , np.unravel_index(np.argmax(data2, axis=None), data2.shape)[1] ,np.mean(data2))
     
     try:
-        popt2, pcov = opt.curve_fit(twoD_Gaussian, xy, (data2).flatten(), p0=initial_guess)
+        popt2, _ = opt.curve_fit(twoD_Gaussian, xy, (data2).flatten(), p0=initial_guess)
     except RuntimeError:
         print("Error - curve_fit failed bottom PSF", flush=True)
         
@@ -1322,45 +1559,3 @@ def sigma_filter(image, box_width, n_sigma=3, ignore_edges=False, monitor=False)
         mean[wh_nan] = image[wh_nan]
 
     return mean
-
-
-
-
-def reduce_cube_image(docs_dir, param):
-    ''' --------------------------------------------------
-    Load all the fits image in a directory
-    
-    Parameters:
-    ----------
-    doc_dir: Input directory
-    
-    Return:
-    ------
-    image_array: numpy array
-    -------------------------------------------------- '''
-    if param["which_nd"] == 'ND_3.5':
-        ND = 1/0.00105
-    elif param["which_nd"] == 'ND_2.0':
-        ND = 1/0.0179
-    else:
-        ND = 1.
-
-    
-    lightsource_estim = param['lightsource_estim']
-    dimimages = param['dimimages']
-    centeringateachiter = param['centeringateachiter']
-    ImageDirectory = param["ImageDirectory"]
-    centerx = param['centerx']
-    centery = param['centery']
-
-    PSF,smoothPSF,maxPSF,exppsf = process_PSF(ImageDirectory,lightsource_estim,centerx,centery,dimimages)
-
-    image_list = []
-    best_params = [centerx-int(centerx), centery-int(centery)]
-    for filename in natsorted(glob.glob(docs_dir+'*.fits')):
-        print(filename)
-        image=reduceimageSPHERE(filename, ImageDirectory, maxPSF, int(centerx), int(centery), dimimages, exppsf, ND)
-        image = fancy_xy_trans_slice(image, best_params)
-        image_list.append(image)
-    image_array = np.array(image_list)
-    return image_array
