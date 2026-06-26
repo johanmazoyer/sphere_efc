@@ -18,8 +18,8 @@ from astroplan import Observer, FixedTarget
 from scipy import ndimage
 import astropy.units as u
 from scipy.optimize import fmin_powell as fmin_powell
-import SPHERE_EFC_Func as SPHERE
-import Definitions_for_matrices as matrices
+import sphere_efc.SPHERE_EFC_Func as SPHERE
+import sphere_efc.Definitions_for_matrices as matrices
 
 
 def custom_plot(pup, img, vmin, vmax , norm = None):

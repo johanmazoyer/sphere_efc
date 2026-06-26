@@ -48,19 +48,19 @@ if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_H':
 elif detector == 'IRDIS_H3':
     waves = [1.667e-6]
 
-onsky = 0 #1 if on sky correction
+onsky = 1 #1 if on sky correction
 
 zone_to_correct = 'FDH' #vertical #horizontal #'FDH'
-createPW = False
+createPW = True
 probe_type = 'individual_act' #'sinc' #'individual_act'
 
-createwhich = True
-createjacobian = True
+createwhich = False
+createjacobian = False
 
 #name of the mask that can be saved with createmask and then used in createEFCmatrix
 namemask ='6'
 maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,67], circ_side='Top', circ_offset=8)
-createmask = True
+createmask = False
 
 nbmodes = 450
 corr_mode='450'
@@ -90,7 +90,7 @@ else:
 lightsource = lightsource + coro + '_'
 
 #Amplitude in x nm/37 for the PW pokes such that pushact amplitude is equal to x nm
-amplitudePW = 100/37
+amplitudePW = 296/37
 #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
 amplitudeEFCMatrix = 8
 
