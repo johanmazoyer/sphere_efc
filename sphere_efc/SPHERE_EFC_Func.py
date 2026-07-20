@@ -704,8 +704,10 @@ def process_PSF(param):
             ND_col = 4
         elif param["which_nd"] == 'ND_2.0':
             ND_col = 3
+        elif param["which_nd"] == 'ND_1.0':
+            ND_col = 2
         else:
-            ND_col = 1.
+            ND_col = 1
         
         ND = []
         col0 = ND_file[:, 0]
@@ -719,6 +721,8 @@ def process_PSF(param):
             ND = 1/0.00105
         elif param["which_nd"] == 'ND_2.0':
             ND = 1/0.0179
+        elif param["which_nd"] == 'ND_1.0':
+            ND = 1/0.140
         else:
             ND = 1.
 
