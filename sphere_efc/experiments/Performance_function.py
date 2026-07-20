@@ -55,6 +55,66 @@ def custom_plot(pup, img, vmin, vmax , norm = None):
     #cbar.set_label('Nanometers', fontsize=14)
 
     
+def creatingMaskDH(dimimages,
+                   shape,
+                   choosepixDH=[8, 35, -35, 35],
+                   circ_rad=[8, 10],
+                   circ_side="Full",
+                   circ_offset=8,
+                   circ_angle=0):
+    """ --------------------------------------------------
+    Create a binary mask.
+    
+    Parameters:
+    ----------
+    dimimages: int, size of the output squared mask
+    shape: string, can be 'square' or 'circle' , define the shape of the binary mask.
+    choosepixDH: 1D array, if shape is 'square', define the edges of the binary mask in pixels.
+    circ_rad: 1D array, if shape is 'circle', define the inner and outer edge of the binary mask
+    circ_side: string, if shape is 'circle', can define to keep only one side of the circle
+    circ_offset : float, remove pixels that are closer than circ_offset if circ_side is set
+    circ_angle : float, if circ_side is set, remove pixels within a cone of angle circ_angle
+
+    Return:
+    ------
+    maskDH: 2D array, binary mask
+    -------------------------------------------------- """
+    xx, yy = np.meshgrid(
+        np.arange(dimimages) - (dimimages) / 2,
+        np.arange(dimimages) - (dimimages) / 2)
+    rr = np.hypot(yy, xx)
+    if shape == "square":
+        maskDH = np.ones((dimimages, dimimages))
+        maskDH[xx < choosepixDH[0]] = 0
+        maskDH[xx > choosepixDH[1]] = 0
+        maskDH[yy < choosepixDH[2]] = 0
+        maskDH[yy > choosepixDH[3]] = 0
+    if shape == "circle":
+        maskDH = np.ones((dimimages, dimimages))
+        maskDH[rr >= circ_rad[1]] = 0
+        maskDH[rr < circ_rad[0]] = 0
+        if circ_side == "Right":
+            maskDH[xx < np.abs(circ_offset)] = 0
+            if circ_angle != 0:
+                maskDH[yy - xx / np.tan(circ_angle * np.pi / 180) > 0] = 0
+                maskDH[yy + xx / np.tan(circ_angle * np.pi / 180) < 0] = 0
+        if circ_side == "Left":
+            maskDH[xx > -np.abs(circ_offset)] = 0
+            if circ_angle != 0:
+                maskDH[yy - xx / np.tan(circ_angle * np.pi / 180) < 0] = 0
+                maskDH[yy + xx / np.tan(circ_angle * np.pi / 180) > 0] = 0
+        if circ_side == "Bottom":
+            maskDH[yy < np.abs(circ_offset)] = 0
+            if circ_angle != 0:
+                maskDH[yy - xx * np.tan(circ_angle * np.pi / 180) < 0] = 0
+                maskDH[yy + xx * np.tan(circ_angle * np.pi / 180) < 0] = 0
+        if circ_side == "Top":
+            maskDH[yy > -np.abs(circ_offset)] = 0
+            if circ_angle != 0:
+                maskDH[yy - xx * np.tan(circ_angle * np.pi / 180) > 0] = 0
+                maskDH[yy + xx * np.tan(circ_angle * np.pi / 180) > 0] = 0
+    return maskDH
+    
     
 def rms(data):
     """
@@ -323,8 +383,8 @@ def high_pass_filter(image, sigma):
 
 
 def rescale_CDI(signal_co, signal_tot, maskCDI):
-    filtered_co = high_pass_filter(signal_co, 2)
-    filtered_tot = high_pass_filter(signal_tot, 2)
+    filtered_co = signal_co#high_pass_filter(signal_co, 2)
+    filtered_tot = signal_tot#high_pass_filter(signal_tot, 2)
 
     best_params=[]
     best_params3=[]
@@ -346,13 +406,14 @@ def rescale_CDI(signal_co, signal_tot, maskCDI):
         
         best_params3.append(fmin_powell(cost_function3,1, disp=0, callback=None))
         filtered_co = filtered_co*best_params3[-1]
+
     print(np.prod(best_params3))
     #weight = np.sum(np.abs(filtered_tot[np.where(maskCDI==1)] - filtered_co[np.where(maskCDI==1)])*1e5)
     #print(weight)
     
     
-    for i in np.arange(len(best_params)):
-        signal_co = SPHERE.fancy_xy_trans_slice(signal_co, best_params[i])
+    for i in np.arange(len(best_params3)):
+        #signal_co = SPHERE.fancy_xy_trans_slice(signal_co, best_params[i])
         signal_co = signal_co*best_params3[i]
         
     return signal_co

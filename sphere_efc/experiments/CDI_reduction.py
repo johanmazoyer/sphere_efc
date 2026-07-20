@@ -15,7 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import imageio
 #import seaborn as sns
-import experiments.Performance_function as perf
+import sphere_efc.experiments.Performance_function as perf
 import SPHERE_EFC_Func as SPHERE
 import Definitions_for_matrices as matrices
 from astropy.io import fits
@@ -225,7 +225,7 @@ plt.show()
 
 #%% Normal ADI ---------------------------------------
 
-import experiments.Performance_function as perf
+import sphere_efc.experiments.Performance_function as perf
 
 #Filter unwanted images from the cube; remove corresponds to their index
 #remove = []#np.append(np.arange(3,len(cube_co))[::-1],1)
@@ -291,7 +291,7 @@ ADI_tot_result = np.array(ADI_tot_result)
 fits.writeto(processed_directory+'ADI_tot_VIP.fits', ADI_tot_result, overwrite=True)
 
 #%% Test CDI + rotation + stack + high pass filter -------------------------------------
-import experiments.Performance_function as perf
+import sphere_efc.experiments.Performance_function as perf
 
 #Filter unwanted images from the cube; remove corresponds to their index
 #remove = []#np.append(np.arange(3,len(cube_co))[::-1],1)
