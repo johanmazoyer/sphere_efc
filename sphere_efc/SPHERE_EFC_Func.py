@@ -21,6 +21,8 @@ from joblib import Parallel, delayed
 from functools import partial
 from tqdm import tqdm
 
+import Definitions_for_matrices as def_mat
+
 #Unit conversion and normalisation
 #influence matrix normalization = defoc meca en rad @ 632 nm
 rad_632_to_nm_opt = 632/2/np.pi
@@ -997,16 +999,29 @@ def resultEFC(param):
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
         
+        rieman_factors = compute_rieman(nb_wvl, correction_channel)
         if nb_wvl>1:
-            rieman_factors = compute_rieman(nb_wvl, correction_channel)
             resultatestimation = np.array(resultatestimation)
             resultatestimation = resultatestimation * rieman_factors[: , None]
             resultatestimation = np.concatenate(resultatestimation, axis=0)
         else:
             resultatestimation = np.array(resultatestimation)
-        WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
-        invertGDH = fits.getdata(MatrixDirectory+lightsource_corr+'Interactionmatrix_DH'+str(dhsize)+'_SVD'+str(corr_mode)+'.fits')
 
+
+        print('...Creating EFC matrix...')
+        Gmatrix = fits.getdata(MatrixDirectory + lightsource_corr + 'Jacobian.fits')
+        Gmatrix = Gmatrix * rieman_factors[: , None]
+
+        masked_Gmatrix = []
+        for k in range(nb_wvl):
+            masked_Gmatrix_per_wvl = def_mat.get_masked_jacobian(Gmatrix[k], maskDH)
+            masked_Gmatrix.append(masked_Gmatrix_per_wvl)
+        masked_Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
+        #Set how many modes you want to use to correct
+        invertGDH = def_mat.invertDSCC(masked_Gmatrix, corr_mode, goal='c', regul='tikhonov', visu=False)[1]
+
+
+        WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
         
         solution1 = solutiontocorrect(resultatestimation, invertGDH, WhichInPupil)
         solution1 = solution1*amplitudeEFCMatrix/rad_632_to_nm_opt
@@ -1022,7 +1037,7 @@ def resultEFC(param):
 def compute_rieman(nb_wavelength, correction_channel):
     if correction_channel.isdigit() == True:
         correction_channel = int(correction_channel)
-        if correction_channel>nb_wavelength:
+        if correction_channel>=nb_wavelength:
             print('Correction channel higher than number of channels. Switch to central channel')
             correction_channel = int(nb_wavelength/2) + 1
         print('Correction using channel ' + str(correction_channel))
