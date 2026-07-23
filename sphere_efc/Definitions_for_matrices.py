@@ -798,32 +798,3 @@ def create_fqpm(isz_pup):
     fqpm_mask[0:int(isz_pup/2),0:int(isz_pup/2)] = -1
     fqpm_mask[int(isz_pup/2):isz_pup,int(isz_pup/2):isz_pup] = -1
     return fqpm_mask
-
-def SaveFits(image,head,doc_dir2,name,replace=False):
-    """
-    
- 
-    Parameters
-    ----------
-    image : TYPE
-        DESCRIPTION.
-    head : TYPE
-        DESCRIPTION.
-    doc_dir2 : TYPE
-        DESCRIPTION.
-    name : TYPE
-        DESCRIPTION.
-    replace : TYPE, optional
-        DESCRIPTION. The default is False.
- 
-    Returns
-    -------
-    None.
- 
-    """
-    hdu = fits.PrimaryHDU(image)
-    hdul = fits.HDUList([hdu])
-    hdr = hdul[0].header
-    hdr.set(head[0],head[1])
-    hdu.writeto(doc_dir2+name+'.fits', overwrite=replace)
- 

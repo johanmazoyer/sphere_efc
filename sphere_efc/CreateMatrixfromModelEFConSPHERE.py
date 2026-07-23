@@ -12,21 +12,6 @@ from astropy.io import fits
 
 import Definitions_for_matrices as def_mat
 
-
-#Raccourcis FFT
-fft = np.fft.fft2
-ifft = np.fft.ifft2
-shift = np.fft.fftshift
-ishift = np.fft.ifftshift
-
-abs = np.abs
-im = np.imag
-real = np.real
-mean = np.mean
-dot = np.dot
-amax = np.amax
-
-
 # directory where are all the different matrices (CLMatrixOptimiser.HO_IM.fits , etc..)
 MatrixDirectory = os.getcwd()+'/MatricesAndModel/'
 # directory where are all the different model planes (Apod, Lyot, etc..)
@@ -155,13 +140,13 @@ if createPW == True:
     #plt.show()
     filename = probe_type + '_' + zone_to_correct + '_' + str(int(amplitudePW*37)) + 'nm' + '_'
     ##
-    def_mat.SaveFits(SVD[1], ['',0], MatrixDirectory, lightsource + filename + 'CorrectedZone',replace=True)
+    fits.writeto(MatrixDirectory + lightsource + filename + 'CorrectedZone.fits', SVD[1], overwrite = True)
     ##
-    def_mat.SaveFits(PWP_matrix, ['',0], MatrixDirectory, lightsource + filename + 'PWP_matrix', replace=True)
+    fits.writeto(MatrixDirectory + lightsource + filename + 'PWP_matrix.fits', PWP_matrix, overwrite = True)
     ##
-    def_mat.SaveFits(int_probes, ['',0], MatrixDirectory, lightsource + filename +'Intensity_probe', replace=True)
+    fits.writeto(MatrixDirectory + lightsource + filename + 'Intensity_probe.fits', int_probes, overwrite = True)
     ##
-    def_mat.SaveFits(probevoltage, ['',0], MatrixDirectory, lightsource + filename +'Voltage_probe', replace=True)
+    fits.writeto(MatrixDirectory + lightsource + filename + 'Voltage_probe.fits', probevoltage, overwrite = True)
 
 
 #### Pour correction 
@@ -170,7 +155,7 @@ if createwhich==True:
     print('...Creating DH and Gmatrix...')
     WhichInPupil = def_mat.creatingWhichinPupil(Lyot384, raw_pushact, 0.5)
     print('Number of actuators in visible through the Lyot: ', len(WhichInPupil))
-    def_mat.SaveFits(WhichInPupil, ['',0], MatrixDirectory, lightsource + 'WhichInPupil0_5', replace=True)
+    fits.writeto(MatrixDirectory + lightsource + 'WhichInPupil0_5.fits', WhichInPupil, overwrite = True)
 
 
 ##
@@ -198,13 +183,13 @@ if createjacobian==True:
 
     Gmatrix = np.array(Gmatrix)
     #Saving matrix
-    def_mat.SaveFits(Gmatrix, ['',0], ModelDirectory, lightsource + 'Jacobian', replace=True)
+    fits.writeto(ModelDirectory + lightsource + 'Jacobian.fits', Gmatrix, overwrite = True)
 
 
 #Choose the four corners of your dark hole (in pixels)
 if createmask == True:
     print('...Creating mask DH...')
-    def_mat.SaveFits(maskDH, ['',0], MatrixDirectory, 'mask_DH' + namemask, replace=True)
+    fits.writeto(MatrixDirectory + 'mask_DH' + namemask + '.fits', maskDH, overwrite = True)
     plt.imshow((maskDH)) #Afficher où le DH apparaît sur l'image au final
     plt.pause(0.1)
 
@@ -222,7 +207,7 @@ if createEFCmatrix == True:
     masked_Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
     #Set how many modes you want to use to correct
     invertGDH = def_mat.invertDSCC(masked_Gmatrix, nbmodes, goal='c', regul='tikhonov', visu=True)[1]
-    def_mat.SaveFits(invertGDH, ['',0], MatrixDirectory, lightsource+'Interactionmatrix_DH'+namemask+'_SVD'+corr_mode, replace=True)
+    fits.writeto(MatrixDirectory + lightsource + 'Interactionmatrix_DH' + namemask + '_SVD' + corr_mode + '.fits', invertGDH, overwrite = True)
 
 
 
