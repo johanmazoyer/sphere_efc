@@ -174,6 +174,9 @@ if createwhich==True:
 
 
 ##
+if detector == 'IFS_OBS_H':
+    waves = waves[::2]
+
 if createjacobian==True:
     print('...Creating Jacobian...')
     pushact = amplitudeEFCMatrix * raw_pushact

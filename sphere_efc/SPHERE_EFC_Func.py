@@ -957,6 +957,7 @@ def resultEFC(param):
     rescaling = param['rescaling']
     probe_type = param['probe_type']
     correction_channel = param['correction_channel']
+    detector = param['detector']
     
     filename = probe_type + '_' + zone_to_correct + '_' + str(size_probes) + 'nm' + '_'
     PWP_matrix = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'PWP_matrix.fits')
@@ -992,32 +993,43 @@ def resultEFC(param):
         resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH)
         resultatestimation.append(resultatestimation_per_wvl_1D)
     
+    resultatestimation = np.array(resultatestimation)
     intensity_co = np.array(intensity_co)
     intensity_inco = np.array(intensity_inco)
     
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
+
+        if detector == 'IFS_OBS_H':
+            #Only keep every other wavelength
+            resultatestimation = resultatestimation[::2]
+            nb_wvl = len(resultatestimation)
         
-        rieman_factors = compute_rieman(nb_wvl, correction_channel)
-        if nb_wvl>1:
-            resultatestimation = np.array(resultatestimation)
-            resultatestimation = resultatestimation * rieman_factors[: , None]
-            resultatestimation = np.concatenate(resultatestimation, axis=0)
-        else:
-            resultatestimation = np.array(resultatestimation)
-
-
         print('...Creating EFC matrix...')
         Gmatrix = fits.getdata(MatrixDirectory + lightsource_corr + 'Jacobian.fits')
-        Gmatrix = Gmatrix * rieman_factors[: , None]
+        if nb_wvl>1:
+            #Compute wavelength weight w.r.t correction strategy
+            rieman_factors = compute_rieman(nb_wvl, correction_channel)
 
-        masked_Gmatrix = []
-        for k in range(nb_wvl):
-            masked_Gmatrix_per_wvl = def_mat.get_masked_jacobian(Gmatrix[k], maskDH)
-            masked_Gmatrix.append(masked_Gmatrix_per_wvl)
-        masked_Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
-        #Set how many modes you want to use to correct
-        invertGDH = def_mat.invertDSCC(masked_Gmatrix, corr_mode, goal='c', regul='tikhonov', visu=False)[1]
+            #Modify the estimate w.r.t correction strategy
+            resultatestimation = resultatestimation * rieman_factors[: , None]
+            resultatestimation = np.concatenate(resultatestimation, axis=0)
+
+            #Modify the jacobian w.r.t correction strategy
+            Gmatrix = Gmatrix * rieman_factors[: , None]
+
+            #Apply spatial mask to Jacobian
+            masked_Gmatrix = []
+            for k in range(nb_wvl):
+                masked_Gmatrix_per_wvl = def_mat.get_masked_jacobian(Gmatrix[k], maskDH)
+                masked_Gmatrix.append(masked_Gmatrix_per_wvl)
+            Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
+        else:
+            #Apply spatial mask to Jacobian
+            Gmatrix = def_mat.get_masked_jacobian(Gmatrix, maskDH)
+
+        #Inverse matrix with regularization
+        invertGDH = def_mat.invertDSCC(Gmatrix, corr_mode, goal='c', regul='tikhonov', visu=False)[1]
 
 
         WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
