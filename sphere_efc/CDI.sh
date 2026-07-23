@@ -99,8 +99,7 @@ centeringateachiter=0
 rescaling=0
 
 #Which instrument is used
-detector="IFS" #Can be IRDIS or IFS
-obs_band="OBS_H" #Can also be 'OBS_YJ' or 'OBS_H3'
+detector="IFS_OBS_YJ" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
 
 
 # Path common to wsre and wsrsgw
@@ -284,7 +283,6 @@ if [ "$create_coro" -eq "1" ]; then
 	export ESTIM_ALGORITHM
 	export PROBE_TYPE
 	export detector
-	export obs_band
 	export correction_channel
 	
 	

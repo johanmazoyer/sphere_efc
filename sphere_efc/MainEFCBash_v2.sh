@@ -103,8 +103,7 @@ centeringateachiter=0
 rescaling=0
 
 #Which instrument is used
-detector="IFS" #Can be IRDIS or IFS
-obs_band="OBS_YJ" #Can also be 'OBS_YJ' or 'H3'
+detector="IFS_OBS_YJ" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
 
 #Weighting broadband corrrection
 #Can be an integer that represents the wvl channel used for correction.
@@ -280,7 +279,6 @@ if [ "$create_coro" -eq "1" ]; then
 	export ESTIM_ALGORITHM
 	export PROBE_TYPE
 	export detector
-	export obs_band
 	export correction_channel
 	
 	#Run the EFC code to prepare all the required files (slopes to apply on the DM and on DTTS)

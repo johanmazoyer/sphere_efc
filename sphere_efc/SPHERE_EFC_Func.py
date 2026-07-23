@@ -407,7 +407,7 @@ def reduce_image_IFS(param, image):
 def build_calibration_IFS(param):
 
     root_directory = param["RootDirectory"]
-    obs_band = param['obs_band']
+    detector = param['detector']
     cal_directory = root_directory + 'IFS_cal/'
 
     #Look for input (raw SPHERE data) and output (charis calibration files) directories
@@ -429,10 +429,10 @@ def build_calibration_IFS(param):
     # raw_directory = config.directories.raw_directory
     # reduction_directory = config.directories.reduction_directory
 
-    if obs_band == 'OBS_YJ':
+    if detector == 'IFS_OBS_YJ':
         instrument = charis.instruments.SPHERE('YJ')
         config.extraction.R = 55
-    elif obs_band == 'OBS_H':
+    elif detector == 'IFS_OBS_H':
         instrument = charis.instruments.SPHERE('YH')
         config.extraction.R = 35
 
@@ -696,10 +696,9 @@ def process_PSF(param):
     ImageDirectory = param["ImageDirectory"]
     MatrixDirectory = param["MatrixDirectory"]
     detector = param["detector"]
-    obs_band = param["obs_band"]
 
     if detector == 'IFS':
-        wavelength_stacked = fits.getdata(MatrixDirectory + detector + '_' + obs_band + '_wavelength.fits')
+        wavelength_stacked = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
         ND_file = np.loadtxt(MatrixDirectory + "../SPHERE_CPI_ND.dat")
 
         if param["which_nd"] == 'ND_3.5':
@@ -1141,7 +1140,6 @@ def FullIterEFC(param):
         #Create the directory
         os.mkdir(dir)
     dir2 = dir + filenameroot
-    obs_band = param['obs_band']
         
     dhsize = param["dhsize"]
     maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
@@ -1158,7 +1156,7 @@ def FullIterEFC(param):
             # Calibrate the IFS if undone before
             extraction_parameters, wavecal_outputdir, instrument = build_calibration_IFS(param)
             nb_images_per_stack, remainder, wavelength_stacked = pick_wvl_IFS(instrument, delta_wave = 5)
-            fits.writeto(MatrixDirectory + detector + '_' + obs_band + '_wavelength.fits', wavelength_stacked, overwrite = True)
+            fits.writeto(MatrixDirectory + detector + '_wavelength.fits', wavelength_stacked, overwrite = True)
 
             # Extract all the IFS raw images in the experiment/iter and create cubes
             filenames = []
