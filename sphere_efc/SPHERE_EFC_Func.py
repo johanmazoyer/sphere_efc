@@ -1204,12 +1204,13 @@ def FullIterEFC(param):
         #Record the slopes to apply for correction at the next iteration (only if not CDI i.e. gain!=0)
         if gain!=0:
             recordslopes(pentespourcorrection, dir2, refslope, 'iter'+str(nbiter-1)+'correction')
-            
+
+        head_image = create_header_from_dict(param)    
         
         #Save data 
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits', coherent_signal, overwrite = True)
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal, overwrite = True)
-        fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection, overwrite = True)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'CoherentSignal.fits', coherent_signal, header = head_image, overwrite = True)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'IncoherentSignal.fits', incoherent_signal, header = head_image, overwrite = True)
+        fits.writeto(dir2+'iter'+str(nbiter-2)+'TotalIntensity.fits', imagecorrection, header = head_image, overwrite = True)
         
         Contrast_tot = str(format(extract_contrast_global(imagecorrection,maskDH)[0],'.2e'))
         Contrast_cor = str(format(extract_contrast_global(coherent_signal,maskDH)[0],'.2e'))
@@ -1335,6 +1336,12 @@ def FullIterEFC(param):
         print('Done with recording new slopes!', flush=True)
         
     return 0
+
+
+def create_header_from_dict(dictionary):
+    header = fits.Header(dictionary.items())
+    return header
+
 
 
     
