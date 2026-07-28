@@ -244,7 +244,7 @@ if [ "$create_PSF" -eq "1" ]; then
 		ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IFU OCS2.INS.DITH.POSX 0 OCS2.INS.DITH.POSY 0 OCS2.OCS.DET1.IMGNAME ${lightsource_estim}IFS_OffAxisPSF_ \" "
 		ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IFS \" "
 
-		if [[ "$IFS_only" == "False"]]; then
+		if [[ "$IFS_only" == "False" ]]; then
 			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${lightsource_estim}IRDIS_OffAxisPSF_ \" "
 			ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
 		fi
@@ -369,7 +369,7 @@ if [ "$create_coro" -eq "1" ]; then
 					ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IFU OCS2.INS.DITH.POSX 0 OCS2.INS.DITH.POSY 0 OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_CosineForCentering_ \" "
 					ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IFS \" "
 
-					if [[ "$IFS_only" == "False"]]; then
+					if [[ "$IFS_only" == "False" ]]; then
 						ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${EXP_NAME}IRDIS_CosineForCentering_  \" "
 						ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
 					fi
@@ -418,7 +418,7 @@ if [ "$create_coro" -eq "1" ]; then
 			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IFU OCS2.INS.DITH.POSX 0 OCS2.INS.DITH.POSY 0 OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ \" "
 			ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IFS \" "
 
-			if [[ "$IFS_only" == "False"]]; then
+			if [[ "$IFS_only" == "False" ]]; then
 				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${EXP_NAME}IRDIS_iter${imgnb}_coro_image_ \" "
 				ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
 			fi
@@ -460,7 +460,7 @@ if [ "$create_coro" -eq "1" ]; then
 				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IFU OCS2.INS.DITH.POSX 0 OCS2.INS.DITH.POSY 0 OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${k}_ \" "
 				ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IFS \" "
 
-				if [[ "$IFS_only" == "False"]]; then
+				if [[ "$IFS_only" == "False" ]]; then
 					ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${EXP_NAME}IRDIS_iter${nbiter}_Probe_000${k}_ \" "
 					ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
 				fi
