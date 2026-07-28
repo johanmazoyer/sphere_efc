@@ -45,6 +45,13 @@ SX=1
 SY=1220
 N=300
 
+if [[ "$detector" == "IFS_OBS_YJ" ]]; then
+	mod_irdifs="IRDIFS"
+	IRDIFS_file="SPHERE_irdifs_obs.ref"
+elif [[ "$detector" == "IFS_OBS_H" ]]; then
+	mod_irdifs="IRDIFS_EXT"
+	IRDIFS_file="SPHERE_irdifs_ext_obs.ref"
+
 	if [ -f "$WORK_PATH/Experiment0000_iter0correction.fits" ]
 	then
 		#tmpplus is used to increment the rootname if nbiter == 1
@@ -84,14 +91,14 @@ N=300
 				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\" "
 
 			elif [[ "$detector" == "IFS_OBS_YJ" || "$detector" == "IFS_OBS_H" ]]; then
-				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function OCS2.DET1.SEQ1.DIT ${DIT_IFS_probe} OCS2.DET1.NDIT ${NDIT_IFS_probe} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_probe} OCS2.DET1.FRAM2.BREAK 0  OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_probe} OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_probe} OCS1.DET1.NDIT ${NDIT_IRDIS_probe} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_probe} OCS1.DET1.READ.CURNAME Nondest -file SPHERE_irdifs_obs.ref \" "
+				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function OCS2.DET1.SEQ1.DIT ${DIT_IFS_probe} OCS2.DET1.NDIT ${NDIT_IFS_probe} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_probe} OCS2.DET1.FRAM2.BREAK 0  OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_probe} OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_probe} OCS1.DET1.NDIT ${NDIT_IRDIS_probe} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_probe} OCS1.DET1.READ.CURNAME Nondest -file ${IRDIFS_file} \" "
 				
 				# Record IFS data
-				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IFU OCS2.INS.DITH.POSX 0 OCS2.INS.DITH.POSY 0 OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${which_probe}_ \" "
+				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IFU OCS2.INS.DITH.POSX 0 OCS2.INS.DITH.POSY 0 OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${which_probe}_ \" "
 				ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IFS \" "
 
 				if [[ "$IFS_only" == "False" ]]; then
-					ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${EXP_NAME}IRDIS_iter${nbiter}_Probe_000${which_probe}_ \" "
+					ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${EXP_NAME}IRDIS_iter${nbiter}_Probe_000${which_probe}_ \" "
 					ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
 				fi
 				# line using the solo file
