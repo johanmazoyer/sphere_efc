@@ -47,7 +47,7 @@ DIT_IRDIS_PSF=0
 NDIT_IRDIS_PSF=1
 DIT_IFS_PSF=64
 NDIT_IFS_PSF=1
-WHICH_ND='ND_2.0' #can be 'ND_3.5' or 'ND_2.0' (to be checked for 2.0!)
+WHICH_ND='ND_2.0' #can be 'ND_3.5' or 'ND_2.0' or 'ND_1.0'
 
 #Background
 DIT_IRDIS_bkgrd=0
@@ -111,7 +111,7 @@ detector="IFS_OBS_YJ" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
 # If detector = "IFS_OBS_YJ" or "IFS_OBS_H"
 # If IFS_only = "True": IRDIS_DIT = 0 and IRDIS_NDIT=1
 # IF IFS_only = "False": the parameters set by the user are used for the IRDIS DIT and NDIT
-IFS_only = "True"
+IFS_only="True"
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
@@ -184,7 +184,7 @@ if [ "$create_bkgrd" -eq "1" ]; then
 		if [[ "$IFS_only" == "False"]]; then
 			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_IRDIS_${DIT_IRDIS_bkgrd}s_ \" "
 			ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
-			
+		fi
 		# line using the solo file
 		# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_bkgrd} OCS2.DET1.NDIT ${NDIT_IFS_bkgrd} OCS2.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_IFS_bkgrd}s_ \" "
 		# ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
@@ -246,7 +246,7 @@ if [ "$create_PSF" -eq "1" ]; then
 		if [[ "$IFS_only" == "False"]]; then
 			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${lightsource_estim}IRDIS_OffAxisPSF_ \" "
 			ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
-
+		fi
 		# line using the solo file
 		# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_PSF} OCS2.DET1.NDIT ${NDIT_IFS_PSF} OCS2.OCS.DET1.IMGNAME ${lightsource_estim}IFS_OffAxisPSF_ \" "
 		# ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
@@ -387,7 +387,7 @@ if [ "$create_coro" -eq "1" ]; then
 					if [[ "$IFS_only" == "False"]]; then
 						ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${EXP_NAME}IRDIS_CosineForCentering_  \" "
 						ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
-
+					fi
 					# line using the solo file
 					# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_CosineForCentering_ \" "
 					# ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
@@ -437,7 +437,7 @@ if [ "$create_coro" -eq "1" ]; then
 			if [[ "$IFS_only" == "False"]]; then
 				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${EXP_NAME}IRDIS_iter${imgnb}_coro_image_ \" "
 				ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
-
+			fi
 			# line using the solo file
 			# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_CosineForCentering_ \" "
 			# ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
@@ -481,7 +481,7 @@ if [ "$create_coro" -eq "1" ]; then
 					if [[ "$IFS_only" == "False"]]; then
 						ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${EXP_NAME}IRDIS_iter${nbiter}_Probe_000${k}_ \" "
 						ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
-
+					fi
 				# line using the solo file
 				# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_probe} OCS2.DET1.NDIT ${NDIT_IFS_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${k}_ \" "
  				# ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
