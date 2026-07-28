@@ -251,7 +251,7 @@ if [ "$create_PSF" -eq "1" ]; then
 		# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_PSF} OCS2.DET1.NDIT ${NDIT_IFS_PSF} OCS2.OCS.DET1.IMGNAME ${lightsource_estim}IFS_OffAxisPSF_ \" "
 		# ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
 		ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
-xxxx
+
 	fi
 
     echo "!!!! ACTION: Bring the PSF back behind the corono by changing DTTS and press ENTER when well-centered"
@@ -428,20 +428,19 @@ if [ "$create_coro" -eq "1" ]; then
 			ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\" "
 
 		elif [[ "$detector" == "IFS_OBS_YJ" || "$detector" == "IFS_OBS_H" ]]; then
-			# full line copy-paste from Zahed's example (2026-06-09 email)
-			# it includes keyword that we can remove I guess (RGa)
-			# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.COMB.ROT PUPIL INS.FILT2.NAME WHICH_ND OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_image} OCS2.DET1.FRAM2.BREAK 0  OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ OCS2.DET1.READ.CURNAME Nondest OCS2.INS.POS.POS -15.7 OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_image} OCS1.DET1.NDIT ${NDIT_IRDIS_image} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_image} OCS1.DET1.READ.CURNAME Nondest INS.COMB.IFLT DB_H34 -file SPHERE_irdifs_obs.ref\" "
+			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_image} OCS2.DET1.FRAM2.BREAK 0  OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_image} OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_image} OCS1.DET1.NDIT ${NDIT_IRDIS_image} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_image} OCS1.DET1.READ.CURNAME Nondest -file SPHERE_irdifs_obs.ref \" "
+			
+			# Record IFS data
+			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IFU OCS2.INS.DITH.POSX 0 OCS2.INS.DITH.POSY 0 OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ \" "
+			ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IFS \" "
 
-			if [[ "$IFS_only" == "True"]]; then
-				# line using the irdifs file removing the keywords we do not need and with 0 for the IRDIS_DIT and 1 for IRDIS_NDIT
-				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_image} OCS2.DET1.FRAM2.BREAK 0  OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT 0 OCS1.DET1.NDIT 1 OCS1.DET1.ACQ1.QUEUE 1 OCS1.DET1.READ.CURNAME Nondest -file SPHERE_irdifs_obs.ref\" "
-			else
-				# Full IRDIFS: line using the irdifs file removing the keywords we do not need
-				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_image} OCS2.DET1.FRAM2.BREAK 0  OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_image} OCS1.DET1.NDIT ${NDIT_IRDIS_image} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_image} OCS1.DET1.READ.CURNAME Nondest -file SPHERE_irdifs_obs.ref\" "
+			if [[ "$IFS_only" == "False"]]; then
+				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE IRDIFS DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${EXP_NAME}IRDIS_iter${imgnb}_coro_image_ \" "
+				ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
 
 			# line using the solo file
-			# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ \" "
-			ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
+			# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_CosineForCentering_ \" "
+			# ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
 			ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
 
 		fi
