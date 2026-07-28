@@ -10,8 +10,10 @@ which_probe=1 #from 1 to 4
 
 ## IRDIS parameters
 #Image diversity
-DIT_probe=1
-NDIT_probe=1
+DIT_IRDIS_probe=0
+NDIT_IRDIS_probe=1
+DIT_IFS_probe=1
+NDIT_IFS_probe=1
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
@@ -69,9 +71,28 @@ N=300
 
 		echo "Acquire Probe"
 		echo ' * acquiring image'
-		ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_probe} OCS1.DET1.NDIT ${NDIT_probe} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${which_probe}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}\" "
-		ssh wsre "msgSend -n wsre sroControl START \"-detId IRDIS\" "
-		ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\" "
+			if [[ "$detector" == "IRDIS" ]]; then
+				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_probe} OCS1.DET1.NDIT ${NDIT_IRDIS_probe} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${nbiter}_Probe_000${which_probe}_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}\" "
+				ssh wsre "msgSend -n wsre sroControl START \"-detId IRDIS\" "
+				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\" "
+
+			elif [[ "$detector" == "IFS" ]]; then
+                ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE TEST" \"
+				# full line copy-paste from Zahed's example (2026-06-09 email)
+				# it includes keyword that we can remove I guess (RGa)
+				# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.COMB.ROT PUPIL INS.FILT2.NAME WHICH_ND OCS2.DET1.SEQ1.DIT ${DIT_IFS_probe} OCS2.DET1.NDIT ${NDIT_IFS_probe} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_probe} OCS2.DET1.FRAM2.BREAK 0  OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${which_probe}_ OCS2.DET1.READ.CURNAME Nondest OCS2.INS.POS.POS -15.7 OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_probe} OCS1.DET1.NDIT ${NDIT_IRDIS_probe} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_probe} OCS1.DET1.READ.CURNAME Nondest INS.COMB.IFLT DB_H34 -file SPHERE_irdifs_obs.ref\" "
+
+				# Full IRDIFS: line using the irdifs file removing the keywords we do not need
+				# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function OCS2.DET1.SEQ1.DIT ${DIT_IFS_probe} OCS2.DET1.NDIT ${NDIT_IFS_probe} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_probe} OCS2.DET1.FRAM2.BREAK 0  OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${which_probe}_ OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_probe} OCS1.DET1.NDIT ${NDIT_IRDIS_probe} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_probe} OCS1.DET1.READ.CURNAME Nondest -file SPHERE_irdifs_obs.ref\" "
+				
+				# line using the irdifs file removing the keywords we do not need and with 0 for the IRDIS_DIT and 1 for IRDIS_NDIT
+				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function OCS2.DET1.SEQ1.DIT ${DIT_IFS_probe} OCS2.DET1.NDIT ${NDIT_IFS_probe} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_probe} OCS2.DET1.FRAM2.BREAK 0  OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${which_probe}_ OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT 0 OCS1.DET1.NDIT 1 OCS1.DET1.ACQ1.QUEUE 1 OCS1.DET1.READ.CURNAME Nondest -file SPHERE_irdifs_obs.ref\" "
+
+				# line using the solo file
+				# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_probe} OCS2.DET1.NDIT ${NDIT_IFS_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${k}_ \" "
+ 				ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
+				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
+			fi
 	done
 
 
