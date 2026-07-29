@@ -337,7 +337,7 @@ def reduceimageSPHERE(param, file,  maxPSF, remove_bad_pix = True, high_pass_fil
     # Get image exposure time
     expim = get_exptime(file)
 
-    if detector == "IRDIS":
+    if detector == "IRDIS_H3":
         # Load dark that correspond to image exposure time
         back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] 
         # Load image
@@ -347,7 +347,7 @@ def reduceimageSPHERE(param, file,  maxPSF, remove_bad_pix = True, high_pass_fil
         image = image - back
         image = reduce_image_IRDIS(param, image, back, remove_bad_pix, high_pass_filter)
         
-    elif detector == "IFS":
+    elif detector == "IFS_OBS_H" or detector == "IFS_OBS_YJ" :
         image = reduce_image_IFS(param, fits.getdata(file))
     
     #We normalize the image with the max of the PSF
@@ -788,7 +788,7 @@ def createdifference(param):
     imagecorrection = reduceimageSPHERE(param, filecorrection, maxPSF)
         
     #Traitement de l'image de référence (première image corono et recentrage subpixelique)
-    if centeringateachiter == 1 and detector == "IRDIS":
+    if centeringateachiter == 1 and detector == "IRDIS_H3":
         fileref = last(directory + 'iter0_coro_image*.fits')
         imageref = reduceimageSPHERE(param, fileref, maxPSF)
         imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
@@ -1164,7 +1164,7 @@ def FullIterEFC(param):
         recordCoswithvolt(param, 10, slope_ini)
     else:
 
-        if detector == "IFS":
+        if detector == "IFS_OBS_H" or "IFS_OBS_YJ":
             # Calibrate the IFS if undone before
             extraction_parameters, wavecal_outputdir, instrument = build_calibration_IFS(param)
             nb_images_per_stack, remainder, wavelength_stacked = pick_wvl_IFS(instrument, delta_wave = 5)

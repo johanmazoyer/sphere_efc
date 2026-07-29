@@ -183,7 +183,7 @@ if createjacobian==True:
 
     Gmatrix = np.array(Gmatrix)
     #Saving matrix
-    fits.writeto(ModelDirectory + lightsource + 'Jacobian.fits', Gmatrix, overwrite = True)
+    fits.writeto(MatrixDirectory + lightsource + 'Jacobian.fits', Gmatrix, overwrite = True)
 
 
 #Choose the four corners of your dark hole (in pixels)
@@ -198,7 +198,7 @@ if createmask == True:
 if createEFCmatrix == True:
     print('...Creating EFC matrix...')
     maskDH = fits.getdata(MatrixDirectory + '../mask_DH' + namemask + '.fits')
-    Gmatrix = fits.getdata(ModelDirectory + lightsource + 'Jacobian.fits')
+    Gmatrix = fits.getdata(MatrixDirectory + lightsource + 'Jacobian.fits')
     masked_Gmatrix = []
     for k, wave in enumerate(waves) :
         print('wavelength: ', format(wave, '.2e'))
