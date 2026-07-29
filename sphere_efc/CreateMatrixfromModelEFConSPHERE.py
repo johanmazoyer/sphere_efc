@@ -189,7 +189,7 @@ if createjacobian==True:
 #Choose the four corners of your dark hole (in pixels)
 if createmask == True:
     print('...Creating mask DH...')
-    fits.writeto(MatrixDirectory + 'mask_DH' + namemask + '.fits', maskDH, overwrite = True)
+    fits.writeto(MatrixDirectory + '../mask_DH' + namemask + '.fits', maskDH, overwrite = True)
     plt.imshow((maskDH)) #Afficher où le DH apparaît sur l'image au final
     plt.pause(0.1)
 
@@ -197,7 +197,7 @@ if createmask == True:
 #### Uncomment below to create and save the interaction matrix
 if createEFCmatrix == True:
     print('...Creating EFC matrix...')
-    maskDH = fits.getdata(MatrixDirectory + 'mask_DH' + namemask + '.fits')
+    maskDH = fits.getdata(MatrixDirectory + '../mask_DH' + namemask + '.fits')
     Gmatrix = fits.getdata(ModelDirectory + lightsource + 'Jacobian.fits')
     masked_Gmatrix = []
     for k, wave in enumerate(waves) :

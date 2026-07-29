@@ -36,7 +36,7 @@ def SHslopes2map(MatrixDirectory, slopes, visu=True):
         raise IOError('The input vector must have 2480 elements (currently {0:d})'.format(len(slopes)))
     mapx = np.ndarray((40,40),dtype=float)*np.nan
     mapy = np.ndarray((40,40),dtype=float)*np.nan
-    shackgrid = fits.getdata(MatrixDirectory+'shack.grid.fits')
+    shackgrid = fits.getdata(MatrixDirectory+'../shack.grid.fits')
     mapx[shackgrid>0] = slopes[np.arange(1240,dtype=int)*2]
     mapy[shackgrid>0] = slopes[np.arange(1240,dtype=int)*2+1]
     mapx = np.fliplr(np.rot90(mapx,-3))
@@ -961,7 +961,7 @@ def resultEFC(param):
     
     filename = probe_type + '_' + zone_to_correct + '_' + str(size_probes) + 'nm' + '_'
     PWP_matrix = fits.getdata(MatrixDirectory + lightsource_estim + filename + 'PWP_matrix.fits')
-    maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
+    maskDH = fits.getdata(MatrixDirectory+'../mask_DH'+str(dhsize)+'.fits')
     
     intensity_co = []
     intensity_inco =[]
@@ -1154,7 +1154,7 @@ def FullIterEFC(param):
     dir2 = dir + filenameroot
         
     dhsize = param["dhsize"]
-    maskDH = fits.getdata(MatrixDirectory+'mask_DH'+str(dhsize)+'.fits')
+    maskDH = fits.getdata(MatrixDirectory+'../mask_DH'+str(dhsize)+'.fits')
 
     if nbiter == 1:
         print('Creating slopes for Cosine, PSFOffAxis and new probes...', flush=True)
@@ -1358,7 +1358,7 @@ def VoltToSlope(MatrixDirectory,Volt):
     Slopetopush: 
     -------------------------------------------------- """
     # daily calibrations !! Ask for HO_IM matrix before starting and save in directory!! ####################
-    V2S = fits.getdata(MatrixDirectory+ 'CLMatrixOptimiser.HO_IM.fits')
+    V2S = fits.getdata(MatrixDirectory+ '../CLMatrixOptimiser.HO_IM.fits')
     # renormalization for weighted center of gravity: 0.4 sensitivity
     V2S = V2S / 0.4
     Slopetopush = V2S @ Volt
@@ -1381,7 +1381,7 @@ def recordCoswithvolt(param, amptopushinnm, refslope):
     dir = param["ImageDirectory"]
     # Read SAXO calibrations
     # static calibrations
-    IMF_inv = fits.getdata(MatrixDirectory + 'SAXO_DM_IFM_INV.fits', ignore_missing_end=True)
+    IMF_inv = fits.getdata(MatrixDirectory + '../SAXO_DM_IFM_INV.fits', ignore_missing_end=True)
     
     nam = ['cos_00deg','cos_30deg','cos_90deg']
     nbper = 10.
@@ -1412,7 +1412,7 @@ def record_slope_from_file(param, file_path, amptopushinnm, refslope, name):
     dir = param["ImageDirectory"]
     # Read SAXO calibrations
     # static calibrations
-    IMF_inv = fits.getdata(MatrixDirectory + 'SAXO_DM_IFM_INV.fits', ignore_missing_end = True)
+    IMF_inv = fits.getdata(MatrixDirectory + '../SAXO_DM_IFM_INV.fits', ignore_missing_end = True)
     
     cc = fits.getdata(file_path)
     coe = (cc.flatten())@IMF_inv
