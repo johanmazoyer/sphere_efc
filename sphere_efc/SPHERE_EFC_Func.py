@@ -697,7 +697,7 @@ def process_PSF(param):
     MatrixDirectory = param["MatrixDirectory"]
     detector = param["detector"]
 
-    if detector == 'IFS':
+    if detector == "IFS_OBS_H" or detector == "IFS_OBS_YJ" :
         wavelength_stacked = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
         ND_file = np.loadtxt(MatrixDirectory + "../SPHERE_CPI_ND.dat")
 
