@@ -23,6 +23,10 @@ detector="IFS_OBS_YJ" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
 # IF IFS_only = "False": the parameters set by the user are used for the IRDIS DIT and NDIT
 IFS_only = "True"
 
+# If detector = "IFS_OBS_YJ" or "IFS_OBS_H"
+# if True use the new IRDIFS command
+# else use the solo sphere observation file
+IRDIFS_new="True"
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
@@ -91,24 +95,25 @@ elif [[ "$detector" == "IFS_OBS_H" ]]; then
 				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\" "
 
 			elif [[ "$detector" == "IFS_OBS_YJ" || "$detector" == "IFS_OBS_H" ]]; then
-				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file ${IRDIFS_file} -function OCS2.DET1.SEQ1.DIT ${DIT_IFS_probe} OCS2.DET1.NDIT ${NDIT_IFS_probe} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_probe} OCS2.DET1.FRAM2.BREAK 0 OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_probe} OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_probe} OCS1.DET1.NDIT ${NDIT_IRDIS_probe} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_probe} OCS1.DET1.READ.CURNAME Nondest \" "
-				
-				# Record IFS data
-				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IFU OCS2.INS.DITH.POSX 0 OCS2.INS.DITH.POSY 0 OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${which_probe}_ \" "
-				ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IFS \" "
+				if [[ "$IRDIFS_new" == "True" ]]; then
+					ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file ${IRDIFS_file} -function OCS2.DET1.SEQ1.DIT ${DIT_IFS_probe} OCS2.DET1.NDIT ${NDIT_IFS_probe} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_probe} OCS2.DET1.FRAM2.BREAK 0 OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_probe} OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_probe} OCS1.DET1.NDIT ${NDIT_IRDIS_probe} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_probe} OCS1.DET1.READ.CURNAME Nondest \" "
+					
+					# Record IFS data
+					ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IFU OCS2.INS.DITH.POSX 0 OCS2.INS.DITH.POSY 0 OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${which_probe}_ \" "
+					ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IFS \" "
 
-				if [[ "$IFS_only" == "False" ]]; then
-					ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${EXP_NAME}IRDIS_iter${nbiter}_Probe_000${which_probe}_ \" "
-					ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
+					if [[ "$IFS_only" == "False" ]]; then
+						ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME ${EXP_NAME}IRDIS_iter${nbiter}_Probe_000${which_probe}_ \" "
+						ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
+					fi
+					ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
+				else
+					ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_probe} OCS2.DET1.NDIT ${NDIT_IFS_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${k}_ \" "
+					ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
+					ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
 				fi
-				# line using the solo file
-				# ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_probe} OCS2.DET1.NDIT ${NDIT_IFS_probe} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${nbiter}_Probe_000${k}_ \" "
- 				# ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
-				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
-
 			fi
 	done
-
 
 # copy all science files into working directory
 echo "Copy science files"
