@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#Version 2019/11/27
+#Version 2026/06/29 17h30 UT
 
 : '
 This script should be run on the sparta gateway.
@@ -20,7 +20,7 @@ Preliminary steps to perform before running this script
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically created
-nbiter=8
+nbiter=5
 # First try with nbiter= 1 to see if initialization runs
 # then nbiter=2 to see at least 1 full loop 
 
@@ -36,19 +36,19 @@ create_coro=1
 #coronagraphic image
 DIT_IRDIS_image=0
 NDIT_IRDIS_image=1
-DIT_IFS_image=8
+DIT_IFS_image=1
 NDIT_IFS_image=1
 
 #Image diversity
 DIT_IRDIS_probe=0
 NDIT_IRDIS_probe=1
-DIT_IFS_probe=4
+DIT_IFS_probe=1
 NDIT_IFS_probe=1
 
 #Off-axis PSF
 DIT_IRDIS_PSF=0
 NDIT_IRDIS_PSF=1
-DIT_IFS_PSF=8
+DIT_IFS_PSF=1
 NDIT_IFS_PSF=1
 WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' or 'ND_1.0'
 
@@ -69,14 +69,14 @@ coro='APLC'
 #coro='FQPM'
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
-DHsize=4
+DHsize=2
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
 # corr_mode=1: less stable correction but better contrast
 # corr_mode=2: more aggressive correction (may be unstable)
-corr_mode=600
-gain=1.5
+corr_mode=400
+gain=0.8
 
 #Algorithm for estimation. Should be either PWP or BTW
 ESTIM_ALGORITHM='PWP'
@@ -89,7 +89,7 @@ zone_to_correct='vertical'
 PROBE_TYPE='individual_act' #'sinc' #'individual_act'
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
-size_probes=100
+size_probes=200
 
 # First guess for the PSF echo position used for image centering (WARNING X and Y are inverted here)
 # (adding a cosine to DM phase)
@@ -111,7 +111,7 @@ centeringateachiter=0
 rescaling=0
 
 #Which instrument is used
-detector="IFS_OBS_YJ" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
+detector="IFS_OBS_H" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
 
 # If detector = "IFS_OBS_YJ" or "IFS_OBS_H"
 # If IFS_only = "True": IRDIS_DIT = 0 and IRDIS_NDIT=1
@@ -121,14 +121,14 @@ IFS_only="True"
 # If detector = "IFS_OBS_YJ" or "IFS_OBS_H"
 # if True use the new IRDIFS command
 # else use the solo sphere observation file
-IRDIFS_new="True"
+IRDIFS_new="False"
 
 #Weighting broadband corrrection
 #Can be an integer that represents the wvl channel used for correction.
 #Can be "equal_weight" to use all the wvl equally
 #Can be "longer_weight" to priviledge the longer wavelength
 #correction_channel=2
-correction_channel="longer_weight"
+correction_channel="equal_weight"
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
@@ -158,6 +158,7 @@ if [[ "$detector" == "IFS_OBS_YJ" ]]; then
 elif [[ "$detector" == "IFS_OBS_H" ]]; then
 	mod_irdifs="IRDIFS_EXT"
 	IRDIFS_file="SPHERE_irdifs_ext_obs.ref"
+fi
 
 if [ "$ONSKY" -eq "1" ]; then
 	echo "The NCPA compensation is done from on-sky measurements"
@@ -199,7 +200,7 @@ if [ "$create_bkgrd" -eq "1" ]; then
 			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IFU OCS2.INS.DITH.POSX 0 OCS2.INS.DITH.POSY 0 OCS2.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_${DIT_IFS_bkgrd}s_ \" "
 			ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IFS \" "
 
-			if [[ "$IFS_only" == "False"]]; then
+			if [[ "$IFS_only" == "False" ]]; then
 				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE,DUAL OCS1.INS.DITH.POSX 0 OCS1.INS.DITH.POSY 0  OCS1.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_IRDIS_${DIT_IRDIS_bkgrd}s_ \" "
 				ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \""
 			fi
@@ -425,7 +426,7 @@ if [ "$create_coro" -eq "1" ]; then
 			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_irdis_tec_exp.ref -function OCS1.DET1.READ.CURNAME Nondest  OCS1.DET1.SEQ1.DIT ${DIT_IRIDIS_image} OCS1.DET1.NDIT ${NDIT_IRDIS_image} DPR.CATG TEST DPR.TYPE OBJECT DPR.TECH IMAGE OCS1.OCS.DET1.IMGNAME ${EXP_NAME}iter${imgnb}_coro_image_ OCS1.DET1.FRAM1.STORE F OCS1.DET1.FRAM2.STORE T OCS1.DET1.ACQ1.QUEUE 0 OCS.DET1.IMGNAME SPHERE_IRDIS_OBS OCS1.DET1.SEQ1.WIN.STRX ${SX} OCS1.DET1.SEQ1.WIN.STRY ${SY} OCS1.DET1.SEQ1.WIN.NX 2048 OCS1.DET1.SEQ1.WIN.NY ${N}\" "
 			ssh wsre "msgSend -n wsre sroControl START \"-detId IRDIS\" "
 			ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IRDIS\" "
-
+                
 		elif [[ "$detector" == "IFS_OBS_YJ" || "$detector" == "IFS_OBS_H" ]]; then
 			if [[ "$IRDIFS_new" == "True" ]]; then
 				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file ${IRDIFS_file} -function OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_image} OCS2.DET1.FRAM2.BREAK 0  OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_image} OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_image} OCS1.DET1.NDIT ${NDIT_IRDIS_image} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_image} OCS1.DET1.READ.CURNAME Nondest \" "
@@ -440,7 +441,7 @@ if [ "$create_coro" -eq "1" ]; then
 				fi
 				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
 			else
-				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_CosineForCentering_ \" "
+				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ \" "
 				ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
 				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
 			fi
@@ -509,20 +510,6 @@ scp sphere@wsre:${DATA_PATH}/SPHERE_BKGRD_EFC_*.fits ${WORK_PATH}/
 
 # end
 echo "Done!"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

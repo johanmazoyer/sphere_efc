@@ -1,7 +1,7 @@
 #Tests with Zahed, with EssaiBash.sh
 #Use with MainSphereEFC
 #LyotStop was modified!
-#Version 05/05/2026
+#Version 2026/06/29 17h30 UT
 ## Parameters and function
 
 
@@ -33,19 +33,19 @@ if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_H':
 elif detector == 'IRDIS_H3':
     waves = [1.667e-6]
 
-onsky = 1 #1 if on sky correction
+onsky = 0 #1 if on sky correction
 
 zone_to_correct = 'FDH' #vertical #horizontal #'FDH'
-createPW = True
+createPW = False
 probe_type = 'individual_act' #'sinc' #'individual_act'
 
 createwhich = False
 createjacobian = False
 
 #name of the mask that can be saved with createmask and then used in createEFCmatrix
-namemask ='6'
-maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,67], circ_side='Top', circ_offset=8)
-createmask = False
+namemask ='2'
+maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,61], circ_side='Top', circ_offset=8)
+createmask = True
 
 nbmodes = 450
 corr_mode='450'

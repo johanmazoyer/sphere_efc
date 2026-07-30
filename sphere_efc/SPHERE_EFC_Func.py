@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sat Feb  5 13:51:44 2022
 
-@author: apotier
-"""
+#Version 2026/06/29 17h30 UT
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -347,7 +345,7 @@ def reduceimageSPHERE(param, file,  maxPSF, remove_bad_pix = True, high_pass_fil
         image = image - back
         image = reduce_image_IRDIS(param, image, back, remove_bad_pix, high_pass_filter)
         
-    elif detector == "IFS_OBS_H" or detector == "IFS_OBS_YJ" :
+    elif detector == "IFS_OBS_YJ" or detector == "IFS_OBS_H":
         image = reduce_image_IFS(param, fits.getdata(file))
     
     #We normalize the image with the max of the PSF
@@ -697,7 +695,7 @@ def process_PSF(param):
     MatrixDirectory = param["MatrixDirectory"]
     detector = param["detector"]
 
-    if detector == "IFS_OBS_H" or detector == "IFS_OBS_YJ" :
+    if detector == "IFS_OBS_YJ" or detector == "IFS_OBS_H":
         wavelength_stacked = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
         ND_file = np.loadtxt(MatrixDirectory + "../SPHERE_CPI_ND.dat")
 
@@ -1016,7 +1014,7 @@ def resultEFC(param):
             resultatestimation = np.concatenate(resultatestimation, axis=0)
 
             #Modify the jacobian w.r.t correction strategy
-            Gmatrix = Gmatrix * rieman_factors[: , None]
+            Gmatrix = Gmatrix * rieman_factors[: , None, None, None]
 
             #Apply spatial mask to Jacobian
             masked_Gmatrix = []
@@ -1029,7 +1027,7 @@ def resultEFC(param):
             Gmatrix = def_mat.get_masked_jacobian(Gmatrix, maskDH)
 
         #Inverse matrix with regularization
-        invertGDH = def_mat.invertDSCC(Gmatrix, corr_mode, goal='c', regul='tikhonov', visu=False)[1]
+        invertGDH = def_mat.invertDSCC(Gmatrix, int(corr_mode), goal='c', regul='tikhonov', visu=False)[1]
 
 
         WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
@@ -1156,7 +1154,7 @@ def FullIterEFC(param):
     dhsize = param["dhsize"]
     maskDH = fits.getdata(MatrixDirectory+'../mask_DH'+str(dhsize)+'.fits')
 
-    if nbiter == 1:
+    if nbiter == 1: 
         print('Creating slopes for Cosine, PSFOffAxis and new probes...', flush=True)
         #Copy the reference slope with the right name for iteration 0 of ExperimentXXXX
         recordslopes(np.zeros(2480), dir, slope_ini, filenameroot+'iter0correction')
@@ -1164,7 +1162,7 @@ def FullIterEFC(param):
         recordCoswithvolt(param, 10, slope_ini)
     else:
 
-        if detector == "IFS_OBS_H" or "IFS_OBS_YJ":
+        if detector == "IFS_OBS_YJ" or detector == "IFS_OBS_H":
             # Calibrate the IFS if undone before
             extraction_parameters, wavecal_outputdir, instrument = build_calibration_IFS(param)
             nb_images_per_stack, remainder, wavelength_stacked = pick_wvl_IFS(instrument, delta_wave = 5)
@@ -1339,7 +1337,8 @@ def FullIterEFC(param):
 
 
 def create_header_from_dict(dictionary):
-    header = fits.Header(dictionary.items())
+    clean_dict = {str(k): str(v) for k, v in dictionary.items()} 
+    header = fits.Header(clean_dict.items())
     return header
 
 

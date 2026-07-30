@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#Version 2026/06/05 14h52 UT
+#Version 2026/06/29 17h30 UT
 
 : '
 This script should be run on the sparta gateway.
@@ -19,7 +19,7 @@ Preliminary steps to perform before running this script
 '
 
 #Total number of iterations to run in the loop
-tot_nbiter=5
+tot_nbiter=2
 
 
 #Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
@@ -33,21 +33,21 @@ create_coro=1
 #coronagraphic image
 DIT_IRDIS_image=0
 NDIT_IRDIS_image=1
-DIT_IFS_image=96
+DIT_IFS_image=1
 NDIT_IFS_image=1
 
 #Image diversity
 DIT_IRDIS_probe=0
 NDIT_IRDIS_probe=1
-DIT_IFS_probe=96
+DIT_IFS_probe=1
 NDIT_IFS_probe=1
 
 #Off-axis PSF
 DIT_IRDIS_PSF=0
 NDIT_IRDIS_PSF=1
-DIT_IFS_PSF=64
+DIT_IFS_PSF=1
 NDIT_IFS_PSF=1
-WHICH_ND='ND_2.0' #can be 'ND_3.5' or 'ND_2.0' or 'ND_1.0'
+WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' or 'ND_1.0'
 
 #Background
 DIT_IRDIS_bkgrd=0
@@ -55,7 +55,7 @@ NDIT_IRDIS_bkgrd=1
 DIT_IFS_bkgrd=1
 NDIT_IFS_bkgrd=20
 
-ONSKY=1 #Set 0 for internal pup ; 1 for an on sky correction
+ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
 Assuming_VLT_PUP_for_corr=0 
 #Work only if ONSKY=0. If  Assuming_VLT_PUP_for_corr=1 assume ONSKY=1 for EFC correction only
 
@@ -106,7 +106,7 @@ centeringateachiter=0
 rescaling=0
 
 #Which instrument is used
-detector="IFS_OBS_YJ" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
+detector="IFS_OBS_H" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
 
 # If detector = "IFS_OBS_YJ" or "IFS_OBS_H"
 # If IFS_only = "True": IRDIS_DIT = 0 and IRDIS_NDIT=1
@@ -116,7 +116,7 @@ IFS_only="True"
 # If detector = "IFS_OBS_YJ" or "IFS_OBS_H"
 # if True use the new IRDIFS command
 # else use the solo sphere observation file
-IRDIFS_new="True"
+IRDIFS_new="False"
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
@@ -462,7 +462,7 @@ if [ "$create_coro" -eq "1" ]; then
 				fi
 				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
 			else
-				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_CosineForCentering_ \" "
+				ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -file SPHERE_gen_obs_solo_ifs.ref -function OCS2.DET1.READ.CURNAME Nondest OCS2.DET1.SEQ1.DIT ${DIT_IFS_image} OCS2.DET1.NDIT ${NDIT_IFS_image} OCS2.OCS.DET1.IMGNAME ${EXP_NAME}IFS_iter${imgnb}_coro_image_ \" "
 				ssh wsre "msgSend -n wsre sroControl START \"-detId IFS\" "
 				ssh wsre "msgSend -n wsre sroControl WAIT \"-detId IFS\" "
 			fi
