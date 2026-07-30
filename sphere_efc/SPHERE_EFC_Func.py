@@ -337,7 +337,7 @@ def reduceimageSPHERE(param, file,  maxPSF, remove_bad_pix = True, high_pass_fil
 
     if detector == "IRDIS_H3":
         # Load dark that correspond to image exposure time
-        back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_'+str(int(expim))+'s_*.fits'))[0] 
+        back = fits.getdata(last(directory+'SPHERE_BKGRD_EFC_IRDIS_'+str(int(expim))+'s_*.fits'))[0] 
         # Load image
         image = np.mean(fits.getdata(file),axis = 0) 
 
