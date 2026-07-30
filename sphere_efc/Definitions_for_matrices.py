@@ -798,3 +798,50 @@ def create_fqpm(isz_pup):
     fqpm_mask[0:int(isz_pup/2),0:int(isz_pup/2)] = -1
     fqpm_mask[int(isz_pup/2):isz_pup,int(isz_pup/2):isz_pup] = -1
     return fqpm_mask
+
+
+
+def compute_rieman(nb_wavelength, correction_channel):
+    if correction_channel.isdigit() == True:
+        correction_channel = int(correction_channel)
+        if correction_channel>=nb_wavelength:
+            print('Correction channel higher than number of channels. Switch to central channel')
+            correction_channel = int(nb_wavelength/2) + 1
+        print('Correction using channel ' + str(correction_channel))
+        rieman_factors = np.zeros(nb_wavelength)
+        rieman_factors[correction_channel - 1] = 1
+    else:
+        if correction_channel == 'equal_weight':
+            rieman_factors = np.ones(nb_wavelength)
+        elif correction_channel == 'longer_weight':
+            rieman_factors = np.linspace(0, 1, num=nb_wavelength)
+        else:
+            print('Unrecognized weighting channel parameter. Switch to equal weight')
+            correction_channel = 'equal_weight'
+            rieman_factors = compute_rieman(nb_wavelength, correction_channel)
+    
+    return rieman_factors
+
+
+def create_interaction_matrix(MatrixDirectory, lightsource, nb_wvl, namemask, nbmodes, correction_channel = 0):
+
+    maskDH = fits.getdata(MatrixDirectory + '../mask_DH' + namemask + '.fits')
+    Gmatrix = fits.getdata(MatrixDirectory + lightsource + 'Jacobian.fits')
+
+    #Compute wavelength weight w.r.t correction strategy
+    rieman_factors = compute_rieman(nb_wvl, correction_channel)
+
+    #Modify the jacobian w.r.t correction strategy
+    Gmatrix = Gmatrix * rieman_factors[: , None, None, None]
+
+    #Apply spatial mask to Jacobian
+    masked_Gmatrix = []
+    for k in range(nb_wvl):
+        masked_Gmatrix_per_wvl = get_masked_jacobian(Gmatrix[k], maskDH)
+        masked_Gmatrix.append(masked_Gmatrix_per_wvl)
+    masked_Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
+
+    #Inverse matrix with regularization
+    invertGDH = invertDSCC(masked_Gmatrix, nbmodes, goal='c', regul='tikhonov', visu=True)[1]
+    fits.writeto(MatrixDirectory + lightsource + 'Interactionmatrix_DH' + namemask + '_SVD' + str(nbmodes) + '_' + str(correction_channel) + '.fits', invertGDH, overwrite = True)
+

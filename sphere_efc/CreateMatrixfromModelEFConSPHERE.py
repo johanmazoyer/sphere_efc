@@ -48,7 +48,7 @@ maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,61], circ_side
 createmask = True
 
 nbmodes = 450
-corr_mode='450'
+correction_channel="longer_weight" #Either "longer_weight", "equal_weight", or an integer
 createEFCmatrix = False
 
 
@@ -197,21 +197,7 @@ if createmask == True:
 #### Uncomment below to create and save the interaction matrix
 if createEFCmatrix == True:
     print('...Creating EFC matrix...')
-    maskDH = fits.getdata(MatrixDirectory + '../mask_DH' + namemask + '.fits')
-    Gmatrix = fits.getdata(MatrixDirectory + lightsource + 'Jacobian.fits')
-    masked_Gmatrix = []
-    for k, wave in enumerate(waves) :
-        print('wavelength: ', format(wave, '.2e'))
-        masked_Gmatrix_per_wvl = def_mat.get_masked_jacobian(Gmatrix[k], maskDH)
-        masked_Gmatrix.append(masked_Gmatrix_per_wvl)
-    masked_Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
-    #Set how many modes you want to use to correct
-    invertGDH = def_mat.invertDSCC(masked_Gmatrix, nbmodes, goal='c', regul='tikhonov', visu=True)[1]
-    fits.writeto(MatrixDirectory + lightsource + 'Interactionmatrix_DH' + namemask + '_SVD' + corr_mode + '.fits', invertGDH, overwrite = True)
-
-
-
-
+    def_mat.create_interaction_matrix(MatrixDirectory, lightsource, len(waves), namemask, nbmodes, correction_channel)
 
 
 

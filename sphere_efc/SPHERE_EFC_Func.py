@@ -1002,33 +1002,22 @@ def resultEFC(param):
             #Only keep every other wavelength
             resultatestimation = resultatestimation[::2]
             nb_wvl = len(resultatestimation)
-        
-        print('...Creating EFC matrix...')
-        Gmatrix = fits.getdata(MatrixDirectory + lightsource_corr + 'Jacobian.fits')
+
+        interaction_matrix_path = MatrixDirectory + lightsource_corr + 'Interactionmatrix_DH' + str(dhsize) + '_SVD' + str(corr_mode) + '_' + str(correction_channel) + '.fits'
+
+        if not os.path.exists(interaction_matrix_path):
+            print('...Creating EFC matrix...')
+            def_mat.create_interaction_matrix(MatrixDirectory, lightsource_corr, nb_wvl, str(dhsize), corr_mode, correction_channel)
+
+        invertGDH = fits.getdata(interaction_matrix_path)
+
         if nb_wvl>1:
             #Compute wavelength weight w.r.t correction strategy
-            rieman_factors = compute_rieman(nb_wvl, correction_channel)
+            rieman_factors = def_mat.compute_rieman(nb_wvl, correction_channel)
 
             #Modify the estimate w.r.t correction strategy
             resultatestimation = resultatestimation * rieman_factors[: , None]
             resultatestimation = np.concatenate(resultatestimation, axis=0)
-
-            #Modify the jacobian w.r.t correction strategy
-            Gmatrix = Gmatrix * rieman_factors[: , None, None, None]
-
-            #Apply spatial mask to Jacobian
-            masked_Gmatrix = []
-            for k in range(nb_wvl):
-                masked_Gmatrix_per_wvl = def_mat.get_masked_jacobian(Gmatrix[k], maskDH)
-                masked_Gmatrix.append(masked_Gmatrix_per_wvl)
-            Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
-        else:
-            #Apply spatial mask to Jacobian
-            Gmatrix = def_mat.get_masked_jacobian(Gmatrix, maskDH)
-
-        #Inverse matrix with regularization
-        invertGDH = def_mat.invertDSCC(Gmatrix, int(corr_mode), goal='c', regul='tikhonov', visu=False)[1]
-
 
         WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
         
@@ -1041,28 +1030,6 @@ def resultEFC(param):
         slopes = 0
         
     return intensity_co, intensity_inco, imagecorrection, Images_to_display, slopes
-        
-
-def compute_rieman(nb_wavelength, correction_channel):
-    if correction_channel.isdigit() == True:
-        correction_channel = int(correction_channel)
-        if correction_channel>=nb_wavelength:
-            print('Correction channel higher than number of channels. Switch to central channel')
-            correction_channel = int(nb_wavelength/2) + 1
-        print('Correction using channel ' + str(correction_channel))
-        rieman_factors = np.zeros(nb_wavelength)
-        rieman_factors[correction_channel - 1] = 1
-    else:
-        if correction_channel == 'equal_weight':
-            rieman_factors = np.ones(nb_wavelength)
-        elif correction_channel == 'longer_weight':
-            rieman_factors = np.linspace(0, 1, num=nb_wavelength)
-        else:
-            print('Unrecognized weighting channel parameter. Switch to equal weight')
-            correction_channel = 'equal_weight'
-            rieman_factors = compute_rieman(nb_wavelength, correction_channel)
-    
-    return rieman_factors
 
 
 def recordslopes(slopes, dir, refslope, namerecord):
