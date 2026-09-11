@@ -135,6 +135,7 @@ dmypy.json
 *Contrast_vs_iter
 *Contrast_vs_iter.txt
 *.npy
+*.pdf
 
 
 SlopesAndImages/*/

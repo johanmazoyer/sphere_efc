@@ -166,6 +166,24 @@ def cost_function_correl(xy_trans, imageref, imagecorr, mask):
     return correl_mismatch(imageref[np.where(mask == 0)], unshifted[np.where(mask == 0)])
     
 
+def cost_function_shiftimage(xy_trans, image1, image2, mask):
+    # Function can use image slices defined in the global scope
+    # Calculate X_t - image translated by x_trans
+    image_shifted = fancy_xy_trans_slice(image2, xy_trans)
+    #Return mismatch measure for the translated image X_t
+    return np.sum(np.abs(image1[np.where(mask)] - image_shifted[np.where(mask)])**2*1e5)
+
+
+def cost_function_addbias(factor, image1, image2, mask):
+    a = image2 + factor
+    return np.sum(np.abs(image1[np.where(mask)] - a[np.where(mask)])*1e5)
+
+
+def cost_function_rescale(factor, image1, image2, mask):
+    a = image2 * factor
+    return np.sum(np.abs(image1[np.where(mask)] - a[np.where(mask)])*1e5)
+
+
 def last(files):
     """
     Extract last file with same names in folder
@@ -634,36 +652,18 @@ def rescale_coherent_component(signal_co, signal_tot, maskDH, nb_loop):
     best_params2 = []
     best_params3 = []
     for i in np.arange(nb_loop):
-        # Translation in x,y
-        def cost_function(xy_trans):
-            # Function can use image slices defined in the global scope
-            # Calculate X_t - image translated by x_trans
-            unshifted = fancy_xy_trans_slice(filtered_co, xy_trans)
-            #Return mismatch measure for the translated image X_t
-            return np.sum(np.abs(filtered_tot[np.where(maskDH)] - unshifted[np.where(maskDH)])**2*1e5)
-            
-        # Compute solution
-        best_params.append( fmin_powell(cost_function, [0, 0], disp=0, callback=None) )
+        # Translation in x,y: compute solution
+        best_params.append( fmin_powell(cost_function_shiftimage, [0, 0], args = (filtered_tot, filtered_co, maskDH), disp=0, callback=None) )
         # Apply solution
         filtered_co = fancy_xy_trans_slice(filtered_co, best_params[-1])
         
-        # Translation in z
-        def cost_function2(factor):
-            a = filtered_co + factor
-            return np.sum(np.abs(filtered_tot[np.where(maskDH)] - a[np.where(maskDH)])*1e5)
-        
-        # Compute solution
-        best_params2.append( fmin_powell(cost_function2, 1e-5, disp=0, callback=None) )
+        # Translation in z: compute solution
+        best_params2.append( fmin_powell(cost_function_addbias, 1e-5, args = (filtered_tot, filtered_co, maskDH), disp=0, callback=None) )
         # Apply solution
         filtered_co = filtered_co + best_params2[-1]
         
-        # Scaling in z
-        def cost_function3(factor):
-            a = filtered_co * factor
-            return np.sum(np.abs(filtered_tot[np.where(maskDH)] - a[np.where(maskDH)])*1e5)
-        
-        # Compute solution
-        best_params3.append( fmin_powell(cost_function3, 0.9, disp=0, callback=None) )
+        # Scaling in z: Compute solution
+        best_params3.append( fmin_powell(cost_function_rescale, 0.9, args = (filtered_tot, filtered_co, maskDH), disp=0, callback=None) )
         # Apply solution
         filtered_co = filtered_co * best_params3[-1]
     
