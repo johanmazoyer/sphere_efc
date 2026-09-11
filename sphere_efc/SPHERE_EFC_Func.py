@@ -155,6 +155,15 @@ def correl_mismatch(slice0, slice1):
     """ Negative correlation between the two images, flattened to 1D """
     correl = np.corrcoef(slice0.ravel(), slice1.ravel())[0, 1]
     return -correl
+
+
+def cost_function_correl(xy_trans, imageref, imagecorr, mask):
+    # Function can use image slices defined in the global scope
+    # Calculate X_t - image translated by x_trans
+    unshifted = fancy_xy_trans_slice(imagecorr, xy_trans)
+    
+    #Return mismatch measure for the translated image X_t
+    return correl_mismatch(imageref[np.where(mask == 0)], unshifted[np.where(mask == 0)])
     
 
 def last(files):
@@ -790,18 +799,12 @@ def createdifference(param):
         fileref = last(directory + 'iter0_coro_image*.fits')
         imageref = reduceimageSPHERE(param, fileref, maxPSF)
         imageref = fancy_xy_trans_slice(imageref, [centerx-int(centerx), centery-int(centery)])
-        
-        def cost_function(xy_trans):
-            # Function can use image slices defined in the global scope
-            # Calculate X_t - image translated by x_trans
-            unshifted = fancy_xy_trans_slice(imagecorrection, xy_trans)
-            mask = roundpupil(dimimages, 67)
-            #Return mismatch measure for the translated image X_t
-            return correl_mismatch(imageref[np.where(mask == 0)], unshifted[np.where(mask == 0)])
+        mask_correl = roundpupil(dimimages, 67)
         
         #Calcul de la translation du centre par rapport à la réference: best param.
         #Les images probes sont ensuite translatées de best param
-        best_params = fmin_powell(cost_function, [0, 0], disp=0, callback=None) #callback=my_callback
+        best_params = fmin_powell(cost_function_correl, x0 = [0, 0], args = (imageref, imagecorrection, mask_correl), disp=0, callback=None) #callback=my_callback
+
         print('   Shifting recorded images by: ',best_params,' pixels' , flush=True)
     else:
         print('No recentering', flush=True)
