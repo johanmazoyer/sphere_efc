@@ -1291,6 +1291,7 @@ def FullIterEFC(param):
             ax4.legend()
         print('Close each image to proceed', flush=True)
         plt.draw()
+        plt.savefig(dir2+'iter'+str(nbiter-2)+'_results.png')
         if nbiter == 2:
             plt.show()
         else:
@@ -1417,7 +1418,6 @@ def find_center_with_cosine(param):
     coro = last(dir+'iter0_coro_image*.fits')
     
     #Fit gaussian functions
-    #fits.getdata(cosinepluscoro)
     data = fits.getdata(cosinepluscoro)[-4]-fits.getdata(coro)[-4]
     data1 = cropimage(data,x0_up,y0_up,30)
     data2 = cropimage(data,x1_up,y1_up,30)
@@ -1452,7 +1452,7 @@ def find_center_with_cosine(param):
     return data, centerx, centery
 
 def twoD_Gaussian(xy, amplitude, sigma_x, sigma_y, xo, yo,h):
-    x, y = xy
+    x, y = xy #Line to remove if not working
     
     xo = float(xo)
     yo = float(yo) 
