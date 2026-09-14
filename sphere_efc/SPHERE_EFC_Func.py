@@ -1412,19 +1412,6 @@ def find_center_with_cosine(param):
     y1_up = param["y1_up"]
     dir = param["ImageDirectory"] + param["exp_name"]
     
-    def twoD_Gaussian(xy, amplitude, sigma_x, sigma_y, xo, yo,h):
-        xo = float(xo)
-        yo = float(yo) 
-        theta=0   
-        a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
-        b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
-        c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
-    
-        g = amplitude*np.exp( - (a*((x-xo)**2) + 2*b*(x-xo)*(y-yo) 
-                                + c*((y-yo)**2)))+h
-        
-        return (g).flatten()
-    
     #LOOK THE FITS FILE AND CHANGE QUIKLY X0,Y0,X1,Y1
     cosinepluscoro = last(dir+'CosineForCentering*.fits')
     coro = last(dir+'iter0_coro_image*.fits')
@@ -1464,6 +1451,20 @@ def find_center_with_cosine(param):
     print('- centery = ',centerx, flush=True)
     return data, centerx, centery
 
+def twoD_Gaussian(xy, amplitude, sigma_x, sigma_y, xo, yo,h):
+    x, y = xy
+    
+    xo = float(xo)
+    yo = float(yo) 
+    theta=0   
+    a = (np.cos(theta)**2)/(2*sigma_x**2) + (np.sin(theta)**2)/(2*sigma_y**2)
+    b = -(np.sin(2*theta))/(4*sigma_x**2) + (np.sin(2*theta))/(4*sigma_y**2)
+    c = (np.sin(theta)**2)/(2*sigma_x**2) + (np.cos(theta)**2)/(2*sigma_y**2)
+
+    g = amplitude*np.exp( - (a*((x-xo)**2) + 2*b*(x-xo)*(y-yo) 
+                            + c*((y-yo)**2)))+h
+    
+    return (g).flatten()
 
 def sigma_filter(image, box_width, n_sigma=3, ignore_edges=False, monitor=False):
 
