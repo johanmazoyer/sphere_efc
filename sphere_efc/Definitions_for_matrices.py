@@ -842,6 +842,6 @@ def create_interaction_matrix(MatrixDirectory, lightsource, nb_wvl, namemask, nb
     masked_Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
 
     #Inverse matrix with regularization
-    invertGDH = invertDSCC(masked_Gmatrix, nbmodes, goal='c', regul='tikhonov', visu=True)[1]
+    invertGDH = invertDSCC(masked_Gmatrix, int(nbmodes), goal='c', regul='tikhonov', visu=True)[1]
     fits.writeto(MatrixDirectory + lightsource + 'Interactionmatrix_DH' + namemask + '_SVD' + str(nbmodes) + '_' + str(correction_channel) + '.fits', invertGDH, overwrite = True)
 

@@ -115,7 +115,8 @@ def plot_pos_planet(target_name,
     NA
     -------------------------------------------------- """
 
-    sphere_plate_scale = 12.25  #mas.pix−1
+    sphere_plate_scale = 12.25  #mas.pix−1 #IRDIS
+    sphere_plate_scale = 7.4  #mas.pix−1 #IFS
 
     t1 = Time('2010-01-01 00:00:00')
     t2 = Time('2010-01-01 00:10:00')
@@ -151,8 +152,8 @@ def plot_pos_planet(target_name,
     ax.plot(positions_angles_plot, radiuses_plot)
     c = ax.scatter(positions_angles_plot[0], radiuses_plot[0], c='red', alpha=0.75)
 
-    ax.set_rmax(60)
-    ax.set_rticks([10, 20, 30, 40, 50, 60])  # Less radial ticks
+    ax.set_rmax(100)
+    ax.set_rticks([ 20, 40, 60, 80, 100])  # Less radial ticks
     # ax.set_rlabel_position(-22.5)  # Move radial labels away from plotted line
     ax.grid(True)
 
@@ -166,13 +167,13 @@ def plot_pos_planet(target_name,
     plt.savefig(folderplot + f"{target_name}_start{timestring}_duration{time_in_hour}h.pdf")
 
 
-timestring = '2023-04-07T05:00:00'  # start time in cube
+timestring = '2026-08-04T07:34:00'  # start time in cube
 duration_obs = 1  # in hours
 
 # #beta pic b  http://whereistheplanet.com/ on April 7 
-target_name = "Beta pictoris"  
-estimated_sep_of_the_planet = 547.310  # mas https://doi.org/10.1051/0004-6361/201834302
-estimated_onsky_PA_of_the_planet = 31.627  # degree https://doi.org/10.1051/0004-6361/201834302
+# target_name = "Beta pictoris"  
+# estimated_sep_of_the_planet = 547.310  # mas https://doi.org/10.1051/0004-6361/201834302
+# estimated_onsky_PA_of_the_planet = 31.627  # degree https://doi.org/10.1051/0004-6361/201834302
 
 
 # #beta pic c http://whereistheplanet.com/ on April 7 
@@ -204,9 +205,9 @@ estimated_onsky_PA_of_the_planet = 31.627  # degree https://doi.org/10.1051/0004
 # estimated_onsky_PA_of_the_planet = 215 # degree
 
 # 51 eri
-# target_name = "51 eri"
-# estimated_sep_of_the_planet = 324 # mas\
-# estimated_onsky_PA_of_the_planet = 115 # degree
+#target_name = "51 eri"
+#estimated_sep_of_the_planet = 191 # mas\
+#estimated_onsky_PA_of_the_planet = 58 # degree
 
 # HD 60584
 # target_name = "HD 60584"
@@ -226,16 +227,32 @@ estimated_onsky_PA_of_the_planet = 31.627  # degree https://doi.org/10.1051/0004
 # estimated_sep_of_the_planet = 450 # mas semi major axis
 # estimated_onsky_PA_of_the_planet = 0 # degree semi minor axis North
 
-# time_obs_start = Time(timestring, format='isot', scale='utc')
-# PA_on_detector(target_name, time_obs_start, estimated_onsky_PA_of_the_planet, verbose=True)
-# plot_pos_planet(target_name,
-#                 time_obs_start,
-#                 estimated_onsky_PA_of_the_planet,
-#                 estimated_sep_of_the_planet,
-#                 time_in_hour=duration_obs,
-#                 folderplot="/Users/jmazoyer/Desktop/graphe_pos_planets/")
+# HR 8799 e
+#target_name = "HR 8799"
+#estimated_sep_of_the_planet = 408 # mas semi minor axis
+#estimated_onsky_PA_of_the_planet = 342.2 # degree semi minor axis WEST
+
+# HR 8799 d
+#target_name = "HR 8799"
+#estimated_sep_of_the_planet = 702 # mas semi minor axis
+#estimated_onsky_PA_of_the_planet = 247.9 # degree semi minor axis WEST
+
+# HD 4747
+target_name = "HD 4747"
+estimated_sep_of_the_planet = 399.0 # mas semi minor axis
+estimated_onsky_PA_of_the_planet = 237.0 # degree semi minor axis WEST
 
 
+time_obs_start = Time(timestring, format='isot', scale='utc')
+PA_on_detector(target_name, time_obs_start, estimated_onsky_PA_of_the_planet, verbose=True)
+plot_pos_planet(target_name,
+                time_obs_start,
+                estimated_onsky_PA_of_the_planet,
+                estimated_sep_of_the_planet,
+                time_in_hour=duration_obs,
+                folderplot="/Users/apoitier/Documents/Research/Softwares/sphere_efc/sphere_efc/experiments/")
+
+""" 
 firstnightstring = "2023-03-31"
 secondnightstring = "2023-04-01"
 
@@ -256,7 +273,7 @@ for i, strinday in enumerate([firstnightstring, secondnightstring]):
                         estimated_onsky_PA_of_the_planet,
                         estimated_sep_of_the_planet,
                         time_in_hour=duration_obs,
-                        folderplot="/Users/jmazoyer/Desktop/graphe_pos_planets/")
+                        folderplot="/Users/apoitier/Documents/Research/Softwares/sphere_efc/sphere_efc/experiments/") """
 
 # just to check in betapic cube
 # posplanet = [488,504] # position of seen planet in the cube in pixel at start
