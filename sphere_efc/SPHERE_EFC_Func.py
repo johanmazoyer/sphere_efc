@@ -922,6 +922,7 @@ def extract_contrast_global(cubeimage, scoring_region, index = 0):
     """
     if cubeimage.ndim == 3:
         image = cubeimage[index]
+        scoring_region = scoring_region[index]
     else:
         image = cubeimage
     
@@ -982,7 +983,7 @@ def resultEFC(param):
         
         if rescaling == 1:
             print('- Rescaling solution and computing incoherent component...', flush=True)
-            intensity_co_per_wvl, intensity_inco_per_wvl, scaling = rescale_coherent_component(intensity_co_per_wvl, imagecorrection_per_wvl, maskDH, 5)
+            intensity_co_per_wvl, intensity_inco_per_wvl, scaling = rescale_coherent_component(intensity_co_per_wvl, imagecorrection_per_wvl, maskDH[wvl], 5)
             print('- Applied factor = ' + str(scaling), flush=True)
             resultatestimation_per_wvl = resultatestimation_per_wvl * scaling
         
@@ -991,7 +992,7 @@ def resultEFC(param):
         
         intensity_co.append(intensity_co_per_wvl)
         intensity_inco.append(intensity_inco_per_wvl)
-        resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH)
+        resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl])
         resultatestimation.append(resultatestimation_per_wvl_1D)
     
     resultatestimation = np.array(resultatestimation)

@@ -868,7 +868,7 @@ def create_interaction_matrix(MatrixDirectory, lightsource, nb_wvl, namemask, nb
     #Apply spatial mask to Jacobian
     masked_Gmatrix = []
     for k in range(nb_wvl):
-        masked_Gmatrix_per_wvl = get_masked_jacobian(Gmatrix[k], maskDH)
+        masked_Gmatrix_per_wvl = get_masked_jacobian(Gmatrix[k], maskDH[k])
         masked_Gmatrix.append(masked_Gmatrix_per_wvl)
     masked_Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
 
