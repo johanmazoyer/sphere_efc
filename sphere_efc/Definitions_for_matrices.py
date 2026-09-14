@@ -555,6 +555,37 @@ def creatingWhichinPupil(pupil, pushact, cutinpupil):
     
     WhichInPupil = np.array(WhichInPupil)
     return WhichInPupil
+
+
+def create_mask_in_ld(dimimages,
+                      resolinarcsec_pix,
+                      waves,
+                      shape,
+                      choosepixDH=[2, 5, -5, 5],
+                      circ_rad=[3, 10],
+                      circ_side="Full",
+                      circ_offset=3,
+                      circ_angle=0,
+                      ):
+
+    mask = []
+    pix_per_ld = waves / 8.2 * 180 / np.pi * 3600 / resolinarcsec_pix
+    for k ,wave in enumerate(waves):
+        choosepixDH_per_wave = np.array(choosepixDH) * pix_per_ld[k]
+        circ_rad_per_wave = np.array(circ_rad) * pix_per_ld[k]
+        circ_offset_per_wave = circ_offset * pix_per_ld[k]
+        mask.append(creatingMaskDH(dimimages,
+                                    shape,
+                                    choosepixDH_per_wave,
+                                    circ_rad_per_wave,
+                                    circ_side,
+                                    circ_offset_per_wave,
+                                    circ_angle))
+    mask = np.array(mask)
+    return mask
+
+        
+
     
     
     

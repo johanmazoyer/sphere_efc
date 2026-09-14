@@ -13,9 +13,9 @@ from astropy.io import fits
 import Definitions_for_matrices as def_mat
 
 # directory where are all the different matrices (CLMatrixOptimiser.HO_IM.fits , etc..)
-MatrixDirectory = os.getcwd()+'/MatricesAndModel/'
+MatrixDirectory = os.getcwd()+'/sphere_efc/MatricesAndModel/'
 # directory where are all the different model planes (Apod, Lyot, etc..)
-ModelDirectory = os.getcwd()+'/Model/'
+ModelDirectory = os.getcwd()+'/sphere_efc/Model/'
 
 coro = 'APLC'
 #coro = 'FQPM'
@@ -44,8 +44,15 @@ createjacobian = False
 
 #name of the mask that can be saved with createmask and then used in createEFCmatrix
 namemask ='2'
-maskDH = def_mat.creatingMaskDH(dimimages, 'circle', circ_rad=[10,61], circ_side='Top', circ_offset=8)
 createmask = True
+
+mask_shape = 'circle' #circle or square
+pix_limit_in_ld = [8, 35, -35, 35] # Only used if mask_shape = 'square'
+circ_rad_in_ld = [3, 10] # Only used if mask_shape = 'circle', in lambda/D
+circ_side = 'Full' # Only used if mask_shape = 'circle'. Can be Full, Top, Bottom, Left or Right
+circ_offset_in_ld = 3 # Only used if mask_shape = 'circle', in lambda/D
+circ_angle = 0 # Only used if mask_shape = 'circle', in degree
+
 
 nbmodes = 450
 correction_channel="longer_weight" #Either "longer_weight", "equal_weight", or an integer
@@ -132,12 +139,7 @@ if createPW == True:
         PWP_matrix.append(PWP_one_wvl)
 
     PWP_matrix = np.array(PWP_matrix)
-    ##
-    #choosepixvisu = [-55,55,-55,55]
-    #maskvisu = def_mat.creatingMaskDH(dimimages, 'square', choosepixDH = choosepixvisu)
 
-    #plt.imshow(SVD[1]*maskvisu)
-    #plt.show()
     filename = probe_type + '_' + zone_to_correct + '_' + str(int(amplitudePW*37)) + 'nm' + '_'
     ##
     fits.writeto(MatrixDirectory + lightsource + filename + 'CorrectedZone.fits', SVD[1], overwrite = True)
@@ -189,9 +191,9 @@ if createjacobian==True:
 #Choose the four corners of your dark hole (in pixels)
 if createmask == True:
     print('...Creating mask DH...')
+    maskDH = def_mat.create_mask_in_ld(dimimages, resolinarcsec_pix, np.array(waves), mask_shape, pix_limit_in_ld, circ_rad_in_ld, circ_side, circ_offset_in_ld, circ_angle)
     fits.writeto(MatrixDirectory + '../mask_DH' + namemask + '.fits', maskDH, overwrite = True)
-    plt.imshow((maskDH)) #Afficher où le DH apparaît sur l'image au final
-    plt.pause(0.1)
+    plt.imshow(maskDH[0]) #Afficher où le DH apparaît sur l'image au final
 
 
 #### Uncomment below to create and save the interaction matrix
