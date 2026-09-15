@@ -19,7 +19,7 @@ from joblib import Parallel, delayed
 from functools import partial
 from tqdm import tqdm
 
-import Definitions_for_matrices as def_mat
+import sphere_efc.Definitions_for_matrices as def_mat
 
 #Unit conversion and normalisation
 #influence matrix normalization = defoc meca en rad @ 632 nm
@@ -980,14 +980,14 @@ def resultEFC(param):
         imagecorrection_per_wvl = imagecorrection[wvl]
         PWP_matrix_per_wvl = PWP_matrix[wvl]
         resultatestimation_per_wvl = estimate_efield(Difference_per_wvl, PWP_matrix_per_wvl)
+        intensity_co_per_wvl = ndimage.gaussian_filter(np.abs(resultatestimation_per_wvl)**2, 1)
         
         if rescaling == 1:
             print('- Rescaling solution and computing incoherent component...', flush=True)
-            intensity_co_per_wvl, intensity_inco_per_wvl, scaling = rescale_coherent_component(intensity_co_per_wvl, imagecorrection_per_wvl, maskDH[wvl], 5)
+            intensity_co_per_wvl, scaling = rescale_coherent_component(intensity_co_per_wvl, imagecorrection_per_wvl, maskDH[wvl], 5)
             print('- Applied factor = ' + str(scaling), flush=True)
             resultatestimation_per_wvl = resultatestimation_per_wvl * scaling
         
-        intensity_co_per_wvl = ndimage.gaussian_filter(np.abs(resultatestimation_per_wvl)**2, 1)
         intensity_inco_per_wvl = imagecorrection_per_wvl - intensity_co_per_wvl
         
         intensity_co.append(intensity_co_per_wvl)

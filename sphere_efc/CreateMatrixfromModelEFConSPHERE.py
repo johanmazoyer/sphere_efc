@@ -13,9 +13,9 @@ from astropy.io import fits
 import Definitions_for_matrices as def_mat
 
 # directory where are all the different matrices (CLMatrixOptimiser.HO_IM.fits , etc..)
-MatrixDirectory = os.getcwd()+'/sphere_efc/MatricesAndModel/'
+MatrixDirectory = os.getcwd()+'/MatricesAndModel/'
 # directory where are all the different model planes (Apod, Lyot, etc..)
-ModelDirectory = os.getcwd()+'/sphere_efc/Model/'
+ModelDirectory = os.getcwd()+'/Model/'
 
 coro = 'APLC'
 #coro = 'FQPM'
