@@ -28,15 +28,16 @@ if os.path.isdir(MatrixDirectory) is False:
         os.mkdir(MatrixDirectory)
 
 if detector == 'IFS_OBS_YJ' or detector == 'IFS_OBS_H':
+    #waves = fits.getdata(MatrixDirectory + detector + '_wavelength_full.fits')
     waves = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
     waves = waves * 1e-9
 elif detector == 'IRDIS_H3':
     waves = [1.667e-6]
 
-onsky = 0 #1 if on sky correction
+onsky = 1 #1 if on sky correction
 
 zone_to_correct = 'FDH' #vertical #horizontal #'FDH'
-createPW = False
+createPW = True
 probe_type = 'individual_act' #'sinc' #'individual_act'
 
 createwhich = False
