@@ -557,6 +557,10 @@ def process_cube_IFS(filename, nb_images_per_stack, remainder):
 def extract_cube_IFS(file, wavecal_outputdir, cube_outputdir, extraction_parameters):
 
     hdr = fits.getheader(file)
+    expim = get_exptime(file)
+    bkg_dir = os.path.dirname(file)
+    bkg_path = last(bkg_dir+'SPHERE_BKGRD_EFC_IFS_'+str(int(expim))+'s_*.fits')[0]
+
     ndit: int = int(hdr['HIERARCH ESO DET NDIT'])
     for dit_index in tqdm(
                     range(ndit),
@@ -567,7 +571,7 @@ def extract_cube_IFS(file, wavecal_outputdir, cube_outputdir, extraction_paramet
         charis.extractcube.getcube(
             filename=file,
             dit=dit_index,
-            bgpath=None,#wavecal_outputdir + '/SPHERE_IRDIFS_IFS_CAL_DARK259_0005.fits',
+            bgpath=bkg_path,#wavecal_outputdir + '/SPHERE_IRDIFS_IFS_CAL_DARK259_0005.fits',
             calibdir=wavecal_outputdir + '/',
             outdir=cube_outputdir,
             **extraction_parameters,
