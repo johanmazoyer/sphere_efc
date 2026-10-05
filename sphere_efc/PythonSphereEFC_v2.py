@@ -4,6 +4,7 @@
 import os
 import warnings
 import SPHERE_EFC_Func as func
+import sys
 warnings.filterwarnings("ignore")
 
 
@@ -109,6 +110,8 @@ if __name__ == '__main__':
 
 
     func.FullIterEFC(param)
+
+    sys.exit(0)
 
     # file_path = ''
     # func.record_slope_from_file(param, file_path, amplitude_in_nm, slope_ini, name_slope_file)
