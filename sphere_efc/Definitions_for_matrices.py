@@ -294,7 +294,8 @@ def invertDSCC(interact, cut ,goal='e', regul="truncation", visu=False):
                 plt.yscale("log")
                 # plt.show()
 
-    plt.show()                           
+    plt.show()
+    #if visu == True: plt.show() #CDe                      
     pseudoinverse = np.dot(np.dot(np.transpose(V),InvS),np.transpose(U))
     return [np.diag(InvS),pseudoinverse]
 
@@ -873,6 +874,9 @@ def create_interaction_matrix(MatrixDirectory, lightsource, nb_wvl, namemask, nb
     masked_Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
 
     #Inverse matrix with regularization
-    invertGDH = invertDSCC(masked_Gmatrix, int(nbmodes), goal='c', regul='tikhonov', visu=True)[1]
+    invertGDH = invertDSCC(masked_Gmatrix, int(nbmodes), goal='c', regul='tikhonov', visu=True)[1] # CDe Put visu to False to avoid plotting
+    del masked_Gmatrix
+    del Gmatrix
+
     fits.writeto(MatrixDirectory + lightsource + 'Interactionmatrix_DH' + namemask + '_SVD' + str(nbmodes) + '_' + str(correction_channel) + '.fits', invertGDH, overwrite = True)
 

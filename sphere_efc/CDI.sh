@@ -19,25 +19,25 @@ Preliminary steps to perform before running this script
 '
 
 #Total number of iterations to run in the loop
-tot_nbiter=2
+tot_nbiter=1
 
 
 #Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
 create_bkgrd=0
-create_PSF=0
-create_coro=1
+create_PSF=1
+create_coro=0
 
 
 ## IRDIS and IFS parameters
 
 #coronagraphic image
-DIT_IRDIS_image=0
+DIT_IRDIS_image=1
 NDIT_IRDIS_image=1
 DIT_IFS_image=1
 NDIT_IFS_image=1
 
 #Image diversity
-DIT_IRDIS_probe=0
+DIT_IRDIS_probe=1
 NDIT_IRDIS_probe=1
 DIT_IFS_probe=1
 NDIT_IFS_probe=1
@@ -65,7 +65,7 @@ Assuming_VLT_PUP_for_corr=0
 coro='APLC'
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
-DHsize=1
+DHsize=3
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
@@ -83,7 +83,7 @@ zone_to_correct='FDH' #vertical #horizontal #FDH
 PROBE_TYPE='individual_act' #'sinc' #'individual_act'
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
-size_probes=296
+size_probes=200
 
 # First guess for the PSF echo position used for image centering (WARNING X and Y are inverted here)
 # (adding a cosine to DM phase)
@@ -106,12 +106,12 @@ centeringateachiter=0
 rescaling=0
 
 #Which instrument is used
-detector="IFS_OBS_H" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
+detector="IFS_OBS_YJ" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
 
 # If detector = "IFS_OBS_YJ" or "IFS_OBS_H"
 # if True use the new IRDIFS command
 # else use the solo sphere observation file
-IRDIFS_new="False"
+IRDIFS_new="True"
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
@@ -185,7 +185,7 @@ if [ "$create_bkgrd" -eq "1" ]; then
 	elif [[ "$detector" == "IFS_OBS_YJ" || "$detector" == "IFS_OBS_H" ]]; then
 		if [[ "$IRDIFS_new" == "True" ]]; then
 			# setup of IFS and IRDIS (DIT, NDIT, filename)
-			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} OCS2.DET1.SEQ1.DIT ${DIT_IFS_bkgrd} OCS2.DET1.NDIT ${NDIT_IFS_bkgrd} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_bkgrd} OCS2.DET1.FRAM2.BREAK 0 OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_bkgrd} OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_bkgrd} OCS1.DET1.NDIT ${NDIT_IRDIS_bkgrd} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_bkgrd} OCS1.DET1.READ.CURNAME Nondest OCS2.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_IFS_${DIT_IFS_bkgrd}s_ \" "
+			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} OCS2.DET1.SEQ1.DIT ${DIT_IFS_bkgrd} OCS2.DET1.NDIT ${NDIT_IFS_bkgrd} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_bkgrd} OCS2.DET1.FRAM2.BREAK 0 OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_bkgrd} OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_bkgrd} OCS1.DET1.NDIT ${NDIT_IRDIS_bkgrd} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_bkgrd} OCS1.DET1.READ.CURNAME Nondest OCS2.OCS.DET1.IMGNAME SPHERE_BKGRD_EFC_IFS_${DIT_IFS_bkgrd}s_  \" "
 			
 			# Record IFS data
 			ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IFS \" "
@@ -252,13 +252,13 @@ if [ "$create_PSF" -eq "1" ]; then
 	elif [[ "$detector" == "IFS_OBS_YJ" || "$detector" == "IFS_OBS_H" ]]; then
 		if [[ "$IRDIFS_new" == "True" ]]; then
 			# setup of IFS and IRDIS (DIT, NDIT, filename)
-			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} OCS2.DET1.SEQ1.DIT ${DIT_IFS_PSF} OCS2.DET1.NDIT ${NDIT_IFS_PSF} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_PSF} OCS2.DET1.FRAM2.BREAK 0 OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_PSF} OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_PSF} OCS1.DET1.NDIT ${NDIT_IRDIS_PSF} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_PSF} OCS1.DET1.READ.CURNAME Nondest OCS2.OCS.DET1.IMGNAME ${lightsource_estim}IFS_OffAxisPSF_ \" "
+			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} OCS2.DET1.SEQ1.DIT ${DIT_IFS_PSF} OCS2.DET1.NDIT ${NDIT_IFS_PSF} OCS2.DET1.FRAM1.BREAK ${NDIT_IFS_PSF} OCS2.DET1.FRAM2.BREAK 0 OCS2.DET1.ACQ1.QUEUE ${NDIT_IFS_PSF} OCS2.DET1.READ.CURNAME Nondest OCS1.DET1.SEQ1.DIT ${DIT_IRDIS_PSF} OCS1.DET1.NDIT ${NDIT_IRDIS_PSF} OCS1.DET1.ACQ1.QUEUE ${NDIT_IRDIS_PSF} OCS1.DET1.READ.CURNAME Nondest OCS2.OCS.DET1.IMGNAME ${lightsource_estim}IFS_OffAxisPSF_  \" "
 			
 			# Record IFS data
 			ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IFS \" "
 
 			# Record IRDIS data
-			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} OCS1.OCS.DET1.IMGNAME ${lightsource_estim}IRDIS_OffAxisPSF_ \" "
+			ssh wsre "msgSend -n wsre sroControl SETUP \"-expoId 0 -function INS.MODE ${mod_irdifs} OCS1.OCS.DET1.IMGNAME ${lightsource_estim}IRDIS_OffAxisPSF_  \" "
 			ssh wsre "msgSend -n wsre sroControl START \"-expoId 0 -detId IRDIS \" "
 
 			# Wait for the detectors to end the recording
@@ -380,7 +380,7 @@ if [ "$create_coro" -eq "1" ]; then
 				cat ${FILE} | ssh wsre "rsh  wsrsgw cdmsLoad -f - -r VisAcq.DET1.REFSLP"
 				#ssh wsre "rsh wsrsgw cdmsLoad -f ${FILE} -r VisAcq.DET1.REFSLP" 
 				ssh wsre "rsh wsrsgw \"msgSend \\\"\\\" CommandGateway EXEC \\\"VisAcq.update ALL\\\" \" "
-
+				
 				echo "Waiting ${PAUSE_TIME}s for the slopes to be loaded"
 				/bin/sleep ${PAUSE_TIME}
 				echo ' * slopes loaded'

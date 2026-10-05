@@ -19,7 +19,7 @@ from joblib import Parallel, delayed
 from functools import partial
 from tqdm import tqdm
 
-import sphere_efc.Definitions_for_matrices as def_mat
+import Definitions_for_matrices as def_mat
 
 #Unit conversion and normalisation
 #influence matrix normalization = defoc meca en rad @ 632 nm
@@ -577,7 +577,7 @@ def extract_cube_IFS(file, wavecal_outputdir, cube_outputdir, extraction_paramet
 def IFS_from_raw_to_cube(param, delta_wave = 5):
     detector = param['detector']
     MatrixDirectory = param['MatrixDirectory']
-    
+    dir = param['ImageDirectory']
     extraction_parameters, wavecal_outputdir, instrument = build_calibration_IFS(param)
 
     nb_images_per_stack, remainder, wavelength_stacked = pick_wvl_IFS(instrument, delta_wave = delta_wave)
@@ -1009,7 +1009,7 @@ def resultEFC(param):
     print('- Creating difference of images...', flush=True)
     Difference, imagecorrection, Images_to_display = createdifference(param)
     
-    for wvl in np.arange(nb_wvl):
+    for wvl in np.arange(nb_wvl):         
         print('- Estimating the focal plane electric field...', flush=True)
         Difference_per_wvl = Difference[:, wvl]
         imagecorrection_per_wvl = imagecorrection[wvl]
@@ -1027,10 +1027,11 @@ def resultEFC(param):
         
         intensity_co.append(intensity_co_per_wvl)
         intensity_inco.append(intensity_inco_per_wvl)
-        resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl])
+    
+        resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl//2])
         resultatestimation.append(resultatestimation_per_wvl_1D)
     
-    resultatestimation = np.array(resultatestimation)
+    #resultatestimation = np.array(resultatestimation) #CDe
     intensity_co = np.array(intensity_co)
     intensity_inco = np.array(intensity_inco)
     
@@ -1055,7 +1056,7 @@ def resultEFC(param):
             rieman_factors = def_mat.compute_rieman(nb_wvl, correction_channel)
 
             #Modify the estimate w.r.t correction strategy
-            resultatestimation = resultatestimation * rieman_factors[: , None]
+            #resultatestimation = resultatestimation * rieman_factors[: , None] #CDe
             resultatestimation = np.concatenate(resultatestimation, axis=0)
 
         WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')

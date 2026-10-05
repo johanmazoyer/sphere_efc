@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#Version 2026/06/29 17h30 UT
+#Version 2026/06/29 17h30 U
 
 : '
 This script should be run on the sparta gateway.
@@ -10,7 +10,7 @@ Preliminary steps to perform before running this script
 
 1/ In the folder called SlopesAndImages in WORK_PATH0: 
    a/ Save the Visible WFS ref slopes  (VisAcq.DET1.REFSLP.fits)
-
+`
 2/ In the folder called MatricesAndModel in WORK_PATH0:
    Save the interaction matrix (CLMatrixOptimiser.HO_IM.fit) from the CDMS browser
 
@@ -19,9 +19,11 @@ Preliminary steps to perform before running this script
 
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
-#is automatically created
-nbiter=5
-# First try with nbiter= 1 to see if initialization runs
+#is automatically creatd
+nbiter=2
+
+
+# First1try with nbiter= 1 to see if initialization runs
 # then nbiter=2 to see at least 1 full loop 
 
 
@@ -34,13 +36,13 @@ create_coro=1
 ## IRDIS parameters
 
 #coronagraphic image
-DIT_IRDIS_image=0
+DIT_IRDIS_image=1
 NDIT_IRDIS_image=1
 DIT_IFS_image=1
 NDIT_IFS_image=1
 
 #Image diversity
-DIT_IRDIS_probe=0
+DIT_IRDIS_probe=1
 NDIT_IRDIS_probe=1
 DIT_IFS_probe=1
 NDIT_IFS_probe=1
@@ -69,13 +71,13 @@ coro='APLC'
 #coro='FQPM'
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
-DHsize=2
+DHsize=51
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
 # corr_mode=1: less stable correction but better contrast
 # corr_mode=2: more aggressive correction (may be unstable)
-corr_mode=400
+corr_mode=550
 gain=0.8
 
 #Algorithm for estimation. Should be either PWP or BTW
@@ -116,7 +118,7 @@ detector="IFS_OBS_H" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
 # If detector = "IFS_OBS_YJ" or "IFS_OBS_H"
 # if True use the new IRDIFS command
 # else use the solo sphere observation file
-IRDIFS_new="False"
+IRDIFS_new="True"
 
 #Weighting broadband corrrection
 #Can be an integer that represents the wvl channel used for correction.
@@ -500,6 +502,7 @@ if [ "$create_coro" -eq "1" ]; then
 	scp sphere@wsre:${DATA_PATH}/${EXP_NAME}*iter${nbiter}_Probe_000*.fits ${WORK_PATH}/
 
 fi
+
 
 
 # copy all science files into working directory
