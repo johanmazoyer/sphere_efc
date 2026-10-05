@@ -1060,7 +1060,9 @@ def resultEFC(param):
             rieman_factors = def_mat.compute_rieman(nb_wvl, correction_channel)
 
             #Modify the estimate w.r.t correction strategy
-            #resultatestimation = resultatestimation * rieman_factors[: , None] #CDe
+            for i, factor in enumerate(rieman_factors):
+                resultatestimation[i] = [value * factor for value in resultatestimation[i]]
+
             resultatestimation = np.concatenate(resultatestimation, axis=0)
 
         WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
