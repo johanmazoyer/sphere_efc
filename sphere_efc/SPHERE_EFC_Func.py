@@ -16,6 +16,7 @@ import os
 import charis
 from spherical.pipeline.pipeline_config import defaultIFSReduction
 from joblib import Parallel, delayed
+from joblib.externals.loky import get_reusable_executor
 from functools import partial
 from tqdm import tqdm
 
@@ -560,6 +561,7 @@ def extract_cube_IFS(file, wavecal_outputdir, cube_outputdir, extraction_paramet
     expim = get_exptime(file)
     bkg_dir = os.path.dirname(file)
     bkg_path = last(bkg_dir+'SPHERE_BKGRD_EFC_IFS_'+str(int(expim))+'s_*.fits')[0]
+    bkg_path = last(bkg_dir+'/SPHERE_BKGRD_EFC_IFS_'+str(int(expim))+'s_*.fits')#[0]
 
     ndit: int = int(hdr['HIERARCH ESO DET NDIT'])
     for dit_index in tqdm(
@@ -590,7 +592,7 @@ def IFS_from_raw_to_cube(param, delta_wave = 5):
     # Extract all the IFS raw images in the experiment/iter and create cubes
     filenames = []
     for name in os.listdir(dir):
-        if "IFS_" in name:
+        if "IFS_" in name and "BKGRD" not in name:
             # Split at the first occurrence of "IFS_"
             before, _, after = name.partition("IFS_")
             x = before + after  # 'after' is everything after "IFS_"
@@ -598,12 +600,18 @@ def IFS_from_raw_to_cube(param, delta_wave = 5):
             if x and not os.path.exists(os.path.join(dir, x)):
                 filenames.append(dir + name)
     #print(filenames)
+    
     do_extract_cube_IFS = partial(extract_cube_IFS, wavecal_outputdir=wavecal_outputdir, cube_outputdir=dir, extraction_parameters=extraction_parameters)  # freeze b and c
-    Parallel(n_jobs=-1)(delayed(do_extract_cube_IFS)(filename) for filename in filenames)
+    with Parallel(n_jobs=-1) as parallel:
+        results = parallel(delayed(do_extract_cube_IFS)(filename) for filename in filenames) #CDe
+    #Parallel(n_jobs=-1)(delayed(do_extract_cube_IFS)(filename) for filename in filenames)
 
     do_process_cube_IFS = partial(process_cube_IFS, nb_images_per_stack = nb_images_per_stack, remainder = remainder)  # freeze b and c
-    Parallel(n_jobs=-1)(delayed(do_process_cube_IFS)(filename) for filename in filenames)
+    with Parallel(n_jobs=-1) as parallel:
+        results = parallel(delayed(do_process_cube_IFS)(filename) for filename in filenames) #CDe
+    #Parallel(n_jobs=-1)(delayed(do_process_cube_IFS)(filename) for filename in filenames)
 
+    get_reusable_executor().shutdown(wait=False, kill_workers=True)
 
 
 def find_hot_pix_in_dark(dark):
