@@ -297,7 +297,7 @@ def invertDSCC(interact, cut ,goal='e', regul="truncation", visu=False):
     plt.show()
     #if visu == True: plt.show() #CDe                      
     pseudoinverse = np.dot(np.dot(np.transpose(V),InvS),np.transpose(U))
-    return [np.diag(InvS),pseudoinverse]
+    return np.diag(InvS), pseudoinverse
 
 
 def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pushact, amplitudePW, posprobes , cutsvd, coro, probe_type, resolinarcsec_pix):
@@ -391,8 +391,7 @@ def createvectorprobes(input_wavefront, wave, lyot_mask , Name_ALC , isz_foc, pu
             matrix[:,0] = np.real(deltapsik[:,i,j])
             matrix[:,1] = np.imag(deltapsik[:,i,j])
             try:
-                SVD[:,i,j] = invertDSCC(matrix,cutsvd,visu=False)[0]
-                Vecteurenvoi[l] = invertDSCC(matrix,cutsvd,visu=False)[1]
+                SVD[:,i,j], Vecteurenvoi[l] = invertDSCC(matrix,cutsvd,visu=False)
             except:
                 print('Careful: Error! for l='+str(l))
                 SVD[:,i,j] = np.zeros(2)
@@ -874,11 +873,18 @@ def create_interaction_matrix(MatrixDirectory, lightsource, nb_wvl, namemask, nb
     masked_Gmatrix = np.concatenate(masked_Gmatrix, axis=0)
 
     #Inverse matrix with regularization
-    invertGDH = invertDSCC(masked_Gmatrix, int(nbmodes), goal='c', regul='tikhonov', visu=True)[1] # CDe Put visu to False to avoid plotting
+    singular_values, invertGDH = invertDSCC(masked_Gmatrix, int(nbmodes), goal='c', regul='tikhonov', visu=True) # CDe Put visu to False to avoid plotting
+
+    #Save singular values plot
+    plt.plot(singular_values, "b.")
+    plt.yscale("log")
+    plt.savefig(MatrixDirectory + lightsource + 'SingVal_DH' + namemask + '_SVD' + str(nbmodes) + '_' + str(correction_channel) + '.png')
+    plt.close()
+
+    #Save inverse matrix
+    fits.writeto(MatrixDirectory + lightsource + 'Interactionmatrix_DH' + namemask + '_SVD' + str(nbmodes) + '_' + str(correction_channel) + '.fits', invertGDH, overwrite = True)
+    
     del masked_Gmatrix
     del Gmatrix
-
-    fits.writeto(MatrixDirectory + lightsource + 'Interactionmatrix_DH' + namemask + '_SVD' + str(nbmodes) + '_' + str(correction_channel) + '.fits', invertGDH, overwrite = True)
-
     del invertGDH
 
