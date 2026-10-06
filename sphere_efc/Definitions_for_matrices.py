@@ -836,7 +836,7 @@ def create_fqpm(isz_pup):
 def compute_rieman(nb_wavelength, correction_channel):
     if correction_channel.isdigit() == True:
         correction_channel = int(correction_channel)
-        if correction_channel>=nb_wavelength:
+        if correction_channel>=nb_wavelength+1:
             print('Correction channel higher than number of channels. Switch to central channel')
             correction_channel = int(nb_wavelength/2) + 1
         print('Correction using channel ' + str(correction_channel))
