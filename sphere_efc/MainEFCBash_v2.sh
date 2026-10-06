@@ -20,12 +20,11 @@ Preliminary steps to perform before running this script
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically creatd
-nbiter=2
+nbiter=10
 
 
 # First1try with nbiter= 1 to see if initialization runs
 # then nbiter=2 to see at least 1 full loop 
-
 
 #Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
 create_bkgrd=0
@@ -38,26 +37,26 @@ create_coro=1
 #coronagraphic image
 DIT_IRDIS_image=1
 NDIT_IRDIS_image=1
-DIT_IFS_image=1
+DIT_IFS_image=2
 NDIT_IFS_image=1
 
 #Image diversity
 DIT_IRDIS_probe=1
 NDIT_IRDIS_probe=1
-DIT_IFS_probe=1
+DIT_IFS_probe=2
 NDIT_IFS_probe=1
 
 #Off-axis PSF
 DIT_IRDIS_PSF=0
 NDIT_IRDIS_PSF=1
-DIT_IFS_PSF=1
+DIT_IFS_PSF=2
 NDIT_IFS_PSF=1
 WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' or 'ND_1.0'
 
 #Background
 DIT_IRDIS_bkgrd=0
 NDIT_IRDIS_bkgrd=1
-DIT_IFS_bkgrd=1
+DIT_IFS_bkgrd=2
 NDIT_IFS_bkgrd=2
 
 
@@ -71,13 +70,13 @@ coro='APLC'
 #coro='FQPM'
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
-DHsize=51
+DHsize=50
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
 # corr_mode=1: less stable correction but better contrast
 # corr_mode=2: more aggressive correction (may be unstable)
-corr_mode=550
+corr_mode=500
 gain=0.8
 
 #Algorithm for estimation. Should be either PWP or BTW
@@ -124,8 +123,8 @@ IRDIFS_new="True"
 #Can be an integer that represents the wvl channel used for correction.
 #Can be "equal_weight" to use all the wvl equally
 #Can be "longer_weight" to priviledge the longer wavelength
-#correction_channel=2
-correction_channel="equal_weight"
+#correction_channel="2"
+correction_channel="0"
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA

@@ -880,3 +880,5 @@ def create_interaction_matrix(MatrixDirectory, lightsource, nb_wvl, namemask, nb
 
     fits.writeto(MatrixDirectory + lightsource + 'Interactionmatrix_DH' + namemask + '_SVD' + str(nbmodes) + '_' + str(correction_channel) + '.fits', invertGDH, overwrite = True)
 
+    del invertGDH
+

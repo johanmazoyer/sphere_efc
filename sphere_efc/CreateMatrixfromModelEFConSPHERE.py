@@ -43,8 +43,8 @@ createwhich = False
 createjacobian = False
 
 #name of the mask that can be saved with createmask and then used in createEFCmatrix
-namemask ='51'
-createmask = True
+namemask ='50'
+createmask = False
 
 mask_shape = 'circle' #circle or square
 pix_limit_in_ld = [8, 35, -35, 35] # Only used if mask_shape = 'square'
@@ -53,9 +53,8 @@ circ_side = 'Bottom' # Only used if mask_shape = 'circle'. Can be Full, Top, Bot
 circ_offset_in_ld = 2 # Only used if mask_shape = 'circle', in lambda/D
 circ_angle = 0 # Only used if mask_shape = 'circle', in degree
 
-
 nbmodes = 500
-correction_channel="equal_weight" #Either "longer_weight", "equal_weight", or an integer
+correction_channel="2" #Either "longer_weight", "equal_weight", or an integer
 createEFCmatrix = True
 
 
