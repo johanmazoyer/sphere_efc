@@ -174,6 +174,7 @@ if [ "$create_bkgrd" -eq "1" ]; then
 	ssh wsre "msgSend -n wsre sroControl SETUP \"-function INS.SHUT.ST F\" "
     else
 	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS1.INS.OPTI1.NAME CLOSED\" "
+	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS2.INS.OPTI1.NAME CLOSED\" "
     fi
     /bin/sleep 3
     echo "The shutter should be closed now (check)"
