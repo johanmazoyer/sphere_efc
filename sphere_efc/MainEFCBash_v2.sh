@@ -20,7 +20,7 @@ Preliminary steps to perform before running this script
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically creatd
-nbiter=10
+nbiter=7
 
 
 # First1try with nbiter= 1 to see if initialization runs
@@ -70,13 +70,13 @@ coro='APLC'
 #coro='FQPM'
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
-DHsize=50
+DHsize=52
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
 # corr_mode=1: less stable correction but better contrast
 # corr_mode=2: more aggressive correction (may be unstable)
-corr_mode=500
+corr_mode=225
 gain=0.8
 
 #Algorithm for estimation. Should be either PWP or BTW
@@ -124,7 +124,7 @@ IRDIFS_new="True"
 #Can be "equal_weight" to use all the wvl equally
 #Can be "longer_weight" to priviledge the longer wavelength
 #correction_channel="2"
-correction_channel="0"
+correction_channel="longer_weight"
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA
@@ -174,7 +174,8 @@ if [ "$create_bkgrd" -eq "1" ]; then
 	ssh wsre "msgSend -n wsre sroControl SETUP \"-function INS.SHUT.ST F\" "
     else
 	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS1.INS.OPTI1.NAME CLOSED\" "
-	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS2.INS.OPTI1.NAME CLOSED\" "
+	#ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS2.INS.OPTI1.NAME CLOSED\" "
+	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS2.INS.SHUT.ST F\" "
     fi
     /bin/sleep 3
     echo "The shutter should be closed now (check)"
@@ -216,6 +217,7 @@ if [ "$create_bkgrd" -eq "1" ]; then
 	ssh wsre "msgSend -n wsre sroControl SETUP \"-function INS.SHUT.ST T\" "
     else
 	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS1.INS.OPTI1.NAME ST_ALC2\" "
+	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS2.INS.SHUT.ST T\" "
     fi
     /bin/sleep 3
 

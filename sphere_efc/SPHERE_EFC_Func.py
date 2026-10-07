@@ -560,7 +560,7 @@ def extract_cube_IFS(file, wavecal_outputdir, cube_outputdir, extraction_paramet
     hdr = fits.getheader(file)
     expim = get_exptime(file)
     bkg_dir = os.path.dirname(file)
-    bkg_path = last(bkg_dir+'SPHERE_BKGRD_EFC_IFS_'+str(int(expim))+'s_*.fits')[0]
+    #bkg_path = last(bkg_dir+'SPHERE_BKGRD_EFC_IFS_'+str(int(expim))+'s_*.fits')[0]
     bkg_path = last(bkg_dir+'/SPHERE_BKGRD_EFC_IFS_'+str(int(expim))+'s_*.fits')#[0]
 
     ndit: int = int(hdr['HIERARCH ESO DET NDIT'])
