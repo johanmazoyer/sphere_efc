@@ -1040,45 +1040,40 @@ def resultEFC(param):
         intensity_co.append(intensity_co_per_wvl)
         intensity_inco.append(intensity_inco_per_wvl)
     
-        #YJH CDe 2026-10-07 uncomment the following line if YJH
-        #resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl//2])
-        # YJ CDe 2026-10-06 uncomment the following line if YJ
-        resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl])
-        
+        if detector == 'IFS_OBS_H' and wvl//2 == 0 :
+            resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl//2])
+        elif detector != 'IFS_OBS_H':
+            resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl])        
+
         resultatestimation.append(resultatestimation_per_wvl_1D)
-    
-    #resultatestimation = np.array(resultatestimation) #CDe
+
     intensity_co = np.array(intensity_co)
     intensity_inco = np.array(intensity_inco)
     
     if gain!=0:
         print('- Calculating slopes to generate the Dark Hole with EFC...', flush=True)
 
-        if detector == 'IFS_OBS_H':
-            #Only keep every other wavelength
-            resultatestimation = resultatestimation[::2]
-            nb_wvl = len(resultatestimation)
-
-        interaction_matrix_path = MatrixDirectory + lightsource_corr + 'Interactionmatrix_DH' + str(dhsize) + '_SVD' + str(corr_mode) + '_' + str(correction_channel) + '.fits'
-
-        if not os.path.exists(interaction_matrix_path):
-            print('...Creating EFC matrix...')
-            def_mat.create_interaction_matrix(MatrixDirectory, lightsource_corr, nb_wvl, str(dhsize), corr_mode, correction_channel)
-
-        invertGDH = fits.getdata(interaction_matrix_path)
-
+        nb_wvl = len(resultatestimation)
         if nb_wvl>1:
-            #Compute wavelength weight w.r.t correction strategy
+            # Compute wavelength weight w.r.t correction strategy
             rieman_factors = def_mat.compute_rieman(nb_wvl, correction_channel)
 
-            #Modify the estimate w.r.t correction strategy
+            # Modify the estimate w.r.t correction strategy
             for i, factor in enumerate(rieman_factors):
                 resultatestimation[i] = [value * factor for value in resultatestimation[i]]
 
             resultatestimation = np.concatenate(resultatestimation, axis=0)
 
+        # Extract or create relevant interaction matrix
+        interaction_matrix_path = MatrixDirectory + lightsource_corr + 'Interactionmatrix_DH' + str(dhsize) + '_SVD' + str(corr_mode) + '_' + str(correction_channel) + '.fits'
+        if not os.path.exists(interaction_matrix_path):
+            print('...Creating EFC matrix...')
+            def_mat.create_interaction_matrix(MatrixDirectory, lightsource_corr, nb_wvl, str(dhsize), corr_mode, correction_channel)
+        invertGDH = fits.getdata(interaction_matrix_path)
+
         WhichInPupil = fits.getdata(MatrixDirectory+lightsource_estim+'WhichInPupil0_5.fits')
-        
+
+        # Compute solution
         solution1 = solutiontocorrect(resultatestimation, invertGDH, WhichInPupil)
         solution1 = solution1*amplitudeEFCMatrix/rad_632_to_nm_opt
         solution1 = -gain*solution1
