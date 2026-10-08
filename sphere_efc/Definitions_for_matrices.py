@@ -877,6 +877,7 @@ def create_interaction_matrix(MatrixDirectory, lightsource, nb_wvl, namemask, nb
 
     #Save singular values plot
     plt.plot(singular_values, "b.")
+    plt.xlabel("Mode")
     plt.yscale("log")
     plt.savefig(MatrixDirectory + lightsource + 'SingVal_DH' + namemask + '_SVD' + str(nbmodes) + '_' + str(correction_channel) + '.png')
     plt.close()

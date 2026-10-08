@@ -20,7 +20,7 @@ Preliminary steps to perform before running this script
 #Number of the current iteration
 #Each time nbiter=1, a new file rootname 'ExperimentXXXX'
 #is automatically creatd
-nbiter=7
+nbiter=3
 
 
 # First1try with nbiter= 1 to see if initialization runs
@@ -70,13 +70,13 @@ coro='APLC'
 #coro='FQPM'
 
 #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
-DHsize=52
+DHsize=53
 
 #Correction mode
 # corr_mode=0: stable correction but moderate contrast
 # corr_mode=1: less stable correction but better contrast
 # corr_mode=2: more aggressive correction (may be unstable)
-corr_mode=225
+corr_mode=600
 gain=0.8
 
 #Algorithm for estimation. Should be either PWP or BTW
@@ -112,7 +112,7 @@ centeringateachiter=0
 rescaling=0
 
 #Which instrument is used
-detector="IFS_OBS_H" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
+detector="IFS_OBS_YJ" #Can be IRDIS_H3 or IFS_OBS_YJ or IFS_OBS_H
 
 # If detector = "IFS_OBS_YJ" or "IFS_OBS_H"
 # if True use the new IRDIFS command
@@ -124,7 +124,7 @@ IRDIFS_new="True"
 #Can be "equal_weight" to use all the wvl equally
 #Can be "longer_weight" to priviledge the longer wavelength
 #correction_channel="2"
-correction_channel="longer_weight"
+correction_channel="equal_weight"
 
 # Path common to wsre and wsrsgw
 DATA_PATH=/data/SPHERE/INS_ROOT/SYSTEM/DETDATA

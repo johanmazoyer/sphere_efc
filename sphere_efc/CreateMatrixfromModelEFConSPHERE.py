@@ -20,7 +20,7 @@ ModelDirectory = os.getcwd()+'/Model/'
 coro = 'APLC'
 #coro = 'FQPM'
 dimimages = 200
-detector = 'IFS_OBS_H' #'IFS_OBS_H' or 'IFS_OBS_YJ' or 'IRDIS'
+detector = 'IFS_OBS_YJ' #'IFS_OBS_H' or 'IFS_OBS_YJ' or 'IRDIS'
 
 MatrixDirectory = MatrixDirectory + detector + '/'
 if os.path.isdir(MatrixDirectory) is False:
@@ -43,19 +43,19 @@ createwhich = False
 createjacobian = False
 
 #name of the mask that can be saved with createmask and then used in createEFCmatrix
-namemask ='52'
-createmask = False
+namemask ='54'
+createmask = True
 
 mask_shape = 'circle' #circle or square
 pix_limit_in_ld = [8, 35, -35, 35] # Only used if mask_shape = 'square'
-circ_rad_in_ld = [3, 10] # Only used if mask_shape = 'circle', in lambda/D
-circ_side = 'Top' # Only used if mask_shape = 'circle'. Can be Full, Top, Bottom, Left or Right
+circ_rad_in_ld = [3, 16] # Only used if mask_shape = 'circle', in lambda/D
+circ_side = 'Bottom' # Only used if mask_shape = 'circle'. Can be Full, Top, Bottom, Left or Right
 circ_offset_in_ld = 2 # Only used if mask_shape = 'circle', in lambda/D
 circ_angle = 0 # Only used if mask_shape = 'circle', in degree
 
-nbmodes = 200
+nbmodes = 500
 correction_channel="equal_weight" #Either "longer_weight", "equal_weight", or an integer
-createEFCmatrix = True
+createEFCmatrix = False
 
 
 
@@ -81,7 +81,7 @@ else:
 lightsource = lightsource + coro + '_'
 
 #Amplitude in x nm/37 for the PW pokes such that pushact amplitude is equal to x nm
-amplitudePW = 296/37
+amplitudePW = 200/37
 #Amplitude in x nm/37 for the pokes to create the jacobian matrix such that pushact amplitude is equal to x nm (usually 296nm here)
 amplitudeEFCMatrix = 8
 
