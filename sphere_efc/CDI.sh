@@ -1,3 +1,4 @@
+
 #!/bin/bash
 
 #Version 2026/06/29 17h30 UT
@@ -19,13 +20,13 @@ Preliminary steps to perform before running this script
 '
 
 #Total number of iterations to run in the loop
-tot_nbiter=1
+tot_nbiter=3
 
 
 #Do you want to save automatically an off-axis PSF and different backgrounds? Set 1 for yes, 0 for no.
 create_bkgrd=0
-create_PSF=1
-create_coro=0
+create_PSF=0
+create_coro=1
 
 
 ## IRDIS and IFS parameters
@@ -33,27 +34,27 @@ create_coro=0
 #coronagraphic image
 DIT_IRDIS_image=1
 NDIT_IRDIS_image=1
-DIT_IFS_image=1
+DIT_IFS_image=2
 NDIT_IFS_image=1
 
 #Image diversity
 DIT_IRDIS_probe=1
 NDIT_IRDIS_probe=1
-DIT_IFS_probe=1
+DIT_IFS_probe=2
 NDIT_IFS_probe=1
 
 #Off-axis PSF
 DIT_IRDIS_PSF=0
 NDIT_IRDIS_PSF=1
-DIT_IFS_PSF=1
+DIT_IFS_PSF=2
 NDIT_IFS_PSF=1
 WHICH_ND='ND_3.5' #can be 'ND_3.5' or 'ND_2.0' or 'ND_1.0'
 
 #Background
 DIT_IRDIS_bkgrd=0
 NDIT_IRDIS_bkgrd=1
-DIT_IFS_bkgrd=1
-NDIT_IFS_bkgrd=20
+DIT_IFS_bkgrd=2
+NDIT_IFS_bkgrd=2
 
 ONSKY=0 #Set 0 for internal pup ; 1 for an on sky correction
 Assuming_VLT_PUP_for_corr=0 
@@ -83,7 +84,7 @@ zone_to_correct='FDH' #vertical #horizontal #FDH
 PROBE_TYPE='individual_act' #'sinc' #'individual_act'
 
 #SizeProbes : can be 296, 400 or 500 (in nm)
-size_probes=200
+size_probes=300
 
 # First guess for the PSF echo position used for image centering (WARNING X and Y are inverted here)
 # (adding a cosine to DM phase)
@@ -168,6 +169,7 @@ if [ "$create_bkgrd" -eq "1" ]; then
 	ssh wsre "msgSend -n wsre sroControl SETUP \"-function INS.SHUT.ST F\" "
     else
 	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS1.INS.OPTI1.NAME CLOSED\" "
+	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS2.INS.SHUT.ST F\" "
     fi
     /bin/sleep 3
     echo "The shutter should be closed now (check)"
@@ -212,6 +214,7 @@ if [ "$create_bkgrd" -eq "1" ]; then
 	ssh wsre "msgSend -n wsre sroControl SETUP \"-function INS.SHUT.ST T\" "
     else
 	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS1.INS.OPTI1.NAME ST_ALC2\" "
+	ssh wsre "msgSend -n wsre sroControl SETUP \"-function OCS2.INS.SHUT.ST T\" "
     fi
     /bin/sleep 3
 
