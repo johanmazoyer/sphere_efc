@@ -95,7 +95,7 @@ def estimate_efield(Difference, PWP_matrix_per_wvl):
 
     return Result/4
        
-def transform_estimate_from_2D_to_1D(Estimate_2D, mask):
+def transform_estimate_from_2D_to_1D(Estimate_2D, mask): 
     Estimate_1D = np.zeros(2*int(np.sum(mask)))
     Estimate_ROI = (Estimate_2D[np.where(mask==1)])
     Estimate_1D[0:int(np.sum(mask))] = np.real(Estimate_ROI).flatten()     
@@ -1040,7 +1040,11 @@ def resultEFC(param):
         intensity_co.append(intensity_co_per_wvl)
         intensity_inco.append(intensity_inco_per_wvl)
     
-        resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl//2])
+        #YJH CDe 2026-10-07 uncomment the following line if YJH
+        #resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl//2])
+        # YJ CDe 2026-10-06 uncomment the following line if YJ
+        resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl])
+        
         resultatestimation.append(resultatestimation_per_wvl_1D)
     
     #resultatestimation = np.array(resultatestimation) #CDe
