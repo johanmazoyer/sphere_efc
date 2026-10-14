@@ -1040,7 +1040,7 @@ def resultEFC(param):
         intensity_co.append(intensity_co_per_wvl)
         intensity_inco.append(intensity_inco_per_wvl)
     
-        if detector == 'IFS_OBS_H' and wvl//2 == 0 :
+        if detector == 'IFS_OBS_H' and wvl%2 == 0 :
             resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl//2])
         elif detector != 'IFS_OBS_H':
             resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl])        
