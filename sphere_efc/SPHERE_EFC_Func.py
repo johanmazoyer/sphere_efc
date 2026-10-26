@@ -20,7 +20,7 @@ from joblib.externals.loky import get_reusable_executor
 from functools import partial
 from tqdm import tqdm
 
-import Definitions_for_matrices as def_mat
+import sphere_efc.Definitions_for_matrices as def_mat
 
 #Unit conversion and normalisation
 #influence matrix normalization = defoc meca en rad @ 632 nm
@@ -430,7 +430,7 @@ def reduce_image_IFS(param, image):
     return reduced_image
 
 
-def build_calibration_IFS(param):
+def build_calibration_IFS(param, refine = False):
 
     root_directory = param["RootDirectory"]
     detector = param['detector']
@@ -468,7 +468,7 @@ def build_calibration_IFS(param):
     extraction_parameters['fitshift'] = True
     extraction_parameters['bg_scaling_without_mask'] = False
     extraction_parameters['maxcpus'] = 1
-    extraction_parameters['refine'] = False
+    extraction_parameters['refine'] = refine
     extraction_parameters['flatfield'] = False
     extraction_parameters['resample'] = True
     extraction_parameters['linear_wavelength'] = True
@@ -502,32 +502,38 @@ def pick_wvl_IFS(instrument, delta_wave = 5):
     wavelength_0 = (min_wave + max_wave)/2
     d_wavelength = (max_wave - min_wave)
 
-    #Stacking data to get ~5% images
-    nb_images_per_stack = int(delta_wave / ( d_wavelength / wavelength_0 / raw_nb_wave * 100 ))
-    remainder = raw_nb_wave%nb_images_per_stack
-    if remainder<3: #To ensure it suppresses the lowest and highest wavelength
-        remainder = remainder + nb_images_per_stack
-    if remainder % 2 == 0:
-        wavelength_cropped = wavelengths[int(remainder/2):-int(remainder/2)]
-    else:
-        wavelength_cropped = wavelengths[int(remainder/2)+1:-int(remainder/2)]
-
-    #Centraled wavelength stacked
-    wavelength_stacked = [np.mean(wavelength_cropped[a:a+nb_images_per_stack]) for a in nb_images_per_stack * np.arange(len(wavelength_cropped)//nb_images_per_stack)]
-    wavelength_stacked = np.array(wavelength_stacked,dtype=int)
-
     if delta_wave == 0:
         return 1, 0, wavelengths
+    
     else:
+        #Stacking data to get ~5% images
+        nb_images_per_stack = int(delta_wave / ( d_wavelength / wavelength_0 / raw_nb_wave * 100 ))
+        remainder = raw_nb_wave%nb_images_per_stack
+        if remainder<3: #To ensure it suppresses the lowest and highest wavelength
+            remainder = remainder + nb_images_per_stack
+        if remainder % 2 == 0:
+            wavelength_cropped = wavelengths[int(remainder/2):-int(remainder/2)]
+        else:
+            wavelength_cropped = wavelengths[int(remainder/2)+1:-int(remainder/2)]
+
+        #Centraled wavelength stacked
+        wavelength_stacked = [np.mean(wavelength_cropped[a:a+nb_images_per_stack]) for a in nb_images_per_stack * np.arange(len(wavelength_cropped)//nb_images_per_stack)]
+        wavelength_stacked = np.array(wavelength_stacked, dtype=int)
+
         return nb_images_per_stack, remainder, wavelength_stacked
 
 
-def process_cube_IFS(filename, nb_images_per_stack, remainder):
+def process_cube_IFS(filename, output_dir, nb_images_per_stack, remainder):
     
     #Stack, rotate and save results from charis
 
     #Pick resampled IFS cube file
-    root, _ = os.path.splitext(filename)
+    #root, _ = os.path.splitext(filename)
+
+    filename_with_ext = os.path.basename(filename)
+    root, _ = os.path.splitext(filename_with_ext)
+    root = os.path.join(output_dir , root)
+
     filename = root + '_cube_resampled_DIT_000.fits'
 
     cube, header = fits.getdata(filename, ext=1, header=True)
@@ -580,11 +586,13 @@ def extract_cube_IFS(file, wavecal_outputdir, cube_outputdir, extraction_paramet
         )
 
 
-def IFS_from_raw_to_cube(param, delta_wave = 5):
+def IFS_from_raw_to_cube(param, delta_wave = 5, refine = False, output_dir = None):
     detector = param['detector']
     MatrixDirectory = param['MatrixDirectory']
     dir = param['ImageDirectory']
-    extraction_parameters, wavecal_outputdir, instrument = build_calibration_IFS(param)
+    if output_dir == None:
+        output_dir = dir
+    extraction_parameters, wavecal_outputdir, instrument = build_calibration_IFS(param, refine = refine)
 
     nb_images_per_stack, remainder, wavelength_stacked = pick_wvl_IFS(instrument, delta_wave = delta_wave)
     fits.writeto(MatrixDirectory + detector + '_wavelength.fits', wavelength_stacked, overwrite = True)
@@ -597,16 +605,15 @@ def IFS_from_raw_to_cube(param, delta_wave = 5):
             before, _, after = name.partition("IFS_")
             x = before + after  # 'after' is everything after "IFS_"
 
-            if x and not os.path.exists(os.path.join(dir, x)):
+            if x and not os.path.exists(os.path.join(output_dir, x)):
                 filenames.append(dir + name)
-    #print(filenames)
     
-    do_extract_cube_IFS = partial(extract_cube_IFS, wavecal_outputdir=wavecal_outputdir, cube_outputdir=dir, extraction_parameters=extraction_parameters)  # freeze b and c
+    do_extract_cube_IFS = partial(extract_cube_IFS, wavecal_outputdir=wavecal_outputdir, cube_outputdir=output_dir, extraction_parameters=extraction_parameters)  # freeze b and c
     with Parallel(n_jobs=-1) as parallel:
         results = parallel(delayed(do_extract_cube_IFS)(filename) for filename in filenames) #CDe
     #Parallel(n_jobs=-1)(delayed(do_extract_cube_IFS)(filename) for filename in filenames)
 
-    do_process_cube_IFS = partial(process_cube_IFS, nb_images_per_stack = nb_images_per_stack, remainder = remainder)  # freeze b and c
+    do_process_cube_IFS = partial(process_cube_IFS, output_dir = output_dir, nb_images_per_stack = nb_images_per_stack, remainder = remainder)  # freeze b and c
     with Parallel(n_jobs=-1) as parallel:
         results = parallel(delayed(do_process_cube_IFS)(filename) for filename in filenames) #CDe
     #Parallel(n_jobs=-1)(delayed(do_process_cube_IFS)(filename) for filename in filenames)
@@ -1172,7 +1179,7 @@ def FullIterEFC(param):
     dir2 = dir + filenameroot
         
     dhsize = param["dhsize"]
-    maskDH = fits.getdata(MatrixDirectory+'../mask_DH'+str(dhsize)+'.fits')
+    #maskDH = fits.getdata(MatrixDirectory+'../mask_DH'+str(dhsize)+'.fits')
 
     if nbiter == 1: 
         print('Creating slopes for Cosine, PSFOffAxis and new probes...', flush=True)
