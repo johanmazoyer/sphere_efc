@@ -757,9 +757,16 @@ def process_PSF(param):
     MatrixDirectory = param["MatrixDirectory"]
     detector = param["detector"]
 
+    file_PSF = last(ImageDirectory+lightsource_estim+'OffAxisPSF*.fits')
+    exppsf = get_exptime(file_PSF)
+    PSF = reduceimageSPHERE(param, file_PSF, np.array([1]), remove_bad_pix = False, high_pass_filter=False)
+
     if detector == "IFS_OBS_YJ" or detector == "IFS_OBS_H":
-        #wavelength_stacked = fits.getdata(MatrixDirectory + detector + '_wavelength_full.fits')
-        wavelength_stacked = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
+        if len(PSF) == 39:
+            wavelength_stacked = fits.getdata(MatrixDirectory + detector + '_wavelength_full.fits')
+        else:
+            wavelength_stacked = fits.getdata(MatrixDirectory + detector + '_wavelength.fits')
+
         ND_file = np.loadtxt(MatrixDirectory + "../SPHERE_CPI_ND.dat")
 
         if param["which_nd"] == 'ND_3.5':
@@ -1179,7 +1186,7 @@ def FullIterEFC(param):
     dir2 = dir + filenameroot
         
     dhsize = param["dhsize"]
-    #maskDH = fits.getdata(MatrixDirectory+'../mask_DH'+str(dhsize)+'.fits')
+    maskDH = fits.getdata(MatrixDirectory+'../mask_DH'+str(dhsize)+'.fits')
 
     if nbiter == 1: 
         print('Creating slopes for Cosine, PSFOffAxis and new probes...', flush=True)
