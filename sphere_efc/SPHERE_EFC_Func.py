@@ -20,7 +20,8 @@ from joblib.externals.loky import get_reusable_executor
 from functools import partial
 from tqdm import tqdm
 
-import sphere_efc.Definitions_for_matrices as def_mat
+#import sphere_efc.Definitions_for_matrices as def_mat
+import Definitions_for_matrices as def_mat
 
 #Unit conversion and normalisation
 #influence matrix normalization = defoc meca en rad @ 632 nm
@@ -1056,10 +1057,10 @@ def resultEFC(param):
     
         if detector == 'IFS_OBS_H' and wvl%2 == 0 :
             resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl//2])
+            resultatestimation.append(resultatestimation_per_wvl_1D)
         elif detector != 'IFS_OBS_H':
             resultatestimation_per_wvl_1D = transform_estimate_from_2D_to_1D(resultatestimation_per_wvl, maskDH[wvl])        
-
-        resultatestimation.append(resultatestimation_per_wvl_1D)
+            resultatestimation.append(resultatestimation_per_wvl_1D)
 
     intensity_co = np.array(intensity_co)
     intensity_inco = np.array(intensity_inco)
