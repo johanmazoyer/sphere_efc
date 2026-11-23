@@ -50,14 +50,30 @@ if __name__ == "__main__":
 
     WORK_PATH1 = os.path.dirname(__file__) +'/../'
 
-    #Put matrix directory (MatricesAndModel/) path below
-    MatrixDirectory= '/Users/apoitier/Documents/Research/Softwares/sphere_efc/sphere_efc/MatricesAndModel/'
+    
+    whoiam = 'celia' # useful for the data path
 
-    #Directory where all the IFS raw images will be extracted. Think also about the backgrounds
-    ImageDirectory= '/Users/apoitier/Documents/Research/Instruments/SPHERE/Data/Aout2026/2026-08-15/Experiments/Exp0010/'
+    if whoiam == 'axel':
+        #Put matrix directory (MatricesAndModel/) path below
+        MatrixDirectory= '/Users/apoitier/Documents/Research/Softwares/sphere_efc/sphere_efc/MatricesAndModel/'
+        #Directory where all the IFS raw images will be extracted. Think also about the backgrounds
+        ImageDirectory= '/Users/apoitier/Documents/Research/Instruments/SPHERE/Data/Aout2026/2026-08-15/Experiments/Exp0010/'
+        #Directory where to save all those images
+        processed_directory = '/Users/apoitier/Documents/Research/Instruments/SPHERE/Data/Test/'
 
-    #Directory where to save all those images
-    processed_directory = '/Users/apoitier/Documents/Research/Instruments/SPHERE/Data/Test/'
+    elif whoiam == 'celia':
+        #Put matrix directory (MatricesAndModel/) path below
+        MatrixDirectory= '/Users/cdesgran/Documents/work/code/sphere_efc/sphere_efc/MatricesAndModel/'
+        #Directory where all the IFS raw images will be extracted. Think also about the backgrounds
+        ImageDirectory= '/Users/cdesgran/Documents/work/projects/instrus/SPHERE/SciOps/CDI/data/2026-08-15/Experiments/Exp0010/'
+        #Directory where to save all those images
+        processed_directory = '/Users/cdesgran/Documents/work/projects/instrus/SPHERE/SciOps/CDI/data/2026-08-15/Test/'
+
+    
+    print('\n\n', WORK_PATH1)
+    #x = chouette
+
+
     if not os.path.exists(processed_directory):
             os.makedirs(processed_directory)
 
@@ -156,4 +172,4 @@ if __name__ == "__main__":
 
     }
 
-    reprocess_experiment_IFS(param, processed_directory) 
+    reprocess_experiment_IFS(param, processed_directory, refine=False) 
