@@ -23,17 +23,24 @@ def reprocess_experiment_IFS(param, output_dir, delta_wave = 0, refine = True):
 
     SPHERE.IFS_from_raw_to_cube(param, delta_wave = delta_wave, refine = refine, output_dir = output_dir)
 
-    #Pay attention to where the matrices are. Go to CreateMatrixfromModelEFConSPHERE.py first and run PWP with waves = full
+    print('[WARNING] Pay attention to where the matrices are. Go to CreateMatrixfromModelEFConSPHERE.py first and run PWP with waves = full. Same, the dark hole mask should have the same number of spectral channels than the PWP matrices.')
+
     param["MatrixDirectory"] = param["MatrixDirectory"] + '/' + param["detector"] + '/'
     param["ImageDirectory"] = output_dir
     dir2 = output_dir + param["exp_name"]
     
     pattern = output_dir + param["exp_name"] + "*Probe_0001*.fits"
+
+    print(pattern,'\n')
+
     iter_count = len(glob.glob(pattern))
+    
+    L = [print(f) for f in glob.glob(pattern)]
 
 
-    print(iter_count)
+    print('iter_count =', iter_count)
     for nbiter in range(2, iter_count + 2):
+        print('\nProcessing iteration ', nbiter)
         param['nbiter'] = nbiter
         coherent_signal, incoherent_signal, imagecorrection, _, _  = SPHERE.resultEFC(param)
         head_image = SPHERE.create_header_from_dict(param)    
@@ -69,9 +76,6 @@ if __name__ == "__main__":
         #Directory where to save all those images
         processed_directory = '/Users/cdesgran/Documents/work/projects/instrus/SPHERE/SciOps/CDI/data/2026-08-15/Test/'
 
-    
-    print('\n\n', WORK_PATH1)
-    #x = chouette
 
 
     if not os.path.exists(processed_directory):
@@ -84,7 +88,9 @@ if __name__ == "__main__":
     #Coronagraph that is used
     coro='APLC'
     #Dark hole size : param namemask in CreateMatrixfromModelEFConSPHERE.py
-    dhsize=1
+    dhsize=60
+    correction_channel="equal_weight" #Either "longer_weight", "equal_weight", or a string of an integer
+    corr_mode=500
 
     gain=0 # Keep 0 for CDI postprocessing!!
 
@@ -98,7 +104,7 @@ if __name__ == "__main__":
     probe_type='individual_act' #'sinc' #'individual_act'
 
     #SizeProbes : can be 296, 400 or 500 (in nm)
-    size_probes=296
+    size_probes=200
 
     #Do you want to center your image at each iteration. Set 1 for yes, 0 for no.
     centeringateachiter=0
@@ -152,7 +158,7 @@ if __name__ == "__main__":
     "onsky": onsky,
     "size_probes": size_probes,
     "amplitudeEFCMatrix": 8, #required for the code to run but useless
-    "corr_mode": 1, #required for the code to run but useless
+    "corr_mode": corr_mode, #required for the code to run but useless
     "centeringateachiter": centeringateachiter,
     "dimimages": 200,
     "gain": gain,
@@ -167,8 +173,9 @@ if __name__ == "__main__":
     "lightsource_estim": lightsource_estim,
     "lightsource_corr": lightsource_estim, #required for the code to run but useless
     "posprobes": posprobes,
-    "correction_channel": 1,
-    "detector":"IFS_OBS_H"
+    "correction_channel": correction_channel,
+    "detector":"IFS_OBS_H",
+    "use_bkg": False, # CDe ! s
 
     }
 
